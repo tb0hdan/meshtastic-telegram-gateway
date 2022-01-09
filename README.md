@@ -12,20 +12,25 @@ Meshtastic T-Beam v1.1
 
 [Amazon](https://www.amazon.com/TTGO-Meshtastic-T-Beam-Bluetooth-Battery/dp/B08GLDQDW1)
 
+[Banggood](https://www.banggood.com/LILYGO-TTGO-Meshtastic-T-Beam-V1_1-ESP32-433-or-915-or-923Mhz-WiFi-Bluetooth-ESP32-GPS-NEO-6M-SMA-18650-Battery-Holder-With-OLED-p-1727472.html)
+
 [Ebay](https://www.ebay.com/itm/353398290066)
+
+[Tindie](https://www.tindie.com/products/lilygo/lilygo-ttgo-t-beam-v11-esp32/)
 
 [TomTop](https://www.tomtop.com/p-e13012-4.html)
 
 ![Meshtastic T-Beam v1.1](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/img/tbeam_11.jpeg)
 
+
 ## Setup
 
-1. Create new Telegram bot using @BotFather contact. Copy token to clipboard.
-2. Run `cp mesh.ini.example mesh.ini`
-3. Run `sudo pip3 install -r requirements.txt`
-4. Put token from previous step into `mesh.ini`
-5. Put admin id and room id into `mesh.ini`
-6. Edit `mesh.ini` Meshtastic section to reflect your device configuration (usually not required, for Linux at least)
+1. Run `cp mesh.ini.example mesh.ini`
+2. Create new Telegram bot using [@BotFather](https://t.me/BotFather) contact. Copy token to clipboard.
+3. Put token from previous step into `mesh.ini`
+4. Put admin id and room id into `mesh.ini`
+5. Edit `mesh.ini` Meshtastic section to reflect your device configuration (usually not required, for Linux at least)
+6. Run `sudo pip3 install -r requirements.txt`
 7. Run `gpasswd -a youruser dialout`
 8. Relogin
 9. Run `./mesh.py`
