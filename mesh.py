@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 
 import configparser
+import time
+
+from threading import Thread
+from flask import Flask, jsonify, render_template
+from flask_headers import headers
+
+app = Flask(__name__)
 
 config = configparser.ConfigParser()
 config.read('mesh.ini')
@@ -20,6 +27,9 @@ from telegram.ext import MessageHandler, Filters
 MESHTASTIC_ADMIN = config['Telegram']['Admin']
 MESHTASTIC_ROOM = config['Telegram']['Room']
 TELEGRAM_TOKEN = config['Telegram']['Token']
+WEBAPP_PORT = config['WebApp']['Port']
+WEBAPP_APIKEY = config['WebApp']['APIKey']
+WEBAPP_ENABLED = config['WebApp']['Enabled']
 
 interface = None
 
@@ -84,7 +94,7 @@ def onConnection(interface, topic=pub.AUTO_TOPIC): # called when we (re)connect 
 
 def onNodeInfo(node, interface):
     #updater.bot.send_message(chat_id=MESHTASTIC_ADMIN, text="%s" % node)
-    print(node)
+    pass
 
 pub.subscribe(onReceive, "meshtastic.receive")
 pub.subscribe(onConnection, "meshtastic.connection.established")
@@ -93,4 +103,35 @@ pub.subscribe(onNodeInfo, "meshtastic.node.updated")
 interface = meshtastic.serial_interface.SerialInterface(devPath=config['Meshtastic']['Device'])
 
 
+@app.route("/")
+def index_page():
+    return render_template("index.html", timestamp=int(time.time()))
+
+@app.route("/script.js")
+@headers({'Content-Type': 'application/javascript'})
+def render_script():
+    return render_template("script.js", api_key=WEBAPP_APIKEY)
+
+@app.route("/data.json")
+def meshtastic_nodes():
+    nodes = []
+    if not (interface and interface.nodes):
+        return jsonify(nodes)
+    for node in interface.nodes:
+        nodeInfo = interface.nodes.get(node)
+        position = nodeInfo.get('position', {})
+        if not position:
+            continue
+        user = nodeInfo.get('user', {})
+        if not user:
+            continue
+        nodes.append([user.get('longName'), str(round(position.get('latitude'), 5)), str(round(position.get('longitude'), 5))])
+    return jsonify(nodes)
+
+if WEBAPP_ENABLED:
+    t = Thread(target=app.run, kwargs={'port':WEBAPP_PORT})
+    t.start()
+
+print('Reached updater.start_polling()')
+# blocking call
 updater.start_polling()

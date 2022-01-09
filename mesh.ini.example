@@ -6,5 +6,10 @@ Admin = 1234
 Room = -1234
 Token = AA:BB
 
+[WebApp]
+Port = 5000
+APIKey = AIxxxxZA
+Enabled = false
+
 [Meshtastic]
 Device = /dev/ttyACM0
