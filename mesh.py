@@ -3,6 +3,7 @@
 import configparser
 
 config = configparser.ConfigParser()
+config.read('mesh.ini')
 
 import meshtastic
 import time
@@ -24,8 +25,8 @@ interface = None
 
 
 def echo(update: Update, context: CallbackContext):
-    if update.effective_chat.id != MESHTASTIC_ROOM:
-        #print(update.effective_chat.id)
+    if str(update.effective_chat.id) != str(MESHTASTIC_ROOM):
+        print(update.effective_chat.id, MESHTASTIC_ROOM)
         return
     full_user = update.effective_user.first_name
     if update.effective_user.last_name is not None:
@@ -41,7 +42,7 @@ def nodes(update: Update, context: CallbackContext):
     table = interface.showNodes(includeSelf=False)
     context.bot.send_message(chat_id=update.effective_chat.id, text=table)
 
-updater = Updater(token=AUTH, use_context=True)
+updater = Updater(token=TELEGRAM_TOKEN, use_context=True)
 start_handler = CommandHandler('start', start)
 node_handler = CommandHandler('nodes', nodes)
 
