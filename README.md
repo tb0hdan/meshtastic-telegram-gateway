@@ -8,7 +8,7 @@ Telegram chat room. Nicks (Your Name field for Meshtastic) are passed through in
 
 Meshtastic T-Beam v1.1
 
-![Meshtastic T-Beam v1.1](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/img/tbeam-11.jpeg)
+![Meshtastic T-Beam v1.1](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/img/tbeam_11.jpeg)
 
 ## Setup
 
