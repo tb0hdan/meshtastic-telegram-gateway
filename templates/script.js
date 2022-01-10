@@ -9,35 +9,31 @@ jQuery(function($) {
     document.body.appendChild(script);
 });
 
-function draw_markers(markers, map) {
-        var rmarkers = [];
-        for( i = 0; i < markers.length; i++ ) {
-            var marker = new google.maps.Marker({
-                position: new google.maps.LatLng(markers[i][1], markers[i][2]),
-                map,
-                title: markers[i][0]
-            });
-            var contentString = '<div id="content"><div id="sideNotice"></div><div id="bodyContent">' + markers[i][0] + '</div></div>';
+function draw_markers(locations, map) {
+    const infoWindow = new google.maps.InfoWindow({
+        content: "",
+        disableAutoPan: true,
+    });
 
-            var infowindow = new google.maps.InfoWindow({
-                content: contentString
-            });
+  const markers = locations.map((item, i) => {
+    const label = item[0];
+    const marker = new google.maps.Marker({
+      position: new google.maps.LatLng(item[1], item[2]),
+      label,
+    });
 
-            marker.addListener("click", () => {
-                infowindow.open({
-                  anchor: marker,
-                  map,
-                  shouldFocus: false
-                });
-            });
+    // markers can only be keyboard focusable when they have click listeners
+    // open info window when marker is clicked
+    marker.addListener("click", () => {
+      infoWindow.setContent(label);
+      infoWindow.open(map, marker);
+    });
+    return marker;
+  });
 
-            rmarkers.push(marker);
-        };
 
-        var options = {
-            imagePath: '/static/images/m'
-        };
-        var markerCluster = new MarkerClusterer(map, rmarkers, options);
+    //new MarkerClusterer({ markers, map });
+    const markerCluster = new markerClusterer.MarkerClusterer({ map, markers });
 }
 
 function initialize() {
