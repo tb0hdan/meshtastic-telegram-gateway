@@ -3,6 +3,7 @@
 import configparser
 import time
 
+from datetime import datetime
 from threading import Thread
 from flask import Flask, jsonify, render_template
 from flask_headers import headers
@@ -119,13 +120,30 @@ def meshtastic_nodes():
         return jsonify(nodes)
     for node in interface.nodes:
         nodeInfo = interface.nodes.get(node)
+        #
+        print(nodeInfo)
+        #
         position = nodeInfo.get('position', {})
         if not position:
             continue
         user = nodeInfo.get('user', {})
         if not user:
             continue
-        nodes.append([user.get('longName'), str(round(position.get('latitude'), 5)), str(round(position.get('longitude'), 5))])
+        latitude = position.get('latitude')
+        longitude = position.get('longitude')
+        if not (latitude and longitude):
+            continue
+        hwModel = user.get('hwModel', 'unknown')
+        snr = nodeInfo.get('snr', 10.0)
+        lastHeard = nodeInfo.get('lastHeard', 0)
+        batteryLevel = position.get('batteryLevel', 0)
+        altitude = position.get('altitude', 0)
+        nodes.append([user.get('longName'), str(round(latitude, 5)),
+                      str(round(longitude, 5)), hwModel, snr, 
+                      datetime.fromtimestamp(lastHeard).strftime("%d/%m/%Y, %H:%M:%S"),
+                      batteryLevel,
+                      altitude,
+        ])
     return jsonify(nodes)
 
 if WEBAPP_ENABLED:

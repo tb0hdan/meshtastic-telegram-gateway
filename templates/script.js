@@ -22,24 +22,36 @@ function draw_markers(locations, map) {
       label,
     });
 
+    const hwModel = item[3];
+    const snr = item[4];
+    const lastHeard = item[5];
+    const batteryLevel = item[6];
+    const altitude = item[7];
     // markers can only be keyboard focusable when they have click listeners
     // open info window when marker is clicked
     marker.addListener("click", () => {
-      infoWindow.setContent(label);
+      infoWindow.setContent('<div>Long Name: ' + label +
+                            '<br>Last heard: ' + lastHeard +
+                            '<br>HW Model: ' + hwModel +
+                            '<br>SNR: ' + snr +
+                            '<br>Battery level: ' + batteryLevel + '% ' +
+                            '<br>Altitude: ' + altitude + 'm ' +
+      '</div>');
       infoWindow.open(map, marker);
     });
     return marker;
   });
 
 
-    //new MarkerClusterer({ markers, map });
     const markerCluster = new markerClusterer.MarkerClusterer({ map, markers });
 }
 
+
+
 function initialize() {
-     var center = new google.maps.LatLng(51.5074, 0.1278);
-        var map = new google.maps.Map(document.getElementById('map_canvas'), {
-          zoom: 3,
+     var center = new google.maps.LatLng(50.5, 30.5);
+        var map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 10,
           center: center,
           mapTypeId: google.maps.MapTypeId.ROADMAP
         });
