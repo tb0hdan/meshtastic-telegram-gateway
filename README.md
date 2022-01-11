@@ -35,6 +35,10 @@ When enabled, this bot listens on specified port and renders device map.
 
 ![Device Details](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/img/gmaps_details.png)
 
+3. Actual Kyiv community map
+
+[Kyiv map](https://mesh.0x21h.net)
+
 
 ## Setup
 
