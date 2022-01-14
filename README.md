@@ -52,3 +52,9 @@ When enabled, this bot listens on specified port and renders device map.
 8. Relogin
 9. Run `./mesh.py`
 10. Enjoy
+
+## Supported bot commands
+
+1. `/start` - basic command to confirm that bot is up and running
+2. `/nodes` - return list of known nodes (including those reachable via other hops)
+
