@@ -104,6 +104,13 @@ pub.subscribe(onNodeInfo, "meshtastic.node.updated")
 interface = meshtastic.serial_interface.SerialInterface(devPath=config['Meshtastic']['Device'])
 
 
+def format_hw(hwModel: str):
+    if hwModel == 'TBEAM':
+        return '<a href="https://meshtastic.org/docs/hardware/supported/tbeam">TBEAM</a>'
+    if hwModel.startswith('TLORA'):
+        return '<a href="https://meshtastic.org/docs/hardware/supported/lora">TLORA</a>'
+    return hwModel
+
 @app.route("/")
 def index_page():
     return render_template("index.html", timestamp=int(time.time()))
@@ -136,10 +143,10 @@ def meshtastic_nodes():
         hwModel = user.get('hwModel', 'unknown')
         snr = nodeInfo.get('snr', 10.0)
         lastHeard = nodeInfo.get('lastHeard', 0)
-        batteryLevel = position.get('batteryLevel', 0)
+        batteryLevel = position.get('batteryLevel', 100)
         altitude = position.get('altitude', 0)
         nodes.append([user.get('longName'), str(round(latitude, 5)),
-                      str(round(longitude, 5)), hwModel, snr, 
+                      str(round(longitude, 5)), format_hw(hwModel), snr,
                       datetime.fromtimestamp(lastHeard).strftime("%d/%m/%Y, %H:%M:%S"),
                       batteryLevel,
                       altitude,

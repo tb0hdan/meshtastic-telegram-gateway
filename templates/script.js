@@ -53,7 +53,13 @@ function initialize() {
         var map = new google.maps.Map(document.getElementById('map'), {
           zoom: 10,
           center: center,
-          mapTypeId: google.maps.MapTypeId.ROADMAP
+          scaleControl: true,
+          mapTypeId: google.maps.MapTypeId.ROADMAP,
+          mapTypeControl: true,
+          mapTypeControlOptions: {
+            style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
+            mapTypeIds: ["roadmap", "satellite"],
+          },
         });
 
     $.get('/data.json', function(data) {
