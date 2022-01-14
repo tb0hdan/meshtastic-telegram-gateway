@@ -23,6 +23,23 @@ Meshtastic T-Beam v1.1
 ![Meshtastic T-Beam v1.1](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/img/tbeam_11.jpeg)
 
 
+## Webapp
+
+When enabled, this bot listens on specified port and renders device map.
+
+1. Cluster markerer
+
+![Cluster Markerer](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/img/gmaps.png)
+
+2. Device details
+
+![Device Details](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/img/gmaps_details.png)
+
+3. Actual Kyiv community map
+
+[Kyiv map](https://mesh.0x21h.net)
+
+
 ## Setup
 
 1. Run `cp mesh.ini.example mesh.ini`
