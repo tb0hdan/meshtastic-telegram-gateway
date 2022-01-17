@@ -1,4 +1,6 @@
 flask
 flask-headers
+haversine
+humanize
 meshtastic==1.2.51
 python-telegram-bot==13.10

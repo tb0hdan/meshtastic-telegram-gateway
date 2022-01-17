@@ -53,8 +53,15 @@ When enabled, this bot listens on specified port and renders device map.
 9. Run `./mesh.py`
 10. Enjoy
 
+
 ## Supported bot commands
+
+### Telegram only
 
 1. `/start` - basic command to confirm that bot is up and running
 2. `/nodes` - return list of known nodes (including those reachable via other hops)
 
+
+### Meshtastic only
+
+1. `/distance` - print distance to other meshtastic devices (in meters)

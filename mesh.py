@@ -5,8 +5,11 @@ import time
 
 from datetime import datetime
 from threading import Thread
+#
 from flask import Flask, jsonify, render_template
 from flask_headers import headers
+import haversine
+import humanize
 
 app = Flask(__name__)
 
@@ -66,6 +69,77 @@ echo_handler = MessageHandler(Filters.text & (~Filters.command), echo)
 dispatcher.add_handler(echo_handler)
 
 
+def get_lat_lon_distance(latlon1: tuple, latlon2: tuple) -> float:
+    """
+    Get distance (in meters) between two geographical points using GPS coordinates
+
+    :param latlon1:
+    :param latlon2:
+    :return:
+    """
+    if type(latlon1) != tuple:
+        raise RuntimeError('Tuple expected for latlon1')
+    if type(latlon2) != tuple:
+        raise RuntimeError('Tuple expected for latlon2')
+    return haversine.haversine(latlon1, latlon2, unit=haversine.Unit.METERS)
+
+
+def processDistanceCommand(packet, interface):
+    fromId = packet.get('fromId')
+    mynodeInfo = interface.nodes.get(fromId)
+    if not mynodeInfo:
+        interface.sendText("distance err: no node info", destinationId=fromId)
+        return
+    position = mynodeInfo.get('position', {})
+    if not position:
+        interface.sendText("distance err: no position", destinationId=fromId)
+        return
+    mylatitude = position.get('latitude')
+    mylongitude = position.get('longitude')
+    if not (mylatitude and mylongitude):
+        interface.sendText("distance err: no lat/lon", destinationId=fromId)
+        return
+    for node in interface.nodes:
+        nodeInfo = interface.nodes.get(node)
+        position = nodeInfo.get('position', {})
+        if not position:
+            continue
+        latitude = position.get('latitude')
+        longitude = position.get('longitude')
+        if not (latitude and longitude):
+            continue
+        user = nodeInfo.get('user', {})
+        if not user:
+            continue
+        nodeId = user.get('id', '')
+        if fromId == nodeId:
+            continue
+        longName = user.get('longName', '')
+        distance = round(get_lat_lon_distance((mylatitude, mylongitude), (latitude, longitude)))
+        distance = humanize.intcomma(distance)
+        msg = '{}: {}m'.format(longName, distance)
+        interface.sendText(msg, destinationId=fromId)
+
+
+def processMeshtasticCommand(packet, interface):
+    toId = packet.get('toId')
+    if toId != '^all':
+        return
+    decoded = packet.get('decoded')
+    fromId = packet.get('fromId')
+    if decoded.get('portnum') != 'TEXT_MESSAGE_APP':
+        # notifications
+        if decoded.get('portnum') == 'POSITION_APP':
+            return
+        #updater.bot.send_message(chat_id=MESHTASTIC_ADMIN, text="%s" % decoded)
+        print(decoded)
+        return
+    msg = decoded.get('text', '')
+    if msg.startswith('/distance'):
+        processDistanceCommand(packet, interface)
+        return
+    interface.sendText("unknown command", destinationId=fromId)
+
 ##
 def onReceive(packet, interface): # called when a packet arrives
     print(f"Received: {packet}")
@@ -86,7 +160,12 @@ def onReceive(packet, interface): # called when a packet arrives
     if nodeInfo is not None:
         userInfo = nodeInfo.get('user')
         longName = userInfo.get('longName')
-    updater.bot.send_message(chat_id=MESHTASTIC_ROOM, text="%s: %s" % (longName, decoded.get('text')))
+    msg = decoded.get('text', '')
+    # skip commands
+    if msg.startswith('/'):
+        processMeshtasticCommand(packet, interface)
+        return
+    updater.bot.send_message(chat_id=MESHTASTIC_ROOM, text="%s: %s" % (longName, msg))
 
 def onConnection(interface, topic=pub.AUTO_TOPIC): # called when we (re)connect to the radio
     # defaults to broadcast, specify a destination ID if you wish
