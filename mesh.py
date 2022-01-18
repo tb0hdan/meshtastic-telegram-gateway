@@ -34,6 +34,8 @@ TELEGRAM_TOKEN = config['Telegram']['Token']
 WEBAPP_PORT = config['WebApp']['Port']
 WEBAPP_APIKEY = config['WebApp']['APIKey']
 WEBAPP_ENABLED = config['WebApp']['Enabled']
+WEBAPP_CENTER_LATITUDE = config['WebApp']['Center_Latitude']
+WEBAPP_CENTER_LONGITUDE = config['WebApp']['Center_Longitude']
 
 interface = None
 
@@ -197,7 +199,11 @@ def index_page():
 @app.route("/script.js")
 @headers({'Content-Type': 'application/javascript'})
 def render_script():
-    return render_template("script.js", api_key=WEBAPP_APIKEY)
+    return render_template("script.js",
+                           api_key=WEBAPP_APIKEY,
+                           center_latitude=WEBAPP_CENTER_LATITUDE,
+                           center_longitude=WEBAPP_CENTER_LONGITUDE,
+    )
 
 @app.route("/data.json")
 def meshtastic_nodes():
