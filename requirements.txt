@@ -1,5 +1,4 @@
 flask
-flask-headers
 haversine
 humanize
 meshtastic==1.2.51
