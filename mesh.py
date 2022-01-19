@@ -78,7 +78,6 @@ class Config:
     def WebappCenterLongitude(self):
         return self.config['WebApp']['Center_Longitude']
 
-
 class TelegramConnection:
     def __init__(self, token: str):
         self.updater = Updater(token=token, use_context=True)
@@ -105,6 +104,7 @@ class MeshtasticConnection:
     @property
     def nodes(self):
         return self.interface.nodes
+
 
 class TelegramBot:
     def __init__(self, config: Config, meshtasticConnection: MeshtasticConnection, telegramConnection: TelegramConnection):
