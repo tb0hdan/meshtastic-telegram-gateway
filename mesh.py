@@ -21,7 +21,6 @@ from telegram.ext import CommandHandler
 from telegram.ext import Updater
 from telegram.ext import MessageHandler, Filters
 
-
 def get_lat_lon_distance(latlon1: tuple, latlon2: tuple) -> float:
     """
     Get distance (in meters) between two geographical points using GPS coordinates
@@ -39,8 +38,11 @@ def get_lat_lon_distance(latlon1: tuple, latlon2: tuple) -> float:
 
 class Config:
     def __init__(self, configPath="mesh.ini"):
+        self.config_path = configPath
+
+    def read(self):
         self.config = configparser.ConfigParser()
-        self.config.read(configPath)
+        self.config.read(self.config_path)
 
     @property
     def MeshtasticAdmin(self):
@@ -103,7 +105,32 @@ class MeshtasticConnection:
 
     @property
     def nodes(self):
-        return self.interface.nodes
+        return self.interface.nodes if self.interface.nodes else []
+
+    @property
+    def nodes_with_info(self):
+        node_list = []
+        for node in self.nodes:
+            node_list.append(self.nodes.get(node))
+        return node_list
+
+    @property
+    def nodes_with_position(self):
+        node_list = []
+        for nodeInfo in self.nodes_with_info:
+            if not nodeInfo.get('position'):
+                continue
+            node_list.append(nodeInfo)
+        return node_list
+
+    @property
+    def nodes_with_user(self):
+        node_list = []
+        for nodeInfo in self.nodes_with_position:
+            if not nodeInfo.get('user'):
+                continue
+            node_list.append(nodeInfo)
+        return node_list
 
 
 class TelegramBot:
@@ -145,10 +172,10 @@ class TelegramBot:
 
 
 class MeshtasticBot:
-    def __init__(self, config: Config, meshtastiConnection: MeshtasticConnection, telegramConnection: TelegramConnection):
+    def __init__(self, config: Config, meshtasticConnection: MeshtasticConnection, telegramConnection: TelegramConnection):
         self.config = config
         self.telegramConnection = telegramConnection
-        self.meshtastiConnection = meshtastiConnection
+        self.meshtasticConnection = meshtasticConnection
         self.telegramBot = telegramBot
         pub.subscribe(self.onReceive, "meshtastic.receive")
         pub.subscribe(self.onConnection, "meshtastic.connection.established")
@@ -278,25 +305,14 @@ class RenderDataView(View):
         return hwModel
 
     def dispatch_request(self):
-        #return render_template(self.template_name, timestamp=int(time.time()))
         nodes = []
-        if not self.meshtasticConnection.nodes:
-            return jsonify(nodes)
-        for node in self.meshtasticConnection.nodes:
-            nodeInfo = self.meshtasticConnection.nodes.get(node)
-            #
-            print(nodeInfo)
-            #
+        for nodeInfo in self.meshtasticConnection.nodes_with_user:
             position = nodeInfo.get('position', {})
-            if not position:
-                continue
-            user = nodeInfo.get('user', {})
-            if not user:
-                continue
             latitude = position.get('latitude')
             longitude = position.get('longitude')
             if not (latitude and longitude):
                 continue
+            user = nodeInfo.get('user', {})
             hwModel = user.get('hwModel', 'unknown')
             snr = nodeInfo.get('snr', 10.0)
             lastHeard = nodeInfo.get('lastHeard', 0)
@@ -309,6 +325,7 @@ class RenderDataView(View):
                           altitude,
                           ])
         return jsonify(nodes)
+
 
 class WebApp:
     def __init__(self, app: Flask, config: Config, meshtasticConnection: MeshtasticConnection):
@@ -329,6 +346,7 @@ class WebApp:
         self.app.add_url_rule('/index.html', view_func=RenderTemplateView.as_view(
             'index_html_page', template_name='index.html'))
 
+
 class WebServer:
     def __init__(self, config: Config, meshtasticConnection: MeshtasticConnection):
         self.meshtasticConnection = meshtasticConnection
@@ -342,8 +360,10 @@ class WebServer:
             t = Thread(target=self.app.run, kwargs={'port': self.config.WebappPort})
             t.start()
 
+
 if __name__ == '__main__':
     config = Config()
+    config.read()
     telegramConnection = TelegramConnection(config.TelegramToken)
     meshtasticConnection = MeshtasticConnection(config.MeshtasticDevice)
     telegramBot = TelegramBot(config, meshtasticConnection, telegramConnection)

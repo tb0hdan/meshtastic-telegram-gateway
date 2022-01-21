@@ -1,5 +1,6 @@
-flask
-haversine
-humanize
-meshtastic==1.2.51
+flask~=2.0.2
+haversine~=2.5.1
+humanize~=3.13.1
+meshtastic==1.2.57
 python-telegram-bot==13.10
+Pypubsub~=4.0.3
