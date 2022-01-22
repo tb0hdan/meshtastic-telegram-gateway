@@ -5,14 +5,15 @@
 import configparser
 import time
 #
-from datetime import datetime
+from datetime import datetime, timedelta
 from threading import Thread
+from urllib.parse import parse_qs
 #
 import haversine
 import humanize
 import meshtastic.serial_interface
 #
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, make_response, request, render_template
 from flask.views import View
 from pony.orm import db_session, Database, Optional, PrimaryKey, Required, select, Set, set_sql_debug
 from pubsub import pub
@@ -93,6 +94,9 @@ class Config:
     def WebappCenterLongitude(self):
         return self.config['WebApp']['Center_Longitude']
 
+    @property
+    def WebappLastHeardDefault(self):
+        return int(self.config['WebApp']['LastHeardDefault'])
 
 class TelegramConnection:
     def __init__(self, token: str):
@@ -380,15 +384,18 @@ class RenderScript(View):
         self.config = config
 
     def dispatch_request(self):
-        return render_template("script.js",
+        response = make_response(render_template("script.js",
                                api_key=self.config.WebappAPIKey,
                                center_latitude=self.config.WebappCenterLatitude,
                                center_longitude=self.config.WebappCenterLongitude,
-                               )
+                               ))
+        response.headers['Content-Type'] = 'application/javascript'
+        return response
 
 
 class RenderDataView(View):
-    def __init__(self, meshtasticConnection: MeshtasticConnection):
+    def __init__(self, config: Config, meshtasticConnection: MeshtasticConnection):
+        self.config = config
         self.meshtasticConnection = meshtasticConnection
 
     @staticmethod
@@ -400,6 +407,14 @@ class RenderDataView(View):
         return hwModel
 
     def dispatch_request(self):
+        qs = parse_qs(request.query_string)
+        tail_value = self.config.WebappLastHeardDefault
+        tail = qs.get(b'tail', [])
+        if len(tail) > 0:
+            try:
+                tail_value = int(tail[0].decode())
+            except Exception as exc:
+                pass
         nodes = []
         for nodeInfo in self.meshtasticConnection.nodes_with_user:
             position = nodeInfo.get('position', {})
@@ -410,12 +425,18 @@ class RenderDataView(View):
             user = nodeInfo.get('user', {})
             hwModel = user.get('hwModel', 'unknown')
             snr = nodeInfo.get('snr', 10.0)
-            lastHeard = nodeInfo.get('lastHeard', 0)
+            lastHeard = int(nodeInfo.get('lastHeard', 0))
+            lastHeardDT = datetime.fromtimestamp(lastHeard)
             batteryLevel = position.get('batteryLevel', 100)
             altitude = position.get('altitude', 0)
+            # tail filter
+            diff = datetime.fromtimestamp(time.time()) - lastHeardDT
+            if diff > timedelta(seconds=tail_value):
+                continue
+            #
             nodes.append([user.get('longName'), str(round(latitude, 5)),
                           str(round(longitude, 5)), self.format_hw(hwModel), snr,
-                          datetime.fromtimestamp(lastHeard).strftime("%d/%m/%Y, %H:%M:%S"),
+                          lastHeardDT.strftime("%d/%m/%Y, %H:%M:%S"),
                           batteryLevel,
                           altitude,
                           ])
@@ -432,7 +453,7 @@ class WebApp:
         self.app.add_url_rule('/script.js', view_func=RenderScript.as_view(
             'script_page', config=self.config))
         self.app.add_url_rule('/data.json', view_func=RenderDataView.as_view(
-            'data_page', meshtasticConnection=self.meshtasticConnection))
+            'data_page', config=self.config, meshtasticConnection=self.meshtasticConnection))
         # Index pages
         self.app.add_url_rule('/', view_func=RenderTemplateView.as_view(
             'root_page', template_name='index.html'))

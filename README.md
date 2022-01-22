@@ -39,6 +39,12 @@ When enabled, this bot listens on specified port and renders device map.
 
 [Kyiv map](https://mesh.0x21h.net)
 
+4. Tail duration
+
+Default value is 3600 seconds. Can be changed using `?tail=xxx` query string, e.g.
+
+[https://mesh.0x21h.net/?tail=7200](https://mesh.0x21h.net/?tail=7200)
+
 
 ## Setup
 

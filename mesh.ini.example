@@ -12,6 +12,7 @@ APIKey = AIxxxxZA
 Enabled = false
 Center_Latitude = 50.5
 Center_Longitude = 30.5
+LastHeardDefault = 3600
 
 [Meshtastic]
 Device = /dev/ttyACM0

@@ -62,7 +62,7 @@ function initialize() {
           },
         });
 
-    $.get('/data.json', function(data) {
+    $.get('/data.json' + window.location.search, function(data) {
         draw_markers(data, map);
     });
 }
