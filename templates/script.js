@@ -29,9 +29,20 @@ function draw_markers(locations, map) {
     const altitude = item[7];
     // markers can only be keyboard focusable when they have click listeners
     // open info window when marker is clicked
+    const urlSearchParams = new URLSearchParams(window.location.search);
+    const params = Object.fromEntries(urlSearchParams.entries())
+    href = window.location.search;
+    if ( params['name'] == undefined ) {
+        if ( href.length > 0 ) {
+            href += '&name=' + label
+        } else {
+            href += '?name=' + label
+        }
+    }
     marker.addListener("click", () => {
-      infoWindow.setContent('<div>Long Name: ' + label +
-                            '<br>Last heard: ' + lastHeard +
+      infoWindow.setContent('<div><a href="' + href + '">' + label + '</a>' +
+                            '<hr>' +
+                            'Last heard: ' + lastHeard +
                             '<br>HW Model: ' + hwModel +
                             '<br>SNR: ' + snr +
                             '<br>Battery level: ' + batteryLevel + '% ' +

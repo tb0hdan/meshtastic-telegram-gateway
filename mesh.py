@@ -409,12 +409,18 @@ class RenderDataView(View):
     def dispatch_request(self):
         qs = parse_qs(request.query_string)
         tail_value = self.config.WebappLastHeardDefault
+        #
         tail = qs.get(b'tail', [])
         if len(tail) > 0:
             try:
                 tail_value = int(tail[0].decode())
             except Exception as exc:
                 pass
+        #
+        name = ''
+        name_qs = qs.get(b'name', [])
+        if len(name_qs) > 0:
+            name = name_qs[0].decode()
         nodes = []
         for nodeInfo in self.meshtasticConnection.nodes_with_user:
             position = nodeInfo.get('position', {})
@@ -425,6 +431,9 @@ class RenderDataView(View):
             user = nodeInfo.get('user', {})
             hwModel = user.get('hwModel', 'unknown')
             snr = nodeInfo.get('snr', 10.0)
+            # FIXME: find better way for handling this
+            if snr is None:
+                snr = 10.0
             lastHeard = int(nodeInfo.get('lastHeard', 0))
             lastHeardDT = datetime.fromtimestamp(lastHeard)
             batteryLevel = position.get('batteryLevel', 100)
@@ -432,6 +441,9 @@ class RenderDataView(View):
             # tail filter
             diff = datetime.fromtimestamp(time.time()) - lastHeardDT
             if diff > timedelta(seconds=tail_value):
+                continue
+            # name filter
+            if len(name) > 0 and user.get('longName') != name:
                 continue
             #
             nodes.append([user.get('longName'), str(round(latitude, 5)),
