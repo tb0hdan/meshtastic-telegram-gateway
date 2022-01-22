@@ -14,12 +14,17 @@ import meshtastic.serial_interface
 #
 from flask import Flask, jsonify, render_template
 from flask.views import View
+from pony.orm import db_session, Database, Optional, PrimaryKey, Required, select, Set, set_sql_debug
 from pubsub import pub
 from telegram import Update
 from telegram.ext import CallbackContext
 from telegram.ext import CommandHandler
 from telegram.ext import Updater
 from telegram.ext import MessageHandler, Filters
+
+# has to be global variable ;-(
+db = Database()
+
 
 def get_lat_lon_distance(latlon1: tuple, latlon2: tuple) -> float:
     """
@@ -45,12 +50,20 @@ class Config:
         self.config.read(self.config_path)
 
     @property
+    def Debug(self):
+        return self.config['DEFAULT']['Debug']
+
+    @property
     def MeshtasticAdmin(self):
         return self.config['Telegram']['Admin']
 
     @property
     def MeshtasticDevice(self):
         return self.config['Meshtastic']['Device']
+
+    @property
+    def MeshtasticDatabaseFile(self):
+        return self.config['Meshtastic']['DatabaseFile']
 
     @property
     def MeshtasticRoom(self):
@@ -80,6 +93,7 @@ class Config:
     def WebappCenterLongitude(self):
         return self.config['WebApp']['Center_Longitude']
 
+
 class TelegramConnection:
     def __init__(self, token: str):
         self.updater = Updater(token=token, use_context=True)
@@ -102,6 +116,9 @@ class MeshtasticConnection:
 
     def sendText(self, *args, **kwargs):
         self.interface.sendText(*args, **kwargs)
+
+    def node_info(self, node_id):
+        return self.interface.nodes.get(node_id)
 
     @property
     def nodes(self):
@@ -134,7 +151,8 @@ class MeshtasticConnection:
 
 
 class TelegramBot:
-    def __init__(self, config: Config, meshtasticConnection: MeshtasticConnection, telegramConnection: TelegramConnection):
+    def __init__(self, config: Config, meshtasticConnection: MeshtasticConnection,
+                 telegramConnection: TelegramConnection):
         self.config = config
         self.telegramConnection = telegramConnection
         self.meshtasticConnection = meshtasticConnection
@@ -171,8 +189,91 @@ class TelegramBot:
         context.bot.send_message(chat_id=update.effective_chat.id, text=table)
 
 
-class MeshtasticBot:
-    def __init__(self, config: Config, meshtasticConnection: MeshtasticConnection, telegramConnection: TelegramConnection):
+class MeshtasticNodeRecord(db.Entity):
+    nodeId = PrimaryKey(str)
+    nodeName = Required(str)
+    lastHeard = Required(datetime)
+    hwModel = Required(str)
+    locations = Set(lambda: MeshtasticLocationRecord)
+    messages = Set(lambda: MeshtasticMessageRecord)
+
+
+class MeshtasticLocationRecord(db.Entity):
+    datetime = Required(datetime)
+    altitude = Required(float)
+    batteryLevel = Required(float)
+    latitude = Required(float)
+    longitude = Required(float)
+    rxSnr = Required(float)
+    node = Optional(MeshtasticNodeRecord)
+
+
+class MeshtasticMessageRecord(db.Entity):
+    datetime = Required(datetime)
+    message = Required(str)
+    node = Optional(MeshtasticNodeRecord)
+
+
+class MeshtasticDB:
+    def __init__(self, db_file: str, connection: MeshtasticConnection):
+        super().__init__()
+        self.connection = connection
+        db.bind(provider='sqlite', filename=db_file, create_db=True)
+        db.generate_mapping(create_tables=True)
+
+    @db_session
+    def getNodeRecord(self, nodeId: str):
+        nodeRecord = MeshtasticNodeRecord.select(lambda n: n.nodeId == nodeId).first()
+        nodeInfo = self.connection.node_info(nodeId)
+        lastHeard = datetime.fromtimestamp(nodeInfo.get('lastHeard', 0))
+        if not nodeRecord:
+            # create new record
+            nodeRecord = MeshtasticNodeRecord(
+                nodeId=nodeId,
+                nodeName=nodeInfo.get('user', {}).get('longName', ''),
+                lastHeard=lastHeard,
+                hwModel=nodeInfo.get('user', {}).get('hwModel', ''),
+            )
+            return nodeRecord
+        # Update lastHeard and return record
+        nodeRecord.lastHeard = lastHeard
+        return nodeRecord
+
+    @db_session
+    def storeMessage(self, packet: dict):
+        fromId = packet.get("fromId")
+        nodeRecord = self.getNodeRecord(fromId)
+        decoded = packet.get('decoded')
+        message = decoded.get('text', '')
+        # Save meshtastic message
+        MeshtasticMessageRecord(
+            datetime=datetime.fromtimestamp(time.time()),
+            message=message,
+            node=nodeRecord,
+        )
+
+    @db_session
+    def storeLocation(self, packet: dict):
+        fromId = packet.get("fromId")
+        nodeRecord = self.getNodeRecord(fromId)
+        # Save location
+        position = packet.get('decoded', {}).get('position', {})
+        # add location to DB
+        MeshtasticLocationRecord(
+            datetime=datetime.fromtimestamp(time.time()),
+            altitude=position.get('altitude', 0),
+            batteryLevel=position.get('batteryLevel', 100),
+            latitude=position.get('latitude', 0),
+            longitude=position.get('longitude', 0),
+            rxSnr=packet.get('rxSnr', 0),
+            node=nodeRecord,
+        )
+
+
+class MeshtasticBot(MeshtasticDB):
+    def __init__(self, config: Config, meshtasticConnection: MeshtasticConnection,
+                 telegramConnection: TelegramConnection):
+        super().__init__(config.MeshtasticDatabaseFile, meshtasticConnection)
         self.config = config
         self.telegramConnection = telegramConnection
         self.meshtasticConnection = meshtasticConnection
@@ -218,25 +319,15 @@ class MeshtasticBot:
             interface.sendText(msg, destinationId=fromId)
 
     def processMeshtasticCommand(self, packet, interface):
-        toId = packet.get('toId')
-        if toId != '^all':
-            return
         decoded = packet.get('decoded')
         fromId = packet.get('fromId')
-        if decoded.get('portnum') != 'TEXT_MESSAGE_APP':
-            # notifications
-            if decoded.get('portnum') == 'POSITION_APP':
-                return
-            #updater.bot.send_message(chat_id=MESHTASTIC_ADMIN, text="%s" % decoded)
-            print(decoded)
-            return
         msg = decoded.get('text', '')
         if msg.startswith('/distance'):
             self.processDistanceCommand(packet, interface)
             return
         interface.sendText("unknown command", destinationId=fromId)
 
-    def onReceive(self, packet, interface): # called when a packet arrives
+    def onReceive(self, packet, interface):  # called when a packet arrives
         print(f"Received: {packet}")
         toId = packet.get('toId')
         if toId != '^all':
@@ -246,10 +337,14 @@ class MeshtasticBot:
         if decoded.get('portnum') != 'TEXT_MESSAGE_APP':
             # notifications
             if decoded.get('portnum') == 'POSITION_APP':
+                self.storeLocation(packet)
                 return
-            #updater.bot.send_message(chat_id=MESHTASTIC_ADMIN, text="%s" % decoded)
+            # updater.bot.send_message(chat_id=MESHTASTIC_ADMIN, text="%s" % decoded)
             print(decoded)
             return
+        # Save messages
+        self.storeMessage(packet)
+        # Process commands and forward messages
         nodeInfo = interface.nodes.get(fromId)
         longName = fromId
         if nodeInfo is not None:
@@ -262,13 +357,13 @@ class MeshtasticBot:
             return
         self.telegramConnection.send_message(chat_id=self.config.MeshtasticRoom, text="%s: %s" % (longName, msg))
 
-    def onConnection(self, interface, topic=pub.AUTO_TOPIC): # called when we (re)connect to the radio
+    def onConnection(self, interface, topic=pub.AUTO_TOPIC):  # called when we (re)connect to the radio
         # defaults to broadcast, specify a destination ID if you wish
-        #interface.sendText("hello mesh")
+        # interface.sendText("hello mesh")
         pass
 
     def onNodeInfo(self, node, interface):
-        #updater.bot.send_message(chat_id=MESHTASTIC_ADMIN, text="%s" % node)
+        # updater.bot.send_message(chat_id=MESHTASTIC_ADMIN, text="%s" % node)
         pass
 
 
@@ -289,7 +384,7 @@ class RenderScript(View):
                                api_key=self.config.WebappAPIKey,
                                center_latitude=self.config.WebappCenterLatitude,
                                center_longitude=self.config.WebappCenterLongitude,
-        )
+                               )
 
 
 class RenderDataView(View):
@@ -364,6 +459,8 @@ class WebServer:
 if __name__ == '__main__':
     config = Config()
     config.read()
+    if config.Debug:
+        set_sql_debug(True)
     telegramConnection = TelegramConnection(config.TelegramToken)
     meshtasticConnection = MeshtasticConnection(config.MeshtasticDevice)
     telegramBot = TelegramBot(config, meshtasticConnection, telegramConnection)

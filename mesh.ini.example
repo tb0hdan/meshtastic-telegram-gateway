@@ -15,3 +15,4 @@ Center_Longitude = 30.5
 
 [Meshtastic]
 Device = /dev/ttyACM0
+DatabaseFile = meshtastic.sqlite

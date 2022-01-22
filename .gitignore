@@ -130,3 +130,4 @@ dmypy.json
 
 # local
 mesh.ini
+meshtastic.sqlite

@@ -4,3 +4,4 @@ humanize~=3.13.1
 meshtastic==1.2.57
 python-telegram-bot==13.10
 Pypubsub~=4.0.3
+pony~=0.7.14
