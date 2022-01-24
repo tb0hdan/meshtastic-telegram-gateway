@@ -3,18 +3,22 @@
 
 #
 import configparser
+import logging
 import time
 #
 from datetime import datetime, timedelta
 from threading import Thread
+from typing import AnyStr
 from urllib.parse import parse_qs
 #
 import haversine
 import humanize
-import meshtastic.serial_interface
+import meshtastic.serial_interface, meshtastic.portnums_pb2
+
 #
 from flask import Flask, jsonify, make_response, request, render_template
 from flask.views import View
+from meshtastic import BROADCAST_ADDR
 from pony.orm import db_session, Database, Optional, PrimaryKey, Required, select, Set, set_sql_debug
 from pubsub import pub
 from telegram import Update
@@ -52,7 +56,10 @@ class Config:
 
     @property
     def Debug(self):
-        return self.config['DEFAULT']['Debug']
+        value = self.config['DEFAULT']['Debug']
+        if value.lower() == 'true':
+            return True
+        return False
 
     @property
     def MeshtasticAdmin(self):
@@ -98,8 +105,29 @@ class Config:
     def WebappLastHeardDefault(self):
         return int(self.config['WebApp']['LastHeardDefault'])
 
+
+def setup_logger(name=__name__, level=logging.INFO):
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+
+    # create console handler and set level to debug
+    ch = logging.StreamHandler()
+    ch.setLevel(level)
+
+    # create formatter
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    # add formatter to ch
+    ch.setFormatter(formatter)
+
+    # add ch to logger
+    logger.addHandler(ch)
+    return logger
+
+
 class TelegramConnection:
-    def __init__(self, token: str):
+    def __init__(self, token: AnyStr, logger: logging.Logger):
+        self.logger = logger
         self.updater = Updater(token=token, use_context=True)
 
     def send_message(self, *args, **kwargs):
@@ -114,9 +142,10 @@ class TelegramConnection:
 
 
 class MeshtasticConnection:
-    def __init__(self, devPath: str):
+    def __init__(self, devPath: AnyStr, logger: logging.Logger):
         # By default will try to find a meshtastic device, otherwise provide a device path like /dev/ttyUSB0
         self.interface = meshtastic.serial_interface.SerialInterface(devPath=devPath)
+        self.logger = logger
 
     def sendText(self, *args, **kwargs):
         self.interface.sendText(*args, **kwargs)
@@ -156,10 +185,12 @@ class MeshtasticConnection:
 
 class TelegramBot:
     def __init__(self, config: Config, meshtasticConnection: MeshtasticConnection,
-                 telegramConnection: TelegramConnection):
+                 telegramConnection: TelegramConnection, logger: logging.Logger):
         self.config = config
-        self.telegramConnection = telegramConnection
+        self.logger = logger
         self.meshtasticConnection = meshtasticConnection
+        self.telegramConnection = telegramConnection
+
         start_handler = CommandHandler('start', self.start)
         node_handler = CommandHandler('nodes', self.nodes)
 
@@ -173,12 +204,12 @@ class TelegramBot:
 
     def echo(self, update: Update, context: CallbackContext):
         if str(update.effective_chat.id) != str(self.config.MeshtasticRoom):
-            print(update.effective_chat.id, self.config.MeshtasticRoom)
+            self.logger.debug(update.effective_chat.id, self.config.MeshtasticRoom)
             return
         full_user = update.effective_user.first_name
         if update.effective_user.last_name is not None:
             full_user += ' ' + update.effective_user.last_name
-        print(update.effective_chat.id, full_user, update.message.text)
+        self.logger.debug(update.effective_chat.id, full_user, update.message.text)
         self.meshtasticConnection.sendText("%s: %s" % (full_user, update.message.text))
 
     def poll(self):
@@ -219,14 +250,15 @@ class MeshtasticMessageRecord(db.Entity):
 
 
 class MeshtasticDB:
-    def __init__(self, db_file: str, connection: MeshtasticConnection):
+    def __init__(self, db_file: AnyStr, connection: MeshtasticConnection, logger: logging.Logger):
         super().__init__()
         self.connection = connection
+        self.logger = logger
         db.bind(provider='sqlite', filename=db_file, create_db=True)
         db.generate_mapping(create_tables=True)
 
     @db_session
-    def getNodeRecord(self, nodeId: str):
+    def getNodeRecord(self, nodeId: AnyStr):
         nodeRecord = MeshtasticNodeRecord.select(lambda n: n.nodeId == nodeId).first()
         nodeInfo = self.connection.node_info(nodeId)
         lastHeard = datetime.fromtimestamp(nodeInfo.get('lastHeard', 0))
@@ -276,9 +308,10 @@ class MeshtasticDB:
 
 class MeshtasticBot(MeshtasticDB):
     def __init__(self, config: Config, meshtasticConnection: MeshtasticConnection,
-                 telegramConnection: TelegramConnection):
-        super().__init__(config.MeshtasticDatabaseFile, meshtasticConnection)
+                 telegramConnection: TelegramConnection, logger: logging.Logger):
+        super().__init__(config.MeshtasticDatabaseFile, meshtasticConnection, logger)
         self.config = config
+        self.logger = logger
         self.telegramConnection = telegramConnection
         self.meshtasticConnection = meshtasticConnection
         self.telegramBot = telegramBot
@@ -322,6 +355,12 @@ class MeshtasticBot(MeshtasticDB):
             msg = '{}: {}m'.format(longName, distance)
             interface.sendText(msg, destinationId=fromId)
 
+    def processPingCommand(self, packet, interface):
+        payload = str.encode("test string")
+        self.logger.debug("Sending ping message to all")
+        interface.sendData(payload, BROADCAST_ADDR, portNum=meshtastic.portnums_pb2.PortNum.REPLY_APP,
+                           wantAck=True, wantResponse=True)
+
     def processMeshtasticCommand(self, packet, interface):
         decoded = packet.get('decoded')
         fromId = packet.get('fromId')
@@ -329,10 +368,13 @@ class MeshtasticBot(MeshtasticDB):
         if msg.startswith('/distance'):
             self.processDistanceCommand(packet, interface)
             return
+        if msg.startswith('/ping'):
+            self.processPingCommand(packet, interface)
+            return
         interface.sendText("unknown command", destinationId=fromId)
 
     def onReceive(self, packet, interface):  # called when a packet arrives
-        print(f"Received: {packet}")
+        self.logger.debug(f"Received: {packet}")
         toId = packet.get('toId')
         if toId != '^all':
             return
@@ -344,7 +386,7 @@ class MeshtasticBot(MeshtasticDB):
                 self.storeLocation(packet)
                 return
             # updater.bot.send_message(chat_id=MESHTASTIC_ADMIN, text="%s" % decoded)
-            print(decoded)
+            self.logger.debug(decoded)
             return
         # Save messages
         self.storeMessage(packet)
@@ -399,7 +441,7 @@ class RenderDataView(View):
         self.meshtasticConnection = meshtasticConnection
 
     @staticmethod
-    def format_hw(hwModel: str):
+    def format_hw(hwModel: AnyStr):
         if hwModel == 'TBEAM':
             return '<a href="https://meshtastic.org/docs/hardware/supported/tbeam">TBEAM</a>'
         if hwModel.startswith('TLORA'):
@@ -456,9 +498,10 @@ class RenderDataView(View):
 
 
 class WebApp:
-    def __init__(self, app: Flask, config: Config, meshtasticConnection: MeshtasticConnection):
+    def __init__(self, app: Flask, config: Config, meshtasticConnection: MeshtasticConnection, logger: logging.Logger):
         self.app = app
         self.config = config
+        self.logger = logger
         self.meshtasticConnection = meshtasticConnection
 
     def register(self):
@@ -476,14 +519,15 @@ class WebApp:
 
 
 class WebServer:
-    def __init__(self, config: Config, meshtasticConnection: MeshtasticConnection):
+    def __init__(self, config: Config, meshtasticConnection: MeshtasticConnection, logger: logging.Logger):
         self.meshtasticConnection = meshtasticConnection
         self.config = config
+        self.logger = logger
         self.app = Flask(__name__)
 
     def run(self):
         if self.config.WebappEnabled:
-            webApp = WebApp(self.app, self.config, self.meshtasticConnection)
+            webApp = WebApp(self.app, self.config, self.meshtasticConnection, self.logger)
             webApp.register()
             t = Thread(target=self.app.run, kwargs={'port': self.config.WebappPort})
             t.start()
@@ -492,13 +536,17 @@ class WebServer:
 if __name__ == '__main__':
     config = Config()
     config.read()
+    level = logging.INFO
     if config.Debug:
+        level = logging.DEBUG
         set_sql_debug(True)
-    telegramConnection = TelegramConnection(config.TelegramToken)
-    meshtasticConnection = MeshtasticConnection(config.MeshtasticDevice)
-    telegramBot = TelegramBot(config, meshtasticConnection, telegramConnection)
-    meshtasticBot = MeshtasticBot(config, meshtasticConnection, telegramConnection)
-    webServer = WebServer(config, meshtasticConnection)
+
+    logger = setup_logger('mesh', level)
+    telegramConnection = TelegramConnection(config.TelegramToken, logger)
+    meshtasticConnection = MeshtasticConnection(config.MeshtasticDevice, logger)
+    telegramBot = TelegramBot(config, meshtasticConnection, telegramConnection, logger)
+    meshtasticBot = MeshtasticBot(config, meshtasticConnection, telegramConnection, logger)
+    webServer = WebServer(config, meshtasticConnection, logger)
     # non-blocking
     webServer.run()
     # blocking
