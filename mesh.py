@@ -527,6 +527,26 @@ class MeshtasticBot(MeshtasticDB):
         self.telegram_connection = telegram_connection
         self.meshtastic_connection = meshtastic_connection
 
+    def on_connection(self, interface, topic=pub.AUTO_TOPIC):
+        """
+        on radio connection event
+
+        :param interface:
+        :param topic:
+        :return:
+        """
+        self.logger.debug("connection on %s topic %s", interface, topic)
+
+    def on_node_info(self, node, interface):
+        """
+        on node information event
+
+        :param node:
+        :param interface:
+        :return:
+        """
+        self.logger.debug("node info %s on interface %s", node, interface)
+
     def subscribe(self) -> None:
         """
         Subscribe to Meshtastic events
@@ -534,6 +554,8 @@ class MeshtasticBot(MeshtasticDB):
         :return:
         """
         pub.subscribe(self.on_receive, "meshtastic.receive")
+        pub.subscribe(self.on_connection, "meshtastic.connection.established")
+        pub.subscribe(self.on_connection, "meshtastic.connection.lost")
 
     @staticmethod
     def process_distance_command(packet, interface) -> None:  # pylint:disable=too-many-locals
