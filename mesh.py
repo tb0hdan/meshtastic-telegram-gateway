@@ -534,8 +534,6 @@ class MeshtasticBot(MeshtasticDB):
         :return:
         """
         pub.subscribe(self.on_receive, "meshtastic.receive")
-        pub.subscribe(self.on_connection, "meshtastic.connection.established")
-        pub.subscribe(self.on_node_info, "meshtastic.node.updated")
 
     @staticmethod
     def process_distance_command(packet, interface) -> None:  # pylint:disable=too-many-locals
@@ -651,26 +649,6 @@ class MeshtasticBot(MeshtasticDB):
             self.process_meshtastic_command(packet, interface)
             return
         self.telegram_connection.send_message(chat_id=self.config.meshtastic_room, text="%s: %s" % (long_name, msg))
-
-    @staticmethod
-    def on_connection(_) -> None:
-        """
-        onConnection is called when we (re)connect to the radio
-
-        :param _:
-        :return:
-        """
-        return
-
-    @staticmethod
-    def on_node_info(_) -> None:
-        """
-        onNodeInfo is called when node information packet arrives
-
-        :param _:
-        :return:
-        """
-        return
 
 
 class RenderTemplateView(View):
