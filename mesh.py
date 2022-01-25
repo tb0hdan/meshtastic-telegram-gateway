@@ -789,7 +789,7 @@ class WebApp:  # pylint:disable=too-few-public-methods
         self.app.add_url_rule('/script.js', view_func=RenderScript.as_view(
             'script_page', config=self.config))
         self.app.add_url_rule('/data.json', view_func=RenderDataView.as_view(
-            'data_page', config=self.config, meshtastic_connection=self.meshtastic_connection))
+            'data_page', config=self.config, meshtastic_connection=self.meshtastic_connection, logger=self.logger))
         # Index pages
         self.app.add_url_rule('/', view_func=RenderTemplateView.as_view(
             'root_page', template_name='index.html'))
