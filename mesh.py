@@ -569,16 +569,16 @@ class MeshtasticBot(MeshtasticDB):
         from_id = packet.get('fromId')
         mynode_info = interface.nodes.get(from_id)
         if not mynode_info:
-            interface.send_text("distance err: no node info", destinationId=from_id)
+            interface.sendText("distance err: no node info", destinationId=from_id)
             return
         position = mynode_info.get('position', {})
         if not position:
-            interface.send_text("distance err: no position", destinationId=from_id)
+            interface.sendText("distance err: no position", destinationId=from_id)
             return
         my_latitude = position.get('latitude')
         my_longitude = position.get('longitude')
         if not (my_latitude and my_longitude):
-            interface.send_text("distance err: no lat/lon", destinationId=from_id)
+            interface.sendText("distance err: no lat/lon", destinationId=from_id)
             return
         for node in interface.nodes:
             node_info = interface.nodes.get(node)
@@ -599,7 +599,7 @@ class MeshtasticBot(MeshtasticDB):
             distance = round(get_lat_lon_distance((my_latitude, my_longitude), (latitude, longitude)))
             distance = humanize.intcomma(distance)
             msg = '{}: {}m'.format(long_name, distance)
-            interface.send_text(msg, destinationId=from_id)
+            interface.sendText(msg, destinationId=from_id)
 
     @staticmethod
     def process_ping_command(_, interface) -> None:
@@ -633,7 +633,7 @@ class MeshtasticBot(MeshtasticDB):
         if msg.startswith('/ping'):
             self.process_ping_command(packet, interface)
             return
-        interface.send_text("unknown command", destinationId=from_id)
+        self.meshtastic_connection.send_text("unknown command", destinationId=from_id)
 
     def on_receive(self, packet, interface) -> None:
         """
@@ -845,12 +845,7 @@ class WebServer:  # pylint:disable=too-few-public-methods
             thread.start()
 
 
-def main() -> None:
-    """
-    Nice and cozy main()
-
-    :return:
-    """
+if __name__ == '__main__':
     config = Config()
     config.read()
     level = logging.INFO
@@ -869,7 +864,3 @@ def main() -> None:
     web_server.run()
     # blocking
     telegram_bot.poll()
-
-
-if __name__ == '__main__':
-    main()
