@@ -362,12 +362,12 @@ class TelegramBot:
         :return:
         """
         if str(update.effective_chat.id) != str(self.config.meshtastic_room):
-            self.logger.debug(update.effective_chat.id, self.config.meshtastic_room)
+            self.logger.debug("%d %s", update.effective_chat.id, self.config.meshtastic_room)
             return
         full_user = update.effective_user.first_name
         if update.effective_user.last_name is not None:
             full_user += ' ' + update.effective_user.last_name
-        self.logger.debug(update.effective_chat.id, full_user, update.message.text)
+        self.logger.debug("%d %s %s", update.effective_chat.id, full_user, update.message.text)
         self.meshtastic_connection.send_text("%s: %s" % (full_user, update.message.text))
 
     def poll(self) -> None:
