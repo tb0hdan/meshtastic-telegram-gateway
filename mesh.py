@@ -4,6 +4,7 @@
 #
 import configparser
 import logging
+import sys
 import time
 #
 from datetime import datetime, timedelta
@@ -39,7 +40,7 @@ from telegram.ext import MessageHandler, Filters
 
 # has to be global variable ;-(
 DB = Database()
-
+VERSION = open('VERSION', 'r').read().rstrip('\n')
 
 def get_lat_lon_distance(latlon1: tuple, latlon2: tuple) -> float:
     """
@@ -189,12 +190,14 @@ class Config:
         return int(self.config['WebApp']['LastHeardDefault'])
 
 
-def setup_logger(name=__name__, level=logging.INFO) -> logging.Logger:
+def setup_logger(name=__name__, level=logging.INFO, version=VERSION) -> logging.Logger:
     """
     Set up logger and return usable instance
 
     :param name:
     :param level:
+    :param version:
+
     :return:
     """
     logger = logging.getLogger(name)
@@ -205,7 +208,8 @@ def setup_logger(name=__name__, level=logging.INFO) -> logging.Logger:
     channel.setLevel(level)
 
     # create formatter
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    format = '%(asctime)s - %(name)s/v{} - %(levelname)s - %(message)s'.format(version)
+    formatter = logging.Formatter(format)
 
     # add formatter to ch
     channel.setFormatter(formatter)
@@ -526,6 +530,8 @@ class MeshtasticBot(MeshtasticDB):
         self.logger = logger
         self.telegram_connection = telegram_connection
         self.meshtastic_connection = meshtastic_connection
+        # track ping request/reply
+        self.ping_container = {}
 
     def on_connection(self, interface, topic=pub.AUTO_TOPIC):
         """
@@ -601,8 +607,7 @@ class MeshtasticBot(MeshtasticDB):
             msg = '{}: {}m'.format(long_name, distance)
             interface.sendText(msg, destinationId=from_id)
 
-    @staticmethod
-    def process_ping_command(_, interface) -> None:
+    def process_ping_command(self, packet, interface) -> None:
         """
         Process /ping Meshtastic command
 
@@ -610,6 +615,8 @@ class MeshtasticBot(MeshtasticDB):
         :param interface:
         :return:
         """
+        from_id = packet.get('fromId')
+        self.ping_container[from_id] = {'timestamp': time.time()}
         payload = str.encode("test string")
         interface.sendData(payload,
                            MESHTASTIC_BROADCAST_ADDR,
@@ -635,6 +642,23 @@ class MeshtasticBot(MeshtasticDB):
             return
         self.meshtastic_connection.send_text("unknown command", destinationId=from_id)
 
+    def process_pong(self, packet):
+        from_id = packet.get('fromId')
+        to_id = packet.get('toId')
+        rx_time = packet.get('rxTime')
+        rx_snr = packet.get('rxSnr')
+        processing_time = time.time() - rx_time
+        # node info
+        node_info = self.meshtastic_connection.node_info(to_id)
+        user_info = node_info.get('user', {})
+        remote_name = user_info.get('longName', to_id)
+        #
+        if self.ping_container.get(from_id, {}):
+            ts = self.ping_container[from_id].get('timestamp', 0)
+            processing_time += time.time() - ts
+        msg = "Pong from {} at {:.2f} SNR time={:.3f}s".format(remote_name, rx_snr, processing_time)
+        self.meshtastic_connection.send_text(msg, destinationId=from_id)
+
     def on_receive(self, packet, interface) -> None:
         """
         onReceive is called when a packet arrives
@@ -645,8 +669,6 @@ class MeshtasticBot(MeshtasticDB):
         """
         self.logger.debug(f"Received: {packet}")
         to_id = packet.get('toId')
-        if to_id != '^all':
-            return
         decoded = packet.get('decoded')
         from_id = packet.get('fromId')
         if decoded.get('portnum') != 'TEXT_MESSAGE_APP':
@@ -654,8 +676,15 @@ class MeshtasticBot(MeshtasticDB):
             if decoded.get('portnum') == 'POSITION_APP':
                 self.store_location(packet)
                 return
+            # pong
+            if decoded.get('portnum') == 'REPLY_APP':
+                self.process_pong(packet)
+                return
             # updater.bot.send_message(chat_id=MESHTASTIC_ADMIN, text="%s" % decoded)
-            self.logger.debug(decoded)
+            # self.logger.debug(decoded)
+            return
+        # ignore non-broadcast messages
+        if to_id != MESHTASTIC_BROADCAST_ADDR:
             return
         # Save messages
         self.store_message(packet)
@@ -841,7 +870,8 @@ class WebServer:  # pylint:disable=too-few-public-methods
         if self.config.web_app_enabled:
             web_app = WebApp(self.app, self.config, self.meshtastic_connection, self.logger)
             web_app.register()
-            thread = Thread(target=self.app.run, kwargs={'port': self.config.web_app_port})
+            thread = Thread(target=self.app.run, kwargs={'port': self.config.web_app_port},
+                            daemon=True)
             thread.start()
 
 
@@ -853,7 +883,7 @@ if __name__ == '__main__':
         level = logging.DEBUG
         set_sql_debug(True)
 
-    logger = setup_logger('mesh', level)
+    logger = setup_logger('mesh', level, VERSION)
     telegram_connection = TelegramConnection(config.telegram_token, logger)
     meshtastic_connection = MeshtasticConnection(config.meshtastic_device, logger)
     telegram_bot = TelegramBot(config, meshtastic_connection, telegram_connection, logger)
@@ -863,4 +893,8 @@ if __name__ == '__main__':
     # non-blocking
     web_server.run()
     # blocking
-    telegram_bot.poll()
+    try:
+        telegram_bot.poll()
+    except KeyboardInterrupt:
+        logger.info('Exit requested...')
+        sys.exit(0)

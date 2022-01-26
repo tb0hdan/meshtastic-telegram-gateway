@@ -1,5 +1,5 @@
 # meshtastic-telegram-gateway
-telegram bot that forwards messages to and from meshtastic device
+telegram bot that forwards messages to and from Meshtastic device
 
 The purpose of this bot is to act as a bridge between local Meshtastic conference and
 Telegram chat room. Nicks (Your Name field for Meshtastic) are passed through in both directions.
@@ -56,7 +56,7 @@ Default value is 3600 seconds. Can be changed using `?tail=xxx` query string, e.
 6. Run `sudo pip3 install -r requirements.txt`
 7. Run `gpasswd -a youruser dialout`
 8. Relogin
-9. Run `./mesh.py`
+9. Run `make run`
 10. Enjoy
 
 
@@ -70,4 +70,18 @@ Default value is 3600 seconds. Can be changed using `?tail=xxx` query string, e.
 
 ### Meshtastic only
 
-1. `/distance` - print distance to other meshtastic devices (in meters)
+1. `/distance` - print distance to other Meshtastic devices (in meters)
+Sample answer:
+
+```
+UR5YBM-aa60: 19m
+UT3ULJ: 2,316m
+```
+
+
+2. `/ping` - ping all Meshtastic devices on current channel and get response.
+Sample answer:
+
+```
+Pong from UR5YBM-aa60 at 10.00 SNR time=9.632s
+```

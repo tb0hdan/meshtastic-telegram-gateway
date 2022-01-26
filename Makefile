@@ -7,3 +7,6 @@ lint:
 
 mypy:
 	@mypy mesh.py
+
+run:
+	@while :; do ./mesh.py; sleep 3; done
