@@ -38,6 +38,7 @@ from telegram.ext import CallbackContext
 from telegram.ext import CommandHandler
 from telegram.ext import Updater
 from telegram.ext import MessageHandler, Filters
+from werkzeug.serving import make_server
 
 # has to be global variable ;-(
 DB = Database()
@@ -72,18 +73,18 @@ def setup_logger(name=__name__, level=logging.INFO, version=VERSION) -> logging.
     logger.setLevel(level)
 
     # create console handler and set level to debug
-    channel = logging.StreamHandler()
-    channel.setLevel(level)
+    handler = logging.StreamHandler()
+    handler.setLevel(level)
 
     # create formatter
     format = '%(asctime)s - %(name)s/v{} - %(levelname)s - %(message)s'.format(version)
     formatter = logging.Formatter(format)
 
     # add formatter to ch
-    channel.setFormatter(formatter)
+    handler.setFormatter(formatter)
 
     # add ch to logger
-    logger.addHandler(channel)
+    logger.addHandler(handler)
     return logger
 
 
@@ -771,8 +772,8 @@ class MeshtasticBot:
     def process_pong(self, packet):
         from_id = packet.get('fromId')
         to_id = packet.get('toId')
-        rx_time = packet.get('rxTime')
-        rx_snr = packet.get('rxSnr')
+        rx_time = packet.get('rxTime', 0)
+        rx_snr = packet.get('rxSnr', 0)
         processing_time = time.time() - rx_time
         # node info
         node_info = self.meshtastic_connection.node_info(to_id)
@@ -976,6 +977,23 @@ class WebApp:  # pylint:disable=too-few-public-methods
             'index_html_page', template_name='index.html'))
 
 
+class ServerThread(Thread):
+    def __init__(self, app: Flask, config: Config, logger: logging.Logger):
+        Thread.__init__(self)
+        self.config = config
+        self.logger = logger
+        self.server = make_server('', self.config.web_app_port, app)
+        self.ctx = app.app_context()
+        self.ctx.push()
+
+    def run(self) -> None:
+        self.logger.info('starting server')
+        self.server.serve_forever()
+
+    def shutdown(self) -> None:
+        self.server.shutdown()
+
+
 class WebServer:  # pylint:disable=too-few-public-methods
     """
     Web server wrapper around Flask app
@@ -986,6 +1004,7 @@ class WebServer:  # pylint:disable=too-few-public-methods
         self.config = config
         self.logger = logger
         self.app = Flask(__name__)
+        self.server = None
 
     def run(self) -> None:
         """
@@ -996,9 +1015,11 @@ class WebServer:  # pylint:disable=too-few-public-methods
         if self.config.web_app_enabled:
             web_app = WebApp(self.app, self.config, self.meshtastic_connection, self.logger)
             web_app.register()
-            thread = Thread(target=self.app.run, kwargs={'port': self.config.web_app_port},
-                            daemon=True)
-            thread.start()
+            self.server = ServerThread(self.app, self.config, self.logger)
+            self.server.start()
+
+    def shutdown(self) -> None:
+        self.server.shutdown()
 
 
 if __name__ == '__main__':
@@ -1031,5 +1052,6 @@ if __name__ == '__main__':
     try:
         telegram_bot.poll()
     except KeyboardInterrupt:
+        web_server.shutdown()
         logger.info('Exit requested...')
         sys.exit(0)
