@@ -1,3 +1,4 @@
+aprslib==0.7.0
 flask~=2.0.2
 haversine~=2.5.1
 humanize~=3.13.1
