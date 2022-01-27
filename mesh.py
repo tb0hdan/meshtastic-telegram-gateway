@@ -313,7 +313,7 @@ class MeshtasticConnection:
         :param node_id:
         :return:
         """
-        return self.interface.nodes.get(node_id)
+        return self.interface.nodes.get(node_id, {})
 
     @property
     def nodes(self) -> Dict:
@@ -430,7 +430,7 @@ class MeshtasticDB:
         :return:
         """
         node_record = MeshtasticNodeRecord.select(lambda n: n.nodeId == node_id).first()
-        node_info = self.connection.node_info(node_id, {})
+        node_info = self.connection.node_info(node_id)
         last_heard = datetime.fromtimestamp(node_info.get('lastHeard', 0))
         if not node_record:
             # create new record
