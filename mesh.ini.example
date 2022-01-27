@@ -17,3 +17,10 @@ LastHeardDefault = 3600
 [Meshtastic]
 Device = /dev/ttyACM0
 DatabaseFile = meshtastic.sqlite
+
+[APRS]
+Enabled = false
+ToMeshtastic = false
+FromMeshtastic = false
+CallSign = N0CALL-1
+Password = QwertyLOL123

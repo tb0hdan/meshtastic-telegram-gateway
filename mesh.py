@@ -17,6 +17,7 @@ from typing import (
 )
 from urllib.parse import parse_qs
 #
+import aprslib
 import flask
 import haversine  # type: ignore
 import humanize  # type: ignore
@@ -55,6 +56,35 @@ def get_lat_lon_distance(latlon1: tuple, latlon2: tuple) -> float:
     if not isinstance(latlon2, tuple):
         raise RuntimeError('Tuple expected for latlon2')
     return haversine.haversine(latlon1, latlon2, unit=haversine.Unit.METERS)
+
+
+def setup_logger(name=__name__, level=logging.INFO, version=VERSION) -> logging.Logger:
+    """
+    Set up logger and return usable instance
+
+    :param name:
+    :param level:
+    :param version:
+
+    :return:
+    """
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+
+    # create console handler and set level to debug
+    channel = logging.StreamHandler()
+    channel.setLevel(level)
+
+    # create formatter
+    format = '%(asctime)s - %(name)s/v{} - %(levelname)s - %(message)s'.format(version)
+    formatter = logging.Formatter(format)
+
+    # add formatter to ch
+    channel.setFormatter(formatter)
+
+    # add ch to logger
+    logger.addHandler(channel)
+    return logger
 
 
 class Config:
@@ -169,7 +199,7 @@ class Config:
 
         :return:
         """
-        return self.config['WebApp']['Center_Latitude']
+        return float(self.config['WebApp']['Center_Latitude'])
 
     @property
     def web_app_center_longitude(self) -> float:
@@ -178,7 +208,7 @@ class Config:
 
         :return:
         """
-        return self.config['WebApp']['Center_Longitude']
+        return float(self.config['WebApp']['Center_Longitude'])
 
     @property
     def web_app_last_heard_default(self) -> SupportsInt:
@@ -189,34 +219,34 @@ class Config:
         """
         return int(self.config['WebApp']['LastHeardDefault'])
 
+    @property
+    def aprs_enabled(self) -> bool:
+        value = self.config['APRS']['Enabled']
+        if value.lower() == 'true':
+            return True
+        return False
 
-def setup_logger(name=__name__, level=logging.INFO, version=VERSION) -> logging.Logger:
-    """
-    Set up logger and return usable instance
+    @property
+    def aprs_to_meshtastic_enabled(self) -> bool:
+        value = self.config['APRS']['ToMeshtastic']
+        if value.lower() == 'true':
+            return True
+        return False
 
-    :param name:
-    :param level:
-    :param version:
+    @property
+    def aprs_from_meshtastic_enabled(self) -> bool:
+        value = self.config['APRS']['FromMeshtastic']
+        if value.lower() == 'true':
+            return True
+        return False
 
-    :return:
-    """
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
+    @property
+    def aprs_callsign(self) -> AnyStr:
+        return self.config['APRS']['Callsign']
 
-    # create console handler and set level to debug
-    channel = logging.StreamHandler()
-    channel.setLevel(level)
-
-    # create formatter
-    format = '%(asctime)s - %(name)s/v{} - %(levelname)s - %(message)s'.format(version)
-    formatter = logging.Formatter(format)
-
-    # add formatter to ch
-    channel.setFormatter(formatter)
-
-    # add ch to logger
-    logger.addHandler(channel)
-    return logger
+    @property
+    def aprs_password(self) -> AnyStr:
+        return self.config['APRS']['Password']
 
 
 class TelegramConnection:
@@ -335,76 +365,6 @@ class MeshtasticConnection:
         return node_list
 
 
-class TelegramBot:
-    """
-    Telegram bot
-    """
-
-    def __init__(self, config: Config, meshtastic_connection: MeshtasticConnection,
-                 telegram_connection: TelegramConnection, logger: logging.Logger):
-        self.config = config
-        self.logger = logger
-        self.meshtastic_connection = meshtastic_connection
-        self.telegram_connection = telegram_connection
-
-        start_handler = CommandHandler('start', self.start)
-        node_handler = CommandHandler('nodes', self.nodes)
-        dispatcher = self.telegram_connection.dispatcher
-
-        dispatcher.add_handler(start_handler)
-        dispatcher.add_handler(node_handler)
-
-        echo_handler = MessageHandler(Filters.text & (~Filters.command), self.echo)
-        dispatcher.add_handler(echo_handler)
-
-    def echo(self, update: Update, _) -> None:
-        """
-        Telegram bot echo handler. Does actual message forwarding
-
-        :param update:
-        :param _:
-        :return:
-        """
-        if str(update.effective_chat.id) != str(self.config.meshtastic_room):
-            self.logger.debug("%d %s", update.effective_chat.id, self.config.meshtastic_room)
-            return
-        full_user = update.effective_user.first_name
-        if update.effective_user.last_name is not None:
-            full_user += ' ' + update.effective_user.last_name
-        self.logger.debug("%d %s %s", update.effective_chat.id, full_user, update.message.text)
-        self.meshtastic_connection.send_text("%s: %s" % (full_user, update.message.text))
-
-    def poll(self) -> None:
-        """
-        Telegram bot poller. Uses connection under the hood
-
-        :return:
-        """
-        self.telegram_connection.poll()
-
-    @staticmethod
-    def start(update: Update, context: CallbackContext) -> None:
-        """
-        Telegram /start command handler.
-
-        :param update:
-        :param context:
-        :return:
-        """
-        context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
-
-    def nodes(self, update: Update, context: CallbackContext) -> None:
-        """
-        Returns list of nodes to user
-
-        :param update:
-        :param context:
-        :return:
-        """
-        table = self.meshtastic_connection.interface.showNodes(includeSelf=False)
-        context.bot.send_message(chat_id=update.effective_chat.id, text=table)
-
-
 class MeshtasticNodeRecord(DB.Entity):  # pylint:disable=too-few-public-methods
     """
     MeshtasticNodeRecord: node record representation in DB
@@ -439,13 +399,23 @@ class MeshtasticMessageRecord(DB.Entity):  # pylint:disable=too-few-public-metho
     node = Optional(MeshtasticNodeRecord)
 
 
+class MeshtasticFilterRecord(DB.Entity):
+    """
+    MeshtasticFilterRecord: filter representation in DB
+    """
+    # meshtastic, telegram, etc...
+    connection = Required(str)
+    item = Required(str)
+    reason = Required(str)
+    active = Required(bool)
+
+
 class MeshtasticDB:
     """
     Meshtastic events database
     """
 
     def __init__(self, db_file: AnyStr, connection: MeshtasticConnection, logger: logging.Logger):
-        super().__init__()
         self.connection = connection
         self.logger = logger
         DB.bind(provider='sqlite', filename=db_file, create_db=True)
@@ -518,15 +488,171 @@ class MeshtasticDB:
         )
 
 
-class MeshtasticBot(MeshtasticDB):
+class Filter:
+    connection_type = ""
+    def __init__(self, db: MeshtasticDB, config: Config, connection: MeshtasticConnection, logger: logging.Logger):
+        self.db = db
+        self.connection = connection
+        self.config = config
+        self.logger = logger
+
+
+class TelegramFilter(Filter):
+    def __init__(self, db: MeshtasticDB, config: Config, connection: MeshtasticConnection, logger: logging.Logger):
+        super().__init__(db, config, connection, logger)
+        self.db = db
+        self.config = config
+        self.connection = connection
+        self.connection_type = "Telegram"
+        self.logger = logger
+
+
+class MeshtasticFilter(Filter):
+    def __init__(self, db: MeshtasticDB, config: Config, connection: MeshtasticConnection, logger: logging.Logger):
+        super().__init__(db, config, connection, logger)
+        self.db = db
+        self.config = config
+        self.connection = connection
+        self.connection_type = "Meshtastic"
+        self.logger = logger
+
+
+class CallSignFilter(Filter):
+    def __init__(self, db: MeshtasticDB, config: Config, connection: MeshtasticConnection, logger: logging.Logger):
+        super().__init__(db, config, connection, logger)
+        self.db = db
+        self.config = config
+        self.connection = connection
+        self.connection_type = "Callsign"
+        self.logger = logger
+
+
+class APRSStreamer:
+    def __init__(self, config: Config, logger: logging.Logger, callsign_filter: CallSignFilter):
+        self.aprs_is = None
+        self.callsign_filter = callsign_filter
+        self.config = config
+        self.logger = logger
+        self.exit = False
+
+    def send_packet(self, packet):
+        if not self.config.aprs_from_meshtastic_enabled:
+            return
+        self.aprs_is.sendall(packet)
+
+    def process(self, packet):
+        if not self.config.aprs_to_meshtastic_enabled:
+            return
+        self.logger.debug(packet)
+
+    def callback(self, packet):
+        pub.sendMessage('APRS', packet=packet)
+
+    def run_loop(self):
+        self.aprs_is = aprslib.IS(self.config.aprs_callsign,
+                                  self.config.aprs_password,
+                                  host='euro.aprs2.net',
+                                  port=14580)
+        self.aprs_is.set_filter('r/%f/%f/50' % (self.config.web_app_center_latitude,
+                                                self.config.web_app_center_longitude))
+        while not self.exit:
+            try:
+                self.aprs_is.connect()
+                self.aprs_is.consumer(self.callback, immortal=True)
+            except KeyboardInterrupt:
+                break
+            except aprslib.exceptions.ConnectionDrop:
+                self.logger.debug("aprs conn drop")
+            except aprslib.exceptions.LoginError:
+                self.logger.debug("aprs login error")
+
+    def run(self):
+        if self.config.aprs_enabled:
+            pub.subscribe(self.process, 'APRS')
+            thread = Thread(target=self.run_loop, daemon=True)
+            thread.start()
+
+class TelegramBot:
+    """
+    Telegram bot
+    """
+
+    def __init__(self, config: Config, meshtastic_connection: MeshtasticConnection,
+                 telegram_connection: TelegramConnection, logger: logging.Logger, filter: TelegramFilter):
+        self.config = config
+        self.filter = filter
+        self.logger = logger
+        self.meshtastic_connection = meshtastic_connection
+        self.telegram_connection = telegram_connection
+
+        start_handler = CommandHandler('start', self.start)
+        node_handler = CommandHandler('nodes', self.nodes)
+        dispatcher = self.telegram_connection.dispatcher
+
+        dispatcher.add_handler(start_handler)
+        dispatcher.add_handler(node_handler)
+
+        echo_handler = MessageHandler(Filters.text & (~Filters.command), self.echo)
+        dispatcher.add_handler(echo_handler)
+
+    def echo(self, update: Update, _) -> None:
+        """
+        Telegram bot echo handler. Does actual message forwarding
+
+        :param update:
+        :param _:
+        :return:
+        """
+        if str(update.effective_chat.id) != str(self.config.meshtastic_room):
+            self.logger.debug("%d %s", update.effective_chat.id, self.config.meshtastic_room)
+            return
+        full_user = update.effective_user.first_name
+        if update.effective_user.last_name is not None:
+            full_user += ' ' + update.effective_user.last_name
+        self.logger.debug("%d %s %s", update.effective_chat.id, full_user, update.message.text)
+        self.meshtastic_connection.send_text("%s: %s" % (full_user, update.message.text))
+
+    def poll(self) -> None:
+        """
+        Telegram bot poller. Uses connection under the hood
+
+        :return:
+        """
+        self.telegram_connection.poll()
+
+    @staticmethod
+    def start(update: Update, context: CallbackContext) -> None:
+        """
+        Telegram /start command handler.
+
+        :param update:
+        :param context:
+        :return:
+        """
+        context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
+
+    def nodes(self, update: Update, context: CallbackContext) -> None:
+        """
+        Returns list of nodes to user
+
+        :param update:
+        :param context:
+        :return:
+        """
+        table = self.meshtastic_connection.interface.showNodes(includeSelf=False)
+        context.bot.send_message(chat_id=update.effective_chat.id, text=table)
+
+
+class MeshtasticBot:
     """
     Meshtastic bot
     """
 
-    def __init__(self, config: Config, meshtastic_connection: MeshtasticConnection,
-                 telegram_connection: TelegramConnection, logger: logging.Logger):
-        super().__init__(config.meshtastic_database_file, meshtastic_connection, logger)
+    def __init__(self, db: MeshtasticDB, config: Config, meshtastic_connection: MeshtasticConnection,
+                 telegram_connection: TelegramConnection, logger: logging.Logger, filter: MeshtasticFilter):
+        self.db = db
         self.config = config
+        self.filter = filter
         self.logger = logger
         self.telegram_connection = telegram_connection
         self.meshtastic_connection = meshtastic_connection
@@ -674,7 +800,7 @@ class MeshtasticBot(MeshtasticDB):
         if decoded.get('portnum') != 'TEXT_MESSAGE_APP':
             # notifications
             if decoded.get('portnum') == 'POSITION_APP':
-                self.store_location(packet)
+                self.db.store_location(packet)
                 return
             # pong
             if decoded.get('portnum') == 'REPLY_APP':
@@ -687,7 +813,7 @@ class MeshtasticBot(MeshtasticDB):
         if to_id != MESHTASTIC_BROADCAST_ADDR:
             return
         # Save messages
-        self.store_message(packet)
+        self.db.store_message(packet)
         # Process commands and forward messages
         node_info = interface.nodes.get(from_id)
         long_name = from_id
@@ -884,13 +1010,22 @@ if __name__ == '__main__':
         set_sql_debug(True)
 
     logger = setup_logger('mesh', level, VERSION)
+    #
     telegram_connection = TelegramConnection(config.telegram_token, logger)
     meshtastic_connection = MeshtasticConnection(config.meshtastic_device, logger)
-    telegram_bot = TelegramBot(config, meshtastic_connection, telegram_connection, logger)
-    meshtastic_bot = MeshtasticBot(config, meshtastic_connection, telegram_connection, logger)
+    db = MeshtasticDB(config.meshtastic_database_file, meshtastic_connection, logger)
+    # Initialize filters (node, user, etc)
+    callsign_filter = CallSignFilter(db, config, meshtastic_connection, logger)
+    telegram_filter = TelegramFilter(db, config, meshtastic_connection, logger)
+    meshtastic_filter = MeshtasticFilter(db, config, meshtastic_connection, logger)
+    #
+    aprs_streamer = APRSStreamer(config, logger, callsign_filter)
+    telegram_bot = TelegramBot(config, meshtastic_connection, telegram_connection, logger, telegram_filter)
+    meshtastic_bot = MeshtasticBot(db, config, meshtastic_connection, telegram_connection, logger, meshtastic_filter)
     meshtastic_bot.subscribe()
     web_server = WebServer(config, meshtastic_connection, logger)
     # non-blocking
+    aprs_streamer.run()
     web_server.run()
     # blocking
     try:
