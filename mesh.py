@@ -1022,7 +1022,7 @@ class WebServer:  # pylint:disable=too-few-public-methods
         self.server.shutdown()
 
 
-def main():
+if __name__ == '__main__':
     config = Config()
     config.read()
     level = logging.INFO
@@ -1055,6 +1055,3 @@ def main():
         web_server.shutdown()
         logger.info('Exit requested...')
         sys.exit(0)
-
-if __name__ == '__main__':
-    main()
