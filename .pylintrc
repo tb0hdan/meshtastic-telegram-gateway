@@ -5,4 +5,4 @@ jobs=0
 max-line-length=120
 
 [MESSAGES CONTROL]
-disable=import-error,wrong-import-order
+disable=import-error,wrong-import-order,too-many-lines,too-few-public-methods

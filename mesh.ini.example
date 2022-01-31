@@ -15,6 +15,7 @@ Center_Longitude = 30.5
 LastHeardDefault = 3600
 
 [Meshtastic]
+Admin = !deadbeef
 Device = /dev/ttyACM0
 DatabaseFile = meshtastic.sqlite
 
