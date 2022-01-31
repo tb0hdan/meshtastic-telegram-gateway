@@ -717,6 +717,10 @@ class TelegramBot:
         table = self.meshtastic_connection.interface.showNodes(includeSelf=False)
         context.bot.send_message(chat_id=update.effective_chat.id, text=table)
 
+    def run(self):
+        t = Thread(target=self.poll)
+        t.start()
+
 
 class MeshtasticBot:
     """
@@ -1112,7 +1116,7 @@ class WebServer:  # pylint:disable=too-few-public-methods
         self.server.shutdown()
 
 
-if __name__ == '__main__':
+def main():
     config = Config()
     config.read()
     level = logging.INFO
@@ -1143,11 +1147,16 @@ if __name__ == '__main__':
     # non-blocking
     aprs_streamer.run()
     web_server.run()
+    telegram_bot.run()
     # blocking
-    try:
-        telegram_bot.poll()
-    except KeyboardInterrupt:
-        web_server.shutdown()
-        logger.info('Exit requested...')
-        sys.exit(0)
+    while True:
+        try:
+            time.sleep(1)
+        except KeyboardInterrupt:
+            web_server.shutdown()
+            logger.info('Exit requested...')
+            sys.exit(0)
 
+
+if __name__ == '__main__':
+    main()
