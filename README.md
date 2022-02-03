@@ -79,9 +79,16 @@ UT3ULJ: 2,316m
 ```
 
 
-2. `/ping` - ping all Meshtastic devices on current channel and get response.
+2. `/ping` - ping currently connected Meshtastic node and get response.
 Sample answer:
 
 ```
 Pong from UR5YBM-aa60 at 10.00 SNR time=9.632s
+```
+
+3. `/stats` - get some stats for current node
+Sample anwser:
+
+```
+Locations: 1234. Messages: 20
 ```

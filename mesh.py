@@ -315,6 +315,11 @@ class MeshtasticDB:
         return node_record
 
     @db_session
+    def get_stats(self, node_id: AnyStr) -> AnyStr:
+        node_record = MeshtasticNodeRecord.select(lambda n: n.nodeId == node_id).first()
+        return 'Locations: {}. Messages: {}'.format(len(node_record.locations), len(node_record.messages))
+
+    @db_session
     def store_message(self, packet: dict) -> None:
         """
         Store Meshtastic message in DB
@@ -667,6 +672,12 @@ class MeshtasticBot:
                            portNum=meshtastic_portnums_pb2.PortNum.REPLY_APP,
                            wantAck=True, wantResponse=True)
 
+    def process_stats_command(self, packet, interface) -> None:
+        from_id = packet.get('fromId')
+        msg = self.db.get_stats(from_id)
+        self.meshtastic_connection.send_text(msg, destinationId=from_id)
+
+
     def process_meshtastic_command(self, packet, interface) -> None:
         """
         Process Meshtastic command
@@ -683,6 +694,9 @@ class MeshtasticBot:
             return
         if msg.startswith('/ping'):
             self.process_ping_command(packet, interface)
+            return
+        if msg.startswith('/stats'):
+            self.process_stats_command(packet, interface)
             return
         self.meshtastic_connection.send_text("unknown command", destinationId=from_id)
 
@@ -959,7 +973,7 @@ def main():
     config = Config()
     config.read()
     level = logging.INFO
-    if config.DEFAULT.Debug:
+    if config.enforce_type(bool, config.DEFAULT.Debug):
         level = logging.DEBUG
         set_sql_debug(True)
 
