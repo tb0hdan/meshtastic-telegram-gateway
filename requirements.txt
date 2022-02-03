@@ -2,7 +2,7 @@ aprslib==0.7.0
 flask~=2.0.2
 haversine~=2.5.1
 humanize~=3.14.0
-meshtastic==1.2.80
+meshtastic==1.2.81
 python-telegram-bot==13.11
 Pypubsub~=4.0.3
 pony~=0.7.16
