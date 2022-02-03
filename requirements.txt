@@ -5,5 +5,5 @@ humanize~=3.14.0
 meshtastic==1.2.77
 python-telegram-bot==13.11
 Pypubsub~=4.0.3
-pony~=0.7.14
+pony~=0.7.16
 Werkzeug~=2.0.2
