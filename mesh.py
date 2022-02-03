@@ -90,194 +90,33 @@ def setup_logger(name=__name__, level=logging.INFO, version=VERSION) -> logging.
 
 
 class Config:
-    """
-    Configuration class. Most methods are properties.
-    """
-
     def __init__(self, config_path="mesh.ini"):
-        self.config = None
         self.config_path = config_path
+        self.config = None
+        self.elements = []
 
-    def read(self) -> None:
-        """
-        Read configuration from file
-
-        :return:
-        """
+    def read(self):
         self.config = configparser.ConfigParser()
         self.config.read(self.config_path)
 
-    @property
-    def debug(self) -> bool:
-        """
-        Debugging enable/disable toggle
+    @staticmethod
+    def enforce_type(value_type, value):
+        if value_type == bool:
+            if value.lower() == 'true':
+                return True
+            return False
+        return value_type(value)
 
-        :return:
-        """
-        value = self.config['DEFAULT']['Debug']
-        if value.lower() == 'true':
-            return True
-        return False
-
-    @property
-    def telegram_admin(self) -> AnyStr:
-        """
-        Admin's Telegram ID
-
-        :return:
-        """
-        return self.config['Telegram']['Admin']
-
-    @property
-    def meshtastic_admin(self) -> AnyStr:
-        """
-        Admin's Telegram ID
-
-        :return:
-        """
-        return self.config['Meshtastic']['Admin']
-
-    @property
-    def meshtastic_device(self) -> str:
-        """
-        Meshtastic device path
-
-        :return:
-        """
-        return self.config['Meshtastic']['Device']
-
-    @property
-    def meshtastic_database_file(self) -> AnyStr:
-        """
-        Meshtastic database file
-
-        :return:
-        """
-        return self.config['Meshtastic']['DatabaseFile']
-
-    @property
-    def meshtastic_room(self) -> AnyStr:
-        """
-        Meshtastic room
-
-        :return:
-        """
-        return self.config['Telegram']['Room']
-
-    @property
-    def telegram_token(self) -> str:
-        """
-        Telegram API token
-
-        :return:
-        """
-        return self.config['Telegram']['Token']
-
-    @property
-    def web_app_port(self) -> int:
-        """
-        Web application port
-
-        :return:
-        """
-        return int(self.config['WebApp']['Port'])
-
-    @property
-    def web_app_api_key(self) -> AnyStr:
-        """
-        Web application API key. Used by Google Maps Javascript API.
-
-        :return:
-        """
-        return self.config['WebApp']['APIKey']
-
-    @property
-    def web_app_enabled(self) -> bool:
-        """
-        Web application enable/disable toggle
-
-        :return:
-        """
-        value = self.config['WebApp']['Enabled']
-        if value.lower() == 'true':
-            return True
-        return False
-
-    @property
-    def web_app_center_latitude(self) -> float:
-        """
-        Web application center coordinate (latitude)
-
-        :return:
-        """
-        return float(self.config['WebApp']['Center_Latitude'])
-
-    @property
-    def web_app_center_longitude(self) -> float:
-        """
-        Web application center coordinate (longitude)
-
-        :return:
-        """
-        return float(self.config['WebApp']['Center_Longitude'])
-
-    @property
-    def web_app_last_heard_default(self) -> SupportsInt:
-        """
-        Web application last heard value in seconds
-
-        :return:
-        """
-        return int(self.config['WebApp']['LastHeardDefault'])
-
-    @property
-    def aprs_enabled(self) -> bool:
-        """
-
-        :return:
-        """
-        value = self.config['APRS']['Enabled']
-        if value.lower() == 'true':
-            return True
-        return False
-
-    @property
-    def aprs_to_meshtastic_enabled(self) -> bool:
-        """
-
-        :return:
-        """
-        value = self.config['APRS']['ToMeshtastic']
-        if value.lower() == 'true':
-            return True
-        return False
-
-    @property
-    def aprs_from_meshtastic_enabled(self) -> bool:
-        """
-
-        :return:
-        """
-        value = self.config['APRS']['FromMeshtastic']
-        if value.lower() == 'true':
-            return True
-        return False
-
-    @property
-    def aprs_callsign(self) -> AnyStr:
-        """
-
-        :return:
-        """
-        return self.config['APRS']['Callsign']
-
-    @property
-    def aprs_password(self) -> AnyStr:
-        """
-
-        :return:
-        """
-        return self.config['APRS']['Password']
+    def __getattr__(self, attr):
+        if self.config is None:
+            raise AttributeError('config is empty')
+        if len(self.elements) < 2:
+            self.elements.append(attr)
+        if len(self.elements) == 2:
+            result = self.config[self.elements[0]][self.elements[1]]
+            self.elements = []
+            return result
+        return self
 
 
 class TelegramConnection:
@@ -591,7 +430,7 @@ class APRSStreamer:
         :param packet:
         :return:
         """
-        if not self.config.aprs_from_meshtastic_enabled:
+        if not self.config.enforce_type(bool, self.config.APRS.FromMeshtastic):
             return
         self.aprs_is.sendall(packet)
 
@@ -601,7 +440,7 @@ class APRSStreamer:
         :param packet:
         :return:
         """
-        if not self.config.aprs_to_meshtastic_enabled:
+        if not self.config.enforce_type(bool, self.config.APRS.ToMeshtastic):
             return
         self.logger.debug(packet)
 
@@ -619,12 +458,12 @@ class APRSStreamer:
 
         :return:
         """
-        self.aprs_is = aprslib.IS(self.config.aprs_callsign,
-                                  self.config.aprs_password,
+        self.aprs_is = aprslib.IS(self.config.APRS.Callsign,
+                                  self.config.APRS.Password,
                                   host='euro.aprs2.net',
                                   port=14580)
-        self.aprs_is.set_filter('r/%f/%f/50' % (self.config.web_app_center_latitude,
-                                                self.config.web_app_center_longitude))
+        self.aprs_is.set_filter('r/%f/%f/50' % (self.config.enforce_type(float, self.config.WebApp.Center_Latitude),
+                                                self.config.enforce_type(float, self.config.WebApp.Center_Longitude)))
         while not self.exit:
             try:
                 self.aprs_is.connect()
@@ -641,7 +480,7 @@ class APRSStreamer:
 
         :return:
         """
-        if self.config.aprs_enabled:
+        if self.config.enforce_type(bool, self.config.APRS.Enabled):
             pub.subscribe(self.process, 'APRS')
             thread = Thread(target=self.run_loop, daemon=True)
             thread.start()
@@ -678,8 +517,8 @@ class TelegramBot:
         :param _:
         :return:
         """
-        if str(update.effective_chat.id) != str(self.config.meshtastic_room):
-            self.logger.debug("%d %s", update.effective_chat.id, self.config.meshtastic_room)
+        if update.effective_chat.id != self.config.enforce_type(int, self.config.Telegram.Room):
+            self.logger.debug("%d %s", update.effective_chat.id, self.config.enforce_type(int, self.config.Telegram.Room))
             return
         full_user = update.effective_user.first_name
         if update.effective_user.last_name is not None:
@@ -909,7 +748,7 @@ class MeshtasticBot:
         if msg.startswith('/'):
             self.process_meshtastic_command(packet, interface)
             return
-        self.telegram_connection.send_message(chat_id=self.config.meshtastic_room, text="%s: %s" % (long_name, msg))
+        self.telegram_connection.send_message(chat_id=self.config.enforce_type(int, self.config.Telegram.Room), text="%s: %s" % (long_name, msg))
 
 
 class RenderTemplateView(View):
@@ -944,9 +783,9 @@ class RenderScript(View):
         :return:
         """
         response = make_response(render_template("script.js",
-                                                 api_key=self.config.web_app_api_key,
-                                                 center_latitude=self.config.web_app_center_latitude,
-                                                 center_longitude=self.config.web_app_center_longitude,
+                                                 api_key=self.config.WebApp.APIKey,
+                                                 center_latitude=self.config.enforce_type(float, self.config.WebApp.Center_Latitude),
+                                                 center_longitude=self.config.enforce_type(float, self.config.WebApp.Center_Longitude),
                                                  ))
         response.headers['Content-Type'] = 'application/javascript'
         return response
@@ -983,7 +822,7 @@ class RenderDataView(View):
         :return:
         """
         query_string = parse_qs(request.query_string)
-        tail_value = self.config.web_app_last_heard_default
+        tail_value = self.config.enforce_type(int, self.config.WebApp.LastHeardDefault)
         #
         tail = query_string.get(b'tail', [])
         if len(tail) > 0:
@@ -1068,7 +907,7 @@ class ServerThread(Thread):
         Thread.__init__(self)
         self.config = config
         self.logger = logger
-        self.server = make_server('', self.config.web_app_port, app)
+        self.server = make_server('', self.config.enforce_type(int, self.config.WebApp.Port), app)
         self.ctx = app.app_context()
         self.ctx.push()
 
@@ -1106,7 +945,7 @@ class WebServer:  # pylint:disable=too-few-public-methods
 
         :return:
         """
-        if self.config.web_app_enabled:
+        if self.config.enforce_type(bool, self.config.WebApp.Enabled):
             web_app = WebApp(self.app, self.config, self.meshtastic_connection, self.logger)
             web_app.register()
             self.server = ServerThread(self.app, self.config, self.logger)
@@ -1120,7 +959,7 @@ def main():
     config = Config()
     config.read()
     level = logging.INFO
-    if config.debug:
+    if config.DEFAULT.Debug:
         level = logging.DEBUG
         set_sql_debug(True)
 
@@ -1130,9 +969,9 @@ def main():
     logging.basicConfig(level=level,
                         format='%(levelname)s file:%(filename)s %(funcName)s line:%(lineno)s %(message)s')
     #
-    telegram_connection = TelegramConnection(config.telegram_token, logger)
-    meshtastic_connection = MeshtasticConnection(config.meshtastic_device, logger)
-    database = MeshtasticDB(config.meshtastic_database_file, meshtastic_connection, logger)
+    telegram_connection = TelegramConnection(config.Telegram.Token, logger)
+    meshtastic_connection = MeshtasticConnection(config.Meshtastic.Device, logger)
+    database = MeshtasticDB(config.Meshtastic.DatabaseFile, meshtastic_connection, logger)
     # Initialize filters (node, user, etc)
     call_sign_filter = CallSignFilter(database, config, meshtastic_connection, logger)
     telegram_filter = TelegramFilter(database, config, meshtastic_connection, logger)
