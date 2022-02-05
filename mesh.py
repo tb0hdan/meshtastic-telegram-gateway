@@ -43,6 +43,7 @@ from werkzeug.serving import make_server
 # has to be global variable ;-(
 DB = Database()
 VERSION = open('VERSION', 'r').read().rstrip('\n')
+LOGFORMAT = '%(asctime)s - %(name)s/v{} - %(levelname)s file:%(filename)s %(funcName)s line:%(lineno)s %(message)s'.format(VERSION)
 
 
 def get_lat_lon_distance(latlon1: tuple, latlon2: tuple) -> float:
@@ -78,8 +79,7 @@ def setup_logger(name=__name__, level=logging.INFO, version=VERSION) -> logging.
     handler.setLevel(level)
 
     # create formatter
-    fmt = '%(asctime)s - %(name)s/v{} - %(levelname)s - %(message)s'.format(version)
-    formatter = logging.Formatter(fmt)
+    formatter = logging.Formatter(LOGFORMAT)
 
     # add formatter to ch
     handler.setFormatter(formatter)
@@ -982,7 +982,7 @@ def main():
     logger = setup_logger('mesh', level, VERSION)
     # meshtastic logger
     logging.basicConfig(level=level,
-                        format='%(levelname)s file:%(filename)s %(funcName)s line:%(lineno)s %(message)s')
+                        format=LOGFORMAT)
     #
     telegram_connection = TelegramConnection(config.Telegram.Token, logger)
     meshtastic_connection = MeshtasticConnection(config.Meshtastic.Device, logger)
