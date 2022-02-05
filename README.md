@@ -92,3 +92,7 @@ Sample anwser:
 ```
 Locations: 1234. Messages: 20
 ```
+
+### Common
+
+`/reboot` - request Meshtastic device reboot. Requires respective admin privileges.

@@ -27,6 +27,7 @@ from flask import Flask, jsonify, make_response, request, render_template
 from flask.views import View
 from meshtastic import (
     BROADCAST_ADDR as MESHTASTIC_BROADCAST_ADDR,
+    LOCAL_ADDR as MESHTASTIC_LOCAL_ADDR,
     serial_interface as meshtastic_serial_interface,
     portnums_pb2 as meshtastic_portnums_pb2
 )
@@ -61,13 +62,12 @@ def get_lat_lon_distance(latlon1: tuple, latlon2: tuple) -> float:
     return haversine.haversine(latlon1, latlon2, unit=haversine.Unit.METERS)
 
 
-def setup_logger(name=__name__, level=logging.INFO, version=VERSION) -> logging.Logger:
+def setup_logger(name=__name__, level=logging.INFO) -> logging.Logger:
     """
     Set up logger and return usable instance
 
     :param name:
     :param level:
-    :param version:
 
     :return:
     """
@@ -162,8 +162,12 @@ class MeshtasticConnection:
     """
 
     def __init__(self, dev_path: str, logger: logging.Logger):
-        self.interface = meshtastic_serial_interface.SerialInterface(devPath=dev_path, debugOut=sys.stdout)
+        self.dev_path = dev_path
+        self.interface = None
         self.logger = logger
+
+    def connect(self):
+        self.interface = meshtastic_serial_interface.SerialInterface(devPath=self.dev_path, debugOut=sys.stdout)
 
     def send_text(self, *args, **kwargs) -> None:
         """
@@ -183,6 +187,14 @@ class MeshtasticConnection:
         :return:
         """
         return self.interface.nodes.get(node_id, {})
+
+    def reboot(self):
+        self.logger.info("Reboot requested...")
+        self.interface.getNode(MESHTASTIC_LOCAL_ADDR).reboot(10)
+        self.interface.close()
+        time.sleep(20)
+        self.connect()
+        self.logger.info("Reboot completed...")
 
     @property
     def nodes(self) -> Dict:
@@ -506,10 +518,12 @@ class TelegramBot:
 
         start_handler = CommandHandler('start', self.start)
         node_handler = CommandHandler('nodes', self.nodes)
+        reboot_handler = CommandHandler('reboot', self.reboot)
         dispatcher = self.telegram_connection.dispatcher
 
         dispatcher.add_handler(start_handler)
         dispatcher.add_handler(node_handler)
+        dispatcher.add_handler(reboot_handler)
 
         echo_handler = MessageHandler(Filters.text & (~Filters.command), self.echo)
         dispatcher.add_handler(echo_handler)
@@ -549,6 +563,14 @@ class TelegramBot:
         :return:
         """
         context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
+
+    def reboot(self, update: Update, context: CallbackContext) -> None:
+        if update.effective_chat.id != self.config.enforce_type(int, self.config.Telegram.Admin):
+            self.logger.info("Reboot requested by non-admin: %d", update.effective_chat.id)
+            return
+        context.bot.send_message(chat_id=update.effective_chat.id, text="Requesting reboot...")
+        self.meshtastic_connection.reboot()
+
 
     def nodes(self, update: Update, context: CallbackContext) -> None:
         """
@@ -697,6 +719,9 @@ class MeshtasticBot:
             return
         if msg.startswith('/stats'):
             self.process_stats_command(packet, interface)
+            return
+        if msg.startswith('/reboot') and from_id == self.config.Meshtastic.Admin:
+            self.meshtastic_connection.reboot()
             return
         self.meshtastic_connection.send_text("unknown command", destinationId=from_id)
 
@@ -979,13 +1004,14 @@ def main():
         set_sql_debug(True)
 
     # our logger
-    logger = setup_logger('mesh', level, VERSION)
+    logger = setup_logger('mesh', level)
     # meshtastic logger
     logging.basicConfig(level=level,
                         format=LOGFORMAT)
     #
     telegram_connection = TelegramConnection(config.Telegram.Token, logger)
     meshtastic_connection = MeshtasticConnection(config.Meshtastic.Device, logger)
+    meshtastic_connection.connect()
     database = MeshtasticDB(config.Meshtastic.DatabaseFile, meshtastic_connection, logger)
     # Initialize filters (node, user, etc)
     call_sign_filter = CallSignFilter(database, config, meshtastic_connection, logger)
