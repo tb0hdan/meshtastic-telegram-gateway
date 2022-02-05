@@ -798,6 +798,7 @@ class RenderScript(View):
         """
         response = make_response(render_template("script.js",
                                                  api_key=self.config.WebApp.APIKey,
+                                                 redraw_markers_every=self.config.WebApp.RedrawMarkersEvery,
                                                  center_latitude=self.config.enforce_type(float, self.config.WebApp.Center_Latitude),
                                                  center_longitude=self.config.enforce_type(float, self.config.WebApp.Center_Longitude),
                                                  ))

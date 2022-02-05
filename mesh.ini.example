@@ -8,6 +8,7 @@ Token = AA:BB
 
 [WebApp]
 Port = 5000
+RedrawMarkersEvery = 300
 APIKey = AIxxxxZA
 Enabled = false
 Center_Latitude = 50.5

@@ -9,13 +9,18 @@ jQuery(function($) {
     document.body.appendChild(script);
 });
 
-function draw_markers(locations, map) {
+let map;
+let markers = [];
+let markerCluster;
+
+
+function draw_markers(locations) {
     const infoWindow = new google.maps.InfoWindow({
         content: "",
         disableAutoPan: true,
     });
 
-  const markers = locations.map((item, i) => {
+   markers = locations.map((item, i) => {
     const label = item[0];
     const marker = new google.maps.Marker({
       position: new google.maps.LatLng(item[1], item[2]),
@@ -53,15 +58,27 @@ function draw_markers(locations, map) {
     return marker;
   });
 
+}
 
-    const markerCluster = new markerClusterer.MarkerClusterer({ map, markers });
+function getMarkers() {
+    console.log('(Re)drawing markers...');
+    $.get('/data.json' + window.location.search, function(data) {
+        // clear
+        markerCluster.clearMarkers();
+        markerCluster.setMap(null);
+        markers = [];
+        // (re)draw
+        draw_markers(data);
+        markerCluster.markers = markers;
+        markerCluster.setMap(map);
+    });
 }
 
 
-
 function initialize() {
-     var center = new google.maps.LatLng({{center_latitude}}, {{center_longitude}});
-        var map = new google.maps.Map(document.getElementById('map'), {
+    var center = new google.maps.LatLng({{center_latitude}}, {{center_longitude}});
+    // global
+    map = new google.maps.Map(document.getElementById('map'), {
           zoom: 10,
           center: center,
           scaleControl: true,
@@ -73,7 +90,8 @@ function initialize() {
           },
         });
 
-    $.get('/data.json' + window.location.search, function(data) {
-        draw_markers(data, map);
-    });
+    // global
+    markerCluster = new markerClusterer.MarkerClusterer({ map, markers });
+    getMarkers();
+    setInterval(getMarkers, {{redraw_markers_every}}000);
 }
