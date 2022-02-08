@@ -1,4 +1,6 @@
 # meshtastic-telegram-gateway
+![Build](https://github.com/tb0hdan/meshtastic-telegram-gateway/actions/workflows/build.yml/badge.svg)
+
 telegram bot that forwards messages to and from Meshtastic device
 
 The purpose of this bot is to act as a bridge between local Meshtastic conference and
