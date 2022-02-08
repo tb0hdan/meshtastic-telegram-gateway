@@ -13,7 +13,6 @@ from typing import (
     AnyStr,
     Dict,
     List,
-    SupportsInt
 )
 from urllib.parse import parse_qs
 #
@@ -44,7 +43,8 @@ from werkzeug.serving import make_server
 # has to be global variable ;-(
 DB = Database()
 VERSION = open('VERSION', 'r').read().rstrip('\n')
-LOGFORMAT = '%(asctime)s - %(name)s/v{} - %(levelname)s file:%(filename)s %(funcName)s line:%(lineno)s %(message)s'.format(VERSION)
+LOGFORMAT = '%(asctime)s - %(name)s/v{} - %(levelname)s file:%(filename)s %(funcName)s line:%(lineno)s %(message)s'
+LOGFORMAT = LOGFORMAT.format(VERSION)
 
 
 def get_lat_lon_distance(latlon1: tuple, latlon2: tuple) -> float:
@@ -90,17 +90,32 @@ def setup_logger(name=__name__, level=logging.INFO) -> logging.Logger:
 
 
 class Config:
+    """
+    Config - two level configuration with functionality similar to dotted dict
+    """
     def __init__(self, config_path="mesh.ini"):
         self.config_path = config_path
         self.config = None
         self.elements = []
 
     def read(self):
+        """
+        Read configuration file
+
+        :return:
+        """
         self.config = configparser.ConfigParser()
         self.config.read(self.config_path)
 
     @staticmethod
     def enforce_type(value_type, value):
+        """
+        Enforce selected type
+
+        :param value_type:
+        :param value:
+        :return:
+        """
         if value_type == bool:
             if value.lower() == 'true':
                 return True
@@ -167,6 +182,11 @@ class MeshtasticConnection:
         self.logger = logger
 
     def connect(self):
+        """
+        Connect to Meshtastic device. Interface can be later updated during reboot procedure
+
+        :return:
+        """
         self.interface = meshtastic_serial_interface.SerialInterface(devPath=self.dev_path, debugOut=sys.stdout)
 
     def send_text(self, *args, **kwargs) -> None:
@@ -189,6 +209,11 @@ class MeshtasticConnection:
         return self.interface.nodes.get(node_id, {})
 
     def reboot(self):
+        """
+        Execute Meshtastic device reboot
+
+        :return:
+        """
         self.logger.info("Reboot requested...")
         self.interface.getNode(MESHTASTIC_LOCAL_ADDR).reboot(10)
         self.interface.close()
@@ -326,8 +351,15 @@ class MeshtasticDB:
         node_record.lastHeard = last_heard  # pylint:disable=invalid-name
         return node_record
 
+    @staticmethod
     @db_session
-    def get_stats(self, node_id: AnyStr) -> AnyStr:
+    def get_stats(node_id: AnyStr) -> AnyStr:
+        """
+        Get node stats
+
+        :param node_id:
+        :return:
+        """
         node_record = MeshtasticNodeRecord.select(lambda n: n.nodeId == node_id).first()
         return 'Locations: {}. Messages: {}'.format(len(node_record.locations), len(node_record.messages))
 
@@ -376,13 +408,13 @@ class MeshtasticDB:
 
 class Filter:
     """
-
+    Filter parent class
     """
     connection_type = ""
 
     def __init__(self, database: MeshtasticDB, config: Config, connection: MeshtasticConnection,
                  logger: logging.Logger):
-        self.db = database
+        self.database = database
         self.connection = connection
         self.config = config
         self.logger = logger
@@ -390,12 +422,12 @@ class Filter:
 
 class TelegramFilter(Filter):
     """
-
+    Telegram users filter
     """
     def __init__(self, database: MeshtasticDB, config: Config, connection: MeshtasticConnection,
                  logger: logging.Logger):
         super().__init__(database, config, connection, logger)
-        self.db = database
+        self.database = database
         self.config = config
         self.connection = connection
         self.connection_type = "Telegram"
@@ -404,12 +436,12 @@ class TelegramFilter(Filter):
 
 class MeshtasticFilter(Filter):
     """
-
+    Meshtastic users filter
     """
     def __init__(self, database: MeshtasticDB, config: Config, connection: MeshtasticConnection,
                  logger: logging.Logger):
         super().__init__(database, config, connection, logger)
-        self.db = database
+        self.database = database
         self.config = config
         self.connection = connection
         self.connection_type = "Meshtastic"
@@ -418,12 +450,12 @@ class MeshtasticFilter(Filter):
 
 class CallSignFilter(Filter):
     """
-
+    APRS callsign filter
     """
     def __init__(self, database: MeshtasticDB, config: Config, connection: MeshtasticConnection,
                  logger: logging.Logger):
         super().__init__(database, config, connection, logger)
-        self.db = database
+        self.database = database
         self.config = config
         self.connection = connection
         self.connection_type = "Callsign"
@@ -432,17 +464,36 @@ class CallSignFilter(Filter):
 
 class APRSStreamer:
     """
-
+    APRS streamer
     """
-    def __init__(self, config: Config, logger: logging.Logger, call_sign_filter: CallSignFilter):
+    def __init__(self, config: Config):
         self.aprs_is = None
-        self.call_sign_filter = call_sign_filter
+        self.filter = None
         self.config = config
-        self.logger = logger
+        self.logger = None
         self.exit = False
+
+    def set_logger(self, logger: logging.Logger):
+        """
+        Set class logger
+
+        :param logger:
+        :return:
+        """
+        self.logger = logger
+
+    def set_filter(self, filter_class: CallSignFilter):
+        """
+        Set APRS callsign filter class
+
+        :param filter_class:
+        :return:
+        """
+        self.filter = filter_class
 
     def send_packet(self, packet):
         """
+        Send APRS packet
 
         :param packet:
         :return:
@@ -453,6 +504,7 @@ class APRSStreamer:
 
     def process(self, packet):
         """
+        Process APRS packet
 
         :param packet:
         :return:
@@ -464,6 +516,7 @@ class APRSStreamer:
     @staticmethod
     def callback(packet):
         """
+        APRS packet callback
 
         :param packet:
         :return:
@@ -472,6 +525,7 @@ class APRSStreamer:
 
     def run_loop(self):
         """
+        APRS streamer loop
 
         :return:
         """
@@ -494,6 +548,7 @@ class APRSStreamer:
 
     def run(self):
         """
+        APRS runner
 
         :return:
         """
@@ -509,10 +564,10 @@ class TelegramBot:
     """
 
     def __init__(self, config: Config, meshtastic_connection: MeshtasticConnection,
-                 telegram_connection: TelegramConnection, logger: logging.Logger, filter_class: TelegramFilter):
+                 telegram_connection: TelegramConnection):
         self.config = config
-        self.filter = filter_class
-        self.logger = logger
+        self.filter = None
+        self.logger = None
         self.meshtastic_connection = meshtastic_connection
         self.telegram_connection = telegram_connection
 
@@ -528,6 +583,24 @@ class TelegramBot:
         echo_handler = MessageHandler(Filters.text & (~Filters.command), self.echo)
         dispatcher.add_handler(echo_handler)
 
+    def set_logger(self, logger: logging.Logger):
+        """
+        Set class logger
+
+        :param logger:
+        :return:
+        """
+        self.logger = logger
+
+    def set_filter(self, filter_class: TelegramFilter):
+        """
+        Set filter class
+
+        :param filter_class:
+        :return:
+        """
+        self.filter = filter_class
+
     def echo(self, update: Update, _) -> None:
         """
         Telegram bot echo handler. Does actual message forwarding
@@ -537,7 +610,9 @@ class TelegramBot:
         :return:
         """
         if update.effective_chat.id != self.config.enforce_type(int, self.config.Telegram.Room):
-            self.logger.debug("%d %s", update.effective_chat.id, self.config.enforce_type(int, self.config.Telegram.Room))
+            self.logger.debug("%d %s",
+                              update.effective_chat.id,
+                              self.config.enforce_type(int, self.config.Telegram.Room))
             return
         full_user = update.effective_user.first_name
         if update.effective_user.last_name is not None:
@@ -565,6 +640,13 @@ class TelegramBot:
         context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
 
     def reboot(self, update: Update, context: CallbackContext) -> None:
+        """
+        Telegram reboot command
+
+        :param update:
+        :param context:
+        :return:
+        """
         if update.effective_chat.id != self.config.enforce_type(int, self.config.Telegram.Admin):
             self.logger.info("Reboot requested by non-admin: %d", update.effective_chat.id)
             return
@@ -584,25 +666,47 @@ class TelegramBot:
         context.bot.send_message(chat_id=update.effective_chat.id, text=table)
 
     def run(self):
-        t = Thread(target=self.poll)
-        t.start()
+        """
+        Telegram bot runner
+
+        :return:
+        """
+        thread = Thread(target=self.poll)
+        thread.start()
 
 
 class MeshtasticBot:
     """
     Meshtastic bot
     """
-
     def __init__(self, db: MeshtasticDB, config: Config, meshtastic_connection: MeshtasticConnection,
-                 telegram_connection: TelegramConnection, logger: logging.Logger, filter_class: MeshtasticFilter):
-        self.db = db
+                 telegram_connection: TelegramConnection):
+        self.database = db
         self.config = config
-        self.filter = filter_class
-        self.logger = logger
+        self.filter = None
+        self.logger = None
         self.telegram_connection = telegram_connection
         self.meshtastic_connection = meshtastic_connection
         # track ping request/reply
         self.ping_container = {}
+
+    def set_logger(self, logger: logging.Logger):
+        """
+        Set class logger
+
+        :param logger:
+        :return:
+        """
+        self.logger = logger
+
+    def set_filter(self, filter_class: MeshtasticFilter):
+        """
+        Set filter class
+
+        :param filter_class:
+        :return:
+        """
+        self.filter = filter_class
 
     def on_connection(self, interface, topic=pub.AUTO_TOPIC):
         """
@@ -694,9 +798,16 @@ class MeshtasticBot:
                            portNum=meshtastic_portnums_pb2.PortNum.REPLY_APP,
                            wantAck=True, wantResponse=True)
 
-    def process_stats_command(self, packet, interface) -> None:
+    def process_stats_command(self, packet, _) -> None:
+        """
+        Process /stats Meshtastic command
+
+        :param packet:
+        :param _:
+        :return:
+        """
         from_id = packet.get('fromId')
-        msg = self.db.get_stats(from_id)
+        msg = self.database.get_stats(from_id)
         self.meshtastic_connection.send_text(msg, destinationId=from_id)
 
 
@@ -762,7 +873,7 @@ class MeshtasticBot:
         if decoded.get('portnum') != 'TEXT_MESSAGE_APP':
             # notifications
             if decoded.get('portnum') == 'POSITION_APP':
-                self.db.store_location(packet)
+                self.database.store_location(packet)
                 return
             # pong
             if decoded.get('portnum') == 'REPLY_APP':
@@ -775,7 +886,7 @@ class MeshtasticBot:
         if to_id != MESHTASTIC_BROADCAST_ADDR:
             return
         # Save messages
-        self.db.store_message(packet)
+        self.database.store_message(packet)
         # Process commands and forward messages
         node_info = interface.nodes.get(from_id)
         long_name = from_id
@@ -787,7 +898,8 @@ class MeshtasticBot:
         if msg.startswith('/'):
             self.process_meshtastic_command(packet, interface)
             return
-        self.telegram_connection.send_message(chat_id=self.config.enforce_type(int, self.config.Telegram.Room), text="%s: %s" % (long_name, msg))
+        self.telegram_connection.send_message(chat_id=self.config.enforce_type(int, self.config.Telegram.Room),
+                                              text="%s: %s" % (long_name, msg))
 
 
 class RenderTemplateView(View):
@@ -821,12 +933,13 @@ class RenderScript(View):
 
         :return:
         """
-        response = make_response(render_template("script.js",
-                                                 api_key=self.config.WebApp.APIKey,
-                                                 redraw_markers_every=self.config.WebApp.RedrawMarkersEvery,
-                                                 center_latitude=self.config.enforce_type(float, self.config.WebApp.Center_Latitude),
-                                                 center_longitude=self.config.enforce_type(float, self.config.WebApp.Center_Longitude),
-                                                 ))
+        response = make_response(render_template(
+            "script.js",
+            api_key=self.config.WebApp.APIKey,
+            redraw_markers_every=self.config.WebApp.RedrawMarkersEvery,
+            center_latitude=self.config.enforce_type(float, self.config.WebApp.Center_Latitude),
+            center_longitude=self.config.enforce_type(float, self.config.WebApp.Center_Longitude),
+        ))
         response.headers['Content-Type'] = 'application/javascript'
         return response
 
@@ -941,7 +1054,7 @@ class WebApp:  # pylint:disable=too-few-public-methods
 
 class ServerThread(Thread):
     """
-
+    Web application server thread
     """
     def __init__(self, app: Flask, config: Config, logger: logging.Logger):
         Thread.__init__(self)
@@ -992,10 +1105,20 @@ class WebServer:  # pylint:disable=too-few-public-methods
             self.server.start()
 
     def shutdown(self) -> None:
+        """
+        Web server shutdown method
+
+        :return:
+        """
         self.server.shutdown()
 
 
 def main():
+    """
+    Main function :)
+
+    :return:
+    """
     config = Config()
     config.read()
     level = logging.INFO
@@ -1013,16 +1136,23 @@ def main():
     meshtastic_connection = MeshtasticConnection(config.Meshtastic.Device, logger)
     meshtastic_connection.connect()
     database = MeshtasticDB(config.Meshtastic.DatabaseFile, meshtastic_connection, logger)
-    # Initialize filters (node, user, etc)
-    call_sign_filter = CallSignFilter(database, config, meshtastic_connection, logger)
-    telegram_filter = TelegramFilter(database, config, meshtastic_connection, logger)
-    meshtastic_filter = MeshtasticFilter(database, config, meshtastic_connection, logger)
     #
-    aprs_streamer = APRSStreamer(config, logger, call_sign_filter)
-    telegram_bot = TelegramBot(config, meshtastic_connection, telegram_connection, logger, telegram_filter)
-    meshtastic_bot = MeshtasticBot(database, config, meshtastic_connection, telegram_connection, logger,
-                                   meshtastic_filter)
+    aprs_streamer = APRSStreamer(config)
+    call_sign_filter = CallSignFilter(database, config, meshtastic_connection, logger)
+    aprs_streamer.set_filter(call_sign_filter)
+    aprs_streamer.set_logger(logger)
+    #
+    telegram_bot = TelegramBot(config, meshtastic_connection, telegram_connection)
+    telegram_filter = TelegramFilter(database, config, meshtastic_connection, logger)
+    telegram_bot.set_filter(telegram_filter)
+    telegram_bot.set_logger(logger)
+    #
+    meshtastic_bot = MeshtasticBot(database, config, meshtastic_connection, telegram_connection)
+    meshtastic_filter = MeshtasticFilter(database, config, meshtastic_connection, logger)
+    meshtastic_bot.set_filter(meshtastic_filter)
+    meshtastic_bot.set_logger(logger)
     meshtastic_bot.subscribe()
+    #
     web_server = WebServer(config, meshtastic_connection, logger)
     # non-blocking
     aprs_streamer.run()
