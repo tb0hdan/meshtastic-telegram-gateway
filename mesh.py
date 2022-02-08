@@ -42,7 +42,8 @@ from werkzeug.serving import make_server
 
 # has to be global variable ;-(
 DB = Database()
-VERSION = open('VERSION', 'r').read().rstrip('\n')
+with open('VERSION', 'r', encoding='utf-8') as fh:
+    VERSION = fh.read().rstrip('\n')
 LOGFORMAT = '%(asctime)s - %(name)s/v{} - %(levelname)s file:%(filename)s %(funcName)s line:%(lineno)s %(message)s'
 LOGFORMAT = LOGFORMAT.format(VERSION)
 
@@ -361,7 +362,7 @@ class MeshtasticDB:
         :return:
         """
         node_record = MeshtasticNodeRecord.select(lambda n: n.nodeId == node_id).first()
-        return 'Locations: {}. Messages: {}'.format(len(node_record.locations), len(node_record.messages))
+        return f"Locations: {len(node_record.locations)}. Messages: {len(node_record.messages)}"
 
     @db_session
     def store_message(self, packet: dict) -> None:
@@ -533,8 +534,10 @@ class APRSStreamer:
                                   self.config.APRS.Password,
                                   host='euro.aprs2.net',
                                   port=14580)
-        self.aprs_is.set_filter('r/%f/%f/50' % (self.config.enforce_type(float, self.config.WebApp.Center_Latitude),
-                                                self.config.enforce_type(float, self.config.WebApp.Center_Longitude)))
+        f_filter = f"r/{self.config.enforce_type(float, self.config.WebApp.Center_Latitude)}/"
+        f_filter += f"{self.config.enforce_type(float, self.config.WebApp.Center_Longitude)}/50"
+        self.aprs_is.set_filter(f_filter)
+        #
         while not self.exit:
             try:
                 self.aprs_is.connect()
@@ -617,8 +620,8 @@ class TelegramBot:
         full_user = update.effective_user.first_name
         if update.effective_user.last_name is not None:
             full_user += ' ' + update.effective_user.last_name
-        self.logger.debug("%d %s %s", update.effective_chat.id, full_user, update.message.text)
-        self.meshtastic_connection.send_text("%s: %s" % (full_user, update.message.text))
+        self.logger.debug(f"{update.effective_chat.id} {full_user} {update.message.text}")
+        self.meshtastic_connection.send_text(f"{full_user}: {update.message.text}")
 
     def poll(self) -> None:
         """
@@ -679,9 +682,9 @@ class MeshtasticBot:
     """
     Meshtastic bot
     """
-    def __init__(self, db: MeshtasticDB, config: Config, meshtastic_connection: MeshtasticConnection,
+    def __init__(self, database: MeshtasticDB, config: Config, meshtastic_connection: MeshtasticConnection,
                  telegram_connection: TelegramConnection):
-        self.database = db
+        self.database = database
         self.config = config
         self.filter = None
         self.logger = None
@@ -779,7 +782,7 @@ class MeshtasticBot:
             long_name = user.get('longName', '')
             distance = round(get_lat_lon_distance((my_latitude, my_longitude), (latitude, longitude)))
             distance = humanize.intcomma(distance)
-            msg = '{}: {}m'.format(long_name, distance)
+            msg = f"{long_name}: {distance}m"
             interface.sendText(msg, destinationId=from_id)
 
     def process_ping_command(self, packet, interface) -> None:
@@ -855,7 +858,7 @@ class MeshtasticBot:
         if self.ping_container.get(from_id, {}):
             timestamp = self.ping_container[from_id].get('timestamp', 0)
             processing_time += time.time() - timestamp
-        msg = "Pong from {} at {:.2f} SNR time={:.3f}s".format(remote_name, rx_snr, processing_time)
+        msg = f"Pong from {remote_name} at {rx_snr:.2f} SNR time={processing_time:.3f}s"
         self.meshtastic_connection.send_text(msg, destinationId=from_id)
 
     def on_receive(self, packet, interface) -> None:
@@ -866,7 +869,7 @@ class MeshtasticBot:
         :param interface:
         :return:
         """
-        self.logger.debug("Received: {}".format(packet))
+        self.logger.debug(f"Received: {packet}")
         to_id = packet.get('toId')
         decoded = packet.get('decoded')
         from_id = packet.get('fromId')
@@ -899,7 +902,7 @@ class MeshtasticBot:
             self.process_meshtastic_command(packet, interface)
             return
         self.telegram_connection.send_message(chat_id=self.config.enforce_type(int, self.config.Telegram.Room),
-                                              text="%s: %s" % (long_name, msg))
+                                              text=f"{long_name}: {msg}")
 
 
 class RenderTemplateView(View):
