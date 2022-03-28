@@ -1,5 +1,5 @@
 aprslib==0.7.0
-flask~=2.0.3
+flask~=2.1.0
 haversine~=2.5.1
 humanize~=3.14.0
 meshtastic==1.2.86
