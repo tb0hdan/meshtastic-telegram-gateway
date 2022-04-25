@@ -26,6 +26,17 @@ Meshtastic T-Beam v1.1
 ![Meshtastic T-Beam v1.1](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/img/tbeam_11.jpeg)
 
 
+## Supported software
+
+This project runs on following Python versions:
+
+- 3.7
+- 3.8
+- 3.9
+- 3.10
+
+Note: Python 3.6 is no longer supported.
+
 ## Webapp
 
 When enabled, this bot listens on specified port and renders device map.
