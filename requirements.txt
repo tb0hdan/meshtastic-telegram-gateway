@@ -6,4 +6,4 @@ meshtastic==1.2.93
 python-telegram-bot==13.11
 Pypubsub~=4.0.3
 pony~=0.7.16
-Werkzeug~=2.0.3
+Werkzeug~=2.1.1
