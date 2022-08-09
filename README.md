@@ -1,6 +1,7 @@
 # meshtastic-telegram-gateway
 ![Build](https://github.com/tb0hdan/meshtastic-telegram-gateway/actions/workflows/build.yml/badge.svg)
 ![CodeQL](https://github.com/tb0hdan/meshtastic-telegram-gateway/actions/workflows/codeql-analysis.yml/badge.svg)
+![Python versions](https://shields.io/badge/python-3.7%20|%203.8%20|%203.9%20|%203.10-green)
 
 telegram bot that forwards messages to and from Meshtastic device
 
@@ -25,17 +26,9 @@ Meshtastic T-Beam v1.1
 
 ![Meshtastic T-Beam v1.1](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/img/tbeam_11.jpeg)
 
-
 ## Supported software
 
-This project runs on following Python versions:
-
-- 3.7
-- 3.8
-- 3.9
-- 3.10
-
-Note: Python 3.6 is no longer supported.
+Python 3.7+ is required.
 
 ## Webapp
 
