@@ -3,7 +3,7 @@ flask~=2.1.2
 haversine~=2.5.1
 humanize~=4.2.1
 meshtastic==1.2.95
-python-telegram-bot==13.12
+python-telegram-bot==13.13
 Pypubsub~=4.0.3
 pony~=0.7.16
 Werkzeug~=2.1.2
