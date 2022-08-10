@@ -13,7 +13,9 @@ Telegram chat room. Nicks (Your Name field for Meshtastic) are passed through in
 
 Meshtastic T-Beam v1.1
 
-[Aliexpress](https://www.aliexpress.com/item/4001178678568.html)
+[Aliexpress NEO-6M](https://www.aliexpress.com/item/4001178678568.html)
+
+[Aliexpress NEO-8M (better)](https://www.aliexpress.com/item/4001287221970.html)
 
 [Amazon](https://www.amazon.com/TTGO-Meshtastic-T-Beam-Bluetooth-Battery/dp/B08GLDQDW1)
 
