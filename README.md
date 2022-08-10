@@ -2,6 +2,7 @@
 ![Build](https://github.com/tb0hdan/meshtastic-telegram-gateway/actions/workflows/build.yml/badge.svg)
 ![CodeQL](https://github.com/tb0hdan/meshtastic-telegram-gateway/actions/workflows/codeql-analysis.yml/badge.svg)
 ![Python versions](https://shields.io/badge/python-3.7%20|%203.8%20|%203.9%20|%203.10-green)
+![Snyk vulnerabilities](https://img.shields.io/snyk/vulnerabilities/github/tb0hdan/meshtastic-telegram-gateway)
 
 telegram bot that forwards messages to and from Meshtastic device
 
