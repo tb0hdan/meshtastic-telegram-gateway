@@ -666,6 +666,8 @@ class TelegramBot:
         :return:
         """
         table = self.meshtastic_connection.interface.showNodes(includeSelf=False)
+        if not table:
+            table = "No other nodes"
         context.bot.send_message(chat_id=update.effective_chat.id, text=table)
 
     def run(self):

@@ -131,3 +131,4 @@ dmypy.json
 # local
 mesh.ini
 meshtastic.sqlite
+meshtastic.sqlite.bkp
