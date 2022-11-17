@@ -7,3 +7,4 @@ python-telegram-bot==13.14
 Pypubsub~=4.0.3
 pony~=0.7.16
 Werkzeug~=2.2.2
+setuptools>=65.5.1 # not directly required, pinned by Snyk to avoid a vulnerability
