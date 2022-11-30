@@ -891,7 +891,10 @@ class MeshtasticBot:
         if to_id != MESHTASTIC_BROADCAST_ADDR:
             return
         # Save messages
-        self.database.store_message(packet)
+        try:
+            self.database.store_message(packet)
+        except Exception as exc:
+            print ('Could not store message: ', exc, repr(exc))
         # Process commands and forward messages
         node_info = interface.nodes.get(from_id)
         long_name = from_id
