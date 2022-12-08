@@ -893,7 +893,7 @@ class MeshtasticBot:
         # Save messages
         try:
             self.database.store_message(packet)
-        except Exception as exc:
+        except Exception as exc: # pylint:disable=broad-except
             print ('Could not store message: ', exc, repr(exc))
         # Process commands and forward messages
         node_info = interface.nodes.get(from_id)
