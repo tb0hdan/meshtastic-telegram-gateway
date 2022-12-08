@@ -974,6 +974,8 @@ class RenderDataView(View):
             return '<a href="https://meshtastic.org/docs/hardware/supported/tbeam">TBEAM</a>'
         if hw_model.startswith('TLORA'):
             return '<a href="https://meshtastic.org/docs/hardware/supported/lora">TLORA</a>'
+        if hw_model.startswith('T_ECHO'):
+            return '<a href="https://meshtastic.org/docs/hardware/devices/techo">T-ECHO</a>'
         return hw_model
 
     def dispatch_request(self) -> flask.Response:  # pylint:disable=too-many-locals
