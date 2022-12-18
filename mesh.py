@@ -1002,6 +1002,8 @@ class RenderDataView(View):
             return '<a href="https://meshtastic.org/docs/hardware/supported/lora">TLORA</a>'
         if hw_model.startswith('T_ECHO'):
             return '<a href="https://meshtastic.org/docs/hardware/devices/techo">T-ECHO</a>'
+        if hw_model.startswith('DIY'):
+            return '<a href="https://meshtastic.discourse.group/t/meshtastic-diy-project/3831/1">DIY</a>'
         return hw_model
 
     def dispatch_request(self) -> flask.Response:  # pylint:disable=too-many-locals
