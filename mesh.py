@@ -4,6 +4,7 @@
 #
 import configparser
 import logging
+import re
 import sys
 import time
 #
@@ -656,6 +657,29 @@ class TelegramBot:
         context.bot.send_message(chat_id=update.effective_chat.id, text="Requesting reboot...")
         self.meshtastic_connection.reboot()
 
+    @staticmethod
+    def format_nodes(nodes):
+        """
+        Formats node list to be more compact
+
+        :param nodes:
+        :return:
+        """
+        nodes = re.sub(r'[╒═╤╕╘╧╛╞╪╡├─┼┤]', '', nodes)
+        nodes = nodes.replace('│', ',')
+        new_nodes = []
+        for line in nodes.split('\n'):
+            line = line.lstrip(',').rstrip(',').rstrip('\n')
+            if not line:
+                continue
+            # clear column value
+            new_line = []
+            for column in line.split(','):
+                column = column.strip()
+                new_line.append(column + ', ')
+            reassembled_line = ''.join(new_line).rstrip(', ')
+            new_nodes.append('`{}`'.format(reassembled_line))
+        return '\n'.join(new_nodes)
 
     def nodes(self, update: Update, context: CallbackContext) -> None:
         """
@@ -668,7 +692,9 @@ class TelegramBot:
         table = self.meshtastic_connection.interface.showNodes(includeSelf=False)
         if not table:
             table = "No other nodes"
-        context.bot.send_message(chat_id=update.effective_chat.id, text=table)
+        context.bot.send_message(chat_id=update.effective_chat.id,
+                                 text=self.format_nodes(table),
+                                 parse_mode='MarkdownV2')
 
     def run(self):
         """
