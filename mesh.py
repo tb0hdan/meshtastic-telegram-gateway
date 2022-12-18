@@ -678,7 +678,7 @@ class TelegramBot:
                 column = column.strip()
                 new_line.append(column + ', ')
             reassembled_line = ''.join(new_line).rstrip(', ')
-            new_nodes.append('`{}`'.format(reassembled_line))
+            new_nodes.append(f'`{reassembled_line}`')
         return '\n'.join(new_nodes)
 
     def nodes(self, update: Update, context: CallbackContext) -> None:
