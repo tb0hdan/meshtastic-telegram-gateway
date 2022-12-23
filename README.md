@@ -13,6 +13,8 @@ Telegram chat room. Nicks (Your Name field for Meshtastic) are passed through in
 
 [See official Meshtastic Python list](https://github.com/meshtastic/python/blob/master/meshtastic/supported_device.py)
 
+### Online stores for HW purchase
+
 [Aliexpress NEO-6M](https://www.aliexpress.com/item/4001178678568.html)
 
 [Aliexpress NEO-8M (better)](https://www.aliexpress.com/item/4001287221970.html)
