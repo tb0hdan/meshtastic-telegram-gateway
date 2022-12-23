@@ -11,7 +11,7 @@ Telegram chat room. Nicks (Your Name field for Meshtastic) are passed through in
 
 ## Supported Hardware
 
-Meshtastic T-Beam v1.1
+[See official Meshtastic Python list](https://github.com/meshtastic/python/blob/master/meshtastic/supported_device.py)
 
 [Aliexpress NEO-6M](https://www.aliexpress.com/item/4001178678568.html)
 
