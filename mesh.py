@@ -4,8 +4,10 @@
 #
 import configparser
 import logging
+import os
 import re
 import sys
+import tempfile
 import time
 #
 from datetime import datetime, timedelta
@@ -21,6 +23,7 @@ import aprslib
 import flask
 import haversine  # type: ignore
 import humanize  # type: ignore
+import pyqrcode
 import telegram.ext
 #
 from flask import Flask, jsonify, make_response, request, render_template
@@ -591,11 +594,13 @@ class TelegramBot:
         start_handler = CommandHandler('start', self.start)
         node_handler = CommandHandler('nodes', self.nodes)
         reboot_handler = CommandHandler('reboot', self.reboot)
+        qr_handler = CommandHandler('qr', self.qr_code)
         dispatcher = self.telegram_connection.dispatcher
 
         dispatcher.add_handler(start_handler)
         dispatcher.add_handler(node_handler)
         dispatcher.add_handler(reboot_handler)
+        dispatcher.add_handler(qr_handler)
 
         echo_handler = MessageHandler(Filters.text & (~Filters.command), self.echo)
         dispatcher.add_handler(echo_handler)
@@ -669,6 +674,23 @@ class TelegramBot:
             return
         context.bot.send_message(chat_id=update.effective_chat.id, text="Requesting reboot...")
         self.meshtastic_connection.reboot()
+
+    def qr_code(self, update: Update, context: CallbackContext) -> None:
+        """
+        qr - Return image containing current channel QR
+
+        :param update:
+        :param context:
+        :return:
+        """
+        url = self.meshtastic_connection.interface.localNode.getURL(includeAll=False)
+        print(f"Primary channel URL {url}")
+        qr_url = pyqrcode.create(url)
+        _, tmp = tempfile.mkstemp()
+        qr_url.png(tmp, scale=5)
+        with open(tmp, 'rb') as photo_handle:
+            context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo_handle)
+            os.remove(tmp)
 
     @staticmethod
     def format_nodes(nodes):

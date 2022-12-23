@@ -3,6 +3,7 @@ flask~=2.2.2
 haversine~=2.7.0
 humanize~=4.4.0
 meshtastic==2.0.6
+pypng==0.20220715.0
 python-telegram-bot==13.15
 Pypubsub~=4.0.3
 pony~=0.7.16
