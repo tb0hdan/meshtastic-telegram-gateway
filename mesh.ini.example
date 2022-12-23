@@ -4,6 +4,8 @@ Debug = false
 [Telegram]
 Admin = 1234
 Room = -1234
+NotificationsEnabled = false
+NotificationsRoom = -1234
 Token = AA:BB
 
 [WebApp]

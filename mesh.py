@@ -90,6 +90,17 @@ def setup_logger(name=__name__, level=logging.INFO) -> logging.Logger:
     logger.addHandler(handler)
     return logger
 
+def conditional_log(message, logger, condition):
+    """
+    conditional_log - log message when condition is true
+
+    :param message:
+    :param logger:
+    :param condition:
+    :return:
+    """
+    if condition:
+        logger.info(message)
 
 class Config:
     """
@@ -341,6 +352,7 @@ class MeshtasticDB:
         node_info = self.connection.node_info(node_id)
         last_heard = datetime.fromtimestamp(node_info.get('lastHeard', 0))
         if not node_record:
+            conditional_log(f'creating new record... {node_info}', self.logger, True)
             # create new record
             node_record = MeshtasticNodeRecord(
                 nodeId=node_id,
@@ -348,10 +360,11 @@ class MeshtasticDB:
                 lastHeard=last_heard,
                 hwModel=node_info.get('user', {}).get('hwModel', ''),
             )
-            return node_record
+            return False, node_record
+        conditional_log(f'using found record... {node_record}, {node_info}', self.logger, True)
         # Update lastHeard and return record
         node_record.lastHeard = last_heard  # pylint:disable=invalid-name
-        return node_record
+        return True, node_record
 
     @staticmethod
     @db_session
@@ -374,7 +387,7 @@ class MeshtasticDB:
         :return:
         """
         from_id = packet.get("fromId")
-        node_record = self.get_node_record(from_id)
+        _, node_record = self.get_node_record(from_id)
         decoded = packet.get('decoded')
         message = decoded.get('text', '')
         # Save meshtastic message
@@ -393,7 +406,7 @@ class MeshtasticDB:
         :return:
         """
         from_id = packet.get("fromId")
-        node_record = self.get_node_record(from_id)
+        _, node_record = self.get_node_record(from_id)
         # Save location
         position = packet.get('decoded', {}).get('position', {})
         # add location to DB
@@ -889,6 +902,29 @@ class MeshtasticBot:
         msg = f"Pong from {remote_name} at {rx_snr:.2f} SNR time={processing_time:.3f}s"
         self.meshtastic_connection.send_text(msg, destinationId=from_id)
 
+    def notify_on_new_node(self, packet, interface) -> None:
+        """
+        notify_on_new_node - sends notification about newly connected Meshtastic node (just once)
+
+        :param packet:
+        :param interface:
+        :return:
+        """
+        from_id = packet.get('fromId')
+        found, _ = self.database.get_node_record(from_id)
+        # not a new node
+        if found:
+            return
+        node_info = interface.nodes.get(from_id)
+        if not node_info:
+            return
+        user_info = node_info.get('user')
+        long_name = user_info.get('longName')
+        msg = f"{from_id} -> {long_name}"
+        self.telegram_connection.send_message(chat_id=self.config.enforce_type(int,
+                                                                               self.config.Telegram.NotificationsRoom),
+                                              text=f"New node: {msg}")
+
     def on_receive(self, packet, interface) -> None:
         """
         onReceive is called when a packet arrives
@@ -901,6 +937,10 @@ class MeshtasticBot:
         to_id = packet.get('toId')
         decoded = packet.get('decoded')
         from_id = packet.get('fromId')
+        # Send notifications if they're enabled
+        if from_id is not None and self.config.enforce_type(bool, self.config.Telegram.NotificationsEnabled):
+            self.notify_on_new_node(packet, interface)
+        #
         if decoded.get('portnum') != 'TEXT_MESSAGE_APP':
             # notifications
             if decoded.get('portnum') == 'POSITION_APP':
@@ -910,8 +950,6 @@ class MeshtasticBot:
             if decoded.get('portnum') == 'REPLY_APP':
                 self.process_pong(packet)
                 return
-            # updater.bot.send_message(chat_id=MESHTASTIC_ADMIN, text="%s" % decoded)
-            # self.logger.debug(decoded)
             return
         # ignore non-broadcast messages
         if to_id != MESHTASTIC_BROADCAST_ADDR:
