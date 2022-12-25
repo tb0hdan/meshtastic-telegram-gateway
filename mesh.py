@@ -1088,6 +1088,7 @@ class RenderDataView(View):
             name = name_qs[0].decode()
         nodes = []
         for node_info in self.meshtastic_connection.nodes_with_user:
+            device_metrics = node_info.get('deviceMetrics', {})
             position = node_info.get('position', {})
             latitude = position.get('latitude')
             longitude = position.get('longitude')
@@ -1110,12 +1111,17 @@ class RenderDataView(View):
             # name filter
             if len(name) > 0 and user.get('longName') != name:
                 continue
+            # Channel and Air utilization
+            ch_util = int(device_metrics.get('channelUtilization', 0))
+            air_util = int(device_metrics.get('airUtilTx', 0))
             #
             nodes.append([user.get('longName'), str(round(latitude, 5)),
                           str(round(longitude, 5)), self.format_hw(hw_model), snr,
                           last_heard_dt.strftime("%d/%m/%Y, %H:%M:%S"),
                           battery_level,
                           altitude,
+                          ch_util,
+                          air_util,
                           ])
         return jsonify(nodes)
 

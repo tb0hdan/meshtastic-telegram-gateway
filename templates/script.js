@@ -32,6 +32,9 @@ function draw_markers(locations) {
     const lastHeard = item[5];
     const batteryLevel = item[6];
     const altitude = item[7];
+    // new in 1.3.35+ and 2.x
+    const chUtil = item[8];
+    const airUtil = item[9];
     // markers can only be keyboard focusable when they have click listeners
     // open info window when marker is clicked
     const urlSearchParams = new URLSearchParams(window.location.search);
@@ -50,6 +53,8 @@ function draw_markers(locations) {
                             'Last heard: ' + lastHeard +
                             '<br>HW Model: ' + hwModel +
                             '<br>SNR: ' + snr +
+                            '<br>ChUtil: ' + chUtil + '% ' +
+                            '<br>AirUtil: ' + airUtil + '% ' +
                             '<br>Battery level: ' + batteryLevel + '% ' +
                             '<br>Altitude: ' + altitude + 'm ' +
       '</div>');
