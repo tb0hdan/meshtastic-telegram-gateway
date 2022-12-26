@@ -192,10 +192,18 @@ class MeshtasticConnection:
     Meshtastic device connection
     """
 
-    def __init__(self, dev_path: str, logger: logging.Logger):
+    def __init__(self, dev_path: str, logger: logging.Logger, startup_ts = time.time()):
         self.dev_path = dev_path
         self.interface = None
         self.logger = logger
+        self.startup_ts = startup_ts
+
+    @property
+    def get_startup_ts(self):
+        """
+        get_startup_ts - returns Unix timestamp since startup
+        """
+        return self.startup_ts
 
     def connect(self):
         """
@@ -594,6 +602,7 @@ class TelegramBot:
         start_handler = CommandHandler('start', self.start)
         node_handler = CommandHandler('nodes', self.nodes)
         reboot_handler = CommandHandler('reboot', self.reboot)
+        uptime_handler = CommandHandler('uptime', self.uptime)
         qr_handler = CommandHandler('qr', self.qr_code)
         dispatcher = self.telegram_connection.dispatcher
 
@@ -601,6 +610,7 @@ class TelegramBot:
         dispatcher.add_handler(node_handler)
         dispatcher.add_handler(reboot_handler)
         dispatcher.add_handler(qr_handler)
+        dispatcher.add_handler(uptime_handler)
 
         echo_handler = MessageHandler(Filters.text & (~Filters.command), self.echo)
         dispatcher.add_handler(echo_handler)
@@ -692,6 +702,13 @@ class TelegramBot:
             context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo_handle)
             os.remove(tmp)
 
+    def uptime(self, update: Update, context: CallbackContext) -> None:
+        """
+        uptime - Returns bot uptime
+        """
+        msg = humanize.naturaltime(time.time() - self.meshtastic_connection.get_startup_ts)
+        context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
+
     @staticmethod
     def format_nodes(nodes):
         """
@@ -774,7 +791,7 @@ class MeshtasticBot:
         """
         self.filter = filter_class
 
-    def on_connection(self, interface, topic=pub.AUTO_TOPIC):
+    def on_connection(self, interface: meshtastic_serial_interface.SerialInterface, topic=pub.AUTO_TOPIC) -> None:
         """
         on radio connection event
 
@@ -784,7 +801,7 @@ class MeshtasticBot:
         """
         self.logger.debug("connection on %s topic %s", interface, topic)
 
-    def on_node_info(self, node, interface):
+    def on_node_info(self, node, interface: meshtastic_serial_interface.SerialInterface) -> None:
         """
         on node information event
 
@@ -805,7 +822,7 @@ class MeshtasticBot:
         pub.subscribe(self.on_connection, "meshtastic.connection.lost")
 
     @staticmethod
-    def process_distance_command(packet, interface) -> None:  # pylint:disable=too-many-locals
+    def process_distance_command(packet, interface: meshtastic_serial_interface.SerialInterface) -> None:  # pylint:disable=too-many-locals
         """
         Process /distance Meshtastic command
 
@@ -848,7 +865,7 @@ class MeshtasticBot:
             msg = f"{long_name}: {distance}m"
             interface.sendText(msg, destinationId=from_id)
 
-    def process_ping_command(self, packet, interface) -> None:
+    def process_ping_command(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
         """
         Process /ping Meshtastic command
 
@@ -864,7 +881,8 @@ class MeshtasticBot:
                            portNum=meshtastic_portnums_pb2.PortNum.REPLY_APP,
                            wantAck=True, wantResponse=True)
 
-    def process_stats_command(self, packet, _) -> None:
+    # pylint: disable=unused-argument
+    def process_stats_command(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
         """
         Process /stats Meshtastic command
 
@@ -877,7 +895,7 @@ class MeshtasticBot:
         self.meshtastic_connection.send_text(msg, destinationId=from_id)
 
 
-    def process_meshtastic_command(self, packet, interface) -> None:
+    def process_meshtastic_command(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
         """
         Process Meshtastic command
 
@@ -902,7 +920,16 @@ class MeshtasticBot:
             return
         self.meshtastic_connection.send_text("unknown command", destinationId=from_id)
 
-    def process_pong(self, packet):
+    # pylint: disable=unused-argument
+    def process_uptime(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
+        """
+        process_uptime - return bot uptime
+        """
+        from_id = packet.get('fromId')
+        msg = humanize.naturaltime(time.time() - self.meshtastic_connection.get_startup_ts)
+        self.meshtastic_connection.send_text(msg, destinationId=from_id)
+
+    def process_pong(self, packet) -> None:
         """
 
         :param packet:
@@ -924,7 +951,7 @@ class MeshtasticBot:
         msg = f"Pong from {remote_name} at {rx_snr:.2f} SNR time={processing_time:.3f}s"
         self.meshtastic_connection.send_text(msg, destinationId=from_id)
 
-    def notify_on_new_node(self, packet, interface) -> None:
+    def notify_on_new_node(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
         """
         notify_on_new_node - sends notification about newly connected Meshtastic node (just once)
 
@@ -947,7 +974,7 @@ class MeshtasticBot:
                                                                                self.config.Telegram.NotificationsRoom),
                                               text=f"New node: {msg}")
 
-    def on_receive(self, packet, interface) -> None:
+    def on_receive(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
         """
         onReceive is called when a packet arrives
 
