@@ -7,6 +7,8 @@ Room = -1234
 NotificationsEnabled = false
 NotificationsRoom = -1234
 Token = AA:BB
+MapLinkEnabled = false
+MapLink = https://yourwebsite.com
 
 [WebApp]
 Port = 5000

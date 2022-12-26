@@ -79,7 +79,7 @@ Default value is 3600 seconds. Can be changed using `?tail=xxx` query string, e.
 1. `/start` - basic command to confirm that bot is up and running
 2. `/nodes` - return list of known nodes (including those reachable via other hops)
 3. `/qr` - return active QR code for configuring new Meshtastic devices
-
+4. `/map` - return link to map
 
 ### Meshtastic only
 

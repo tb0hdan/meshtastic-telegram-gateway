@@ -604,6 +604,8 @@ class TelegramBot:
         reboot_handler = CommandHandler('reboot', self.reboot)
         uptime_handler = CommandHandler('uptime', self.uptime)
         qr_handler = CommandHandler('qr', self.qr_code)
+        maplink_handler = CommandHandler('map', self.map_link)
+
         dispatcher = self.telegram_connection.dispatcher
 
         dispatcher.add_handler(start_handler)
@@ -611,6 +613,7 @@ class TelegramBot:
         dispatcher.add_handler(reboot_handler)
         dispatcher.add_handler(qr_handler)
         dispatcher.add_handler(uptime_handler)
+        dispatcher.add_handler(maplink_handler)
 
         echo_handler = MessageHandler(Filters.text & (~Filters.command), self.echo)
         dispatcher.add_handler(echo_handler)
@@ -709,6 +712,16 @@ class TelegramBot:
         formatted_time = humanize.naturaltime(time.time() - self.meshtastic_connection.get_startup_ts)
         context.bot.send_message(chat_id=update.effective_chat.id,
                                  text=f'Bot v{VERSION} started {formatted_time}')
+
+    def map_link(self, update: Update, context: CallbackContext) -> None:
+        """
+        map_link - Returns map link (if enabled)
+        """
+        msg = 'Map link not enabled'
+        if self.config.enforce_type(bool, self.config.Telegram.MapLinkEnabled):
+            msg = self.config.enforce_type(str, self.config.Telegram.MapLink)
+        context.bot.send_message(chat_id=update.effective_chat.id,
+                                 text=msg)
 
     @staticmethod
     def format_nodes(nodes):
