@@ -706,8 +706,9 @@ class TelegramBot:
         """
         uptime - Returns bot uptime
         """
-        msg = humanize.naturaltime(time.time() - self.meshtastic_connection.get_startup_ts)
-        context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
+        formatted_time = humanize.naturaltime(time.time() - self.meshtastic_connection.get_startup_ts)
+        context.bot.send_message(chat_id=update.effective_chat.id,
+                                 text=f'Bot v{VERSION} started {formatted_time}')
 
     @staticmethod
     def format_nodes(nodes):
@@ -926,8 +927,9 @@ class MeshtasticBot:
         process_uptime - return bot uptime
         """
         from_id = packet.get('fromId')
-        msg = humanize.naturaltime(time.time() - self.meshtastic_connection.get_startup_ts)
-        self.meshtastic_connection.send_text(msg, destinationId=from_id)
+        formatted_time = humanize.naturaltime(time.time() - self.meshtastic_connection.get_startup_ts)
+        self.meshtastic_connection.send_text(f'Bot v{VERSION} started {formatted_time}',
+                                             destinationId=from_id)
 
     def process_pong(self, packet) -> None:
         """
