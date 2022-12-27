@@ -709,9 +709,12 @@ class TelegramBot:
         """
         uptime - Returns bot uptime
         """
+        firmware = 'unknown'
+        if self.meshtastic_connection.interface.myInfo:
+            firmware = self.meshtastic_connection.interface.myInfo.firmware_version
         formatted_time = humanize.naturaltime(time.time() - self.meshtastic_connection.get_startup_ts)
         context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text=f'Bot v{VERSION} started {formatted_time}')
+                                 text=f'Bot v{VERSION}/FW: {firmware} started {formatted_time}')
 
     def map_link(self, update: Update, context: CallbackContext) -> None:
         """
@@ -934,14 +937,16 @@ class MeshtasticBot:
             return
         self.meshtastic_connection.send_text("unknown command", destinationId=from_id)
 
-    # pylint: disable=unused-argument
     def process_uptime(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
         """
         process_uptime - return bot uptime
         """
+        firmware = 'unknown'
+        if interface.myInfo:
+            firmware = interface.myInfo.firmware_version
         from_id = packet.get('fromId')
         formatted_time = humanize.naturaltime(time.time() - self.meshtastic_connection.get_startup_ts)
-        self.meshtastic_connection.send_text(f'Bot v{VERSION} started {formatted_time}',
+        self.meshtastic_connection.send_text(f'Bot v{VERSION}/FW: {firmware} started {formatted_time}',
                                              destinationId=from_id)
 
     def process_pong(self, packet) -> None:
