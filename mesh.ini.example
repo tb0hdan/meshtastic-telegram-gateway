@@ -1,32 +1,55 @@
 [DEFAULT]
+# en: Enable global debugging mode
 Debug = false
 
 [Telegram]
+# en: Telegram user id that will have admin privileges. Positive integer.
 Admin = 1234
+# en: Room id that will serve as a gateway between Telegram and Meshtastic users. Negative integer.
 Room = -1234
+# en: New node notifications. Will not notify about nodes that are already in local database. Boolean.
 NotificationsEnabled = false
+# en: Separate room with all the users (not gateway) that will receive new node notifications. Negative integer.
 NotificationsRoom = -1234
+# en: Telegram token. Obrained from @BotFather
 Token = AA:BB
+# en: Enables `/map` command. Boolean
 MapLinkEnabled = false
+# en: Respond with following link to `/map` command. Typically your own website with proxy to bot's webapp. String.
 MapLink = https://yourwebsite.com
-
+ 
 [WebApp]
+# en: TCP port for built-in web application. Integer.
 Port = 5000
+# en: Interval in seconds for redrawing markers on map. Integer.
 RedrawMarkersEvery = 300
+# en: Google Maps Javascript API Key. String.
 APIKey = AIxxxxZA
+# en: Enables built-in web application. Boolean.
 Enabled = false
+# en: Center Latitude for map. Typically your city. Float.
 Center_Latitude = 50.5
+# en: Center Longitude for map. Typically your city. Float.
 Center_Longitude = 30.5
+# en: Tail duration in seconds for map. Integer.
 LastHeardDefault = 3600
 
 [Meshtastic]
+# en: Meshtastic admin node. Both public and private messages are supported. String.
 Admin = !deadbeef
+# en: Meshtastic device file. Works on Linux, OSX and possibly some Unix flavors. String.
 Device = /dev/ttyACM0
+# en: Local database file name. String.
 DatabaseFile = meshtastic.sqlite
 
 [APRS]
+# en: APRS functionality. Not actually used. Boolean.
 Enabled = false
+# en: Forward APRS node coordinates to Meshtastic. Boolean.
 ToMeshtastic = false
+# en: Forward Meshtastic node coordinates to APRS. Boolean.
 FromMeshtastic = false
+# en: Valid APRS callsign. String.
 CallSign = N0CALL-1
+# en: Valid APRS pass code. String.
 Password = QwertyLOL123
