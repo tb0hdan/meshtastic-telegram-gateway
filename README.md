@@ -39,6 +39,11 @@ Telegram chat room. Nicks (Your Name field for Meshtastic) are passed through in
 
 ![Meshtastic diagram](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/MeshtasticBot.drawio.png)
 
+### Interconnecting cities
+
+![Meshtastic cross diagram](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/MeshtasticBot-cross.drawio.png)
+
+
 ## Supported software
 
 Python 3.7+ is required.
