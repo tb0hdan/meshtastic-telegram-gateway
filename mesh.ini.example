@@ -1,78 +1,101 @@
 [DEFAULT]
 # en: Enable global debugging mode. Boolean.
+# pl: Włącz globalny tryb debugowania. Logiczne.
 # pt: Ativar modo de depuração global. Boleano.
 Debug = false
 
 [Telegram]
 # en: Telegram user id that will have admin privileges. Positive integer.
+# pl: Identyfikator użytkownika telegramu, który będzie miał uprawnienia administratora. Dodatnia liczba całkowita.
 # pt: ID de usuário do Telegram que terá privilégios de administrador. Inteiro positivo.
 Admin = 1234
 # en: Room id that will serve as a gateway between Telegram and Meshtastic users. Negative integer.
+# pl: Identyfikator pokoju, który będzie służył jako brama między użytkownikami Telegrama i Meshtastic. Ujemna liczba całkowita.
 # pt: ID da sala que servirá de gateway entre os usuários do Telegram e do Meshtastic. Inteiro negativo.
 Room = -1234
 # en: New node notifications. Will not notify about nodes that are already in local database. Boolean.
+# pl: Powiadomienia o nowych węzłach. Nie będzie powiadamiać o węzłach, które są już w lokalnej bazie danych. Logiczne.
 # pt: Notificações de novos nós. Não notificará sobre nós que já estão no banco de dados local. Boleano.
 NotificationsEnabled = false
 # en: Separate room with all the users (not gateway) that will receive new node notifications. Negative integer.
+# pl: Oddzielne pomieszczenie ze wszystkimi użytkownikami (nie bramą), którzy będą otrzymywać powiadomienia o nowych węzłach. Ujemna liczba całkowita.
 # pt: Sala separada com todos os usuários (não gateway) que receberão notificações de novos nós. Inteiro negativo.
 NotificationsRoom = -1234
 # en: Telegram token. Obrained from @BotFather
+# pl: Token telegramu. Uzyskane od @BotFather
 # pt: Token de telegrama. Obtido de @BotFather
 Token = AA:BB
 # en: Enables `/map` command. Boolean
+# pl: Włącza polecenie `/map`. Logiczne
 # pt: Ativa o comando `/map`. Boleano
 MapLinkEnabled = false
 # en: Respond with following link to `/map` command. Typically your own website with proxy to bot's webapp. String.
+# pl: Odpowiedz za pomocą następującego łącza do polecenia `/map`. Zazwyczaj własna strona internetowa z serwerem proxy do aplikacji internetowej bota. Strunowy.
 # pt: Responda com o seguinte link para o comando `/map`. Normalmente, seu próprio site com proxy para o webapp do bot. Fragmento.
 MapLink = https://yourwebsite.com
  
 [WebApp]
 # en: TCP port for built-in web application. Integer.
+# pl: Port TCP dla wbudowanej aplikacji internetowej. Liczba całkowita.
 # pt: Porta TCP para aplicativo da Web integrado. Inteiro.
 Port = 5000
 # en: Interval in seconds for redrawing markers on map. Integer.
+# pl: Interwał w sekundach do ponownego rysowania znaczników na mapie. Liczba całkowita.
 # pt: Intervalo em segundos para redesenhar os marcadores no mapa. inteiro.
 RedrawMarkersEvery = 300
 # en: Google Maps Javascript API Key. String.
+# pl: Klucz API Javascript Map Google. Strunowy.
 # pt: Chave da API Javascript do Google Maps. Fragmento.
 APIKey = AIxxxxZA
 # en: Enables built-in web application. Boolean.
+# pl: Włącza wbudowaną aplikację internetową. Logiczne.
 # pt: Ativa o aplicativo da Web integrado. Boleano.
 Enabled = false
 # en: Center Latitude for map. Typically your city. Float.
+# pl: Wyśrodkuj szerokość geograficzną dla mapy. Zazwyczaj twoje miasto. Pływak.
 # pt: Latitude central do mapa. Normalmente sua cidade. Flutuador.
 Center_Latitude = 50.5
 # en: Center Longitude for map. Typically your city. Float.
+# pl: Środkowa długość geograficzna dla mapy. Zazwyczaj twoje miasto. Pływak.
 # pt: Longitude central do mapa. Normalmente sua cidade. Flutuador.
 Center_Longitude = 30.5
 # en: Tail duration in seconds for map. Integer.
+# pl: Czas trwania ogona w sekundach dla mapy. Liczba całkowita.
 # pt: Duração da cauda em segundos para o mapa. Inteiro.
 LastHeardDefault = 3600
 
 [Meshtastic]
 # en: Meshtastic admin node. Both public and private messages are supported. String.
+# pl: Węzeł administratora Meshtastic. Obsługiwane są zarówno wiadomości publiczne, jak i prywatne. Strunowy.
 # pt: Nó de administração Meshtastic. Ambas as mensagens públicas e privadas são suportadas. Fragmento.
 Admin = !deadbeef
 # en: Meshtastic device file. Works on Linux, OSX and possibly some Unix flavors. String.
+# pl: Plik urządzenia Meshtastic. Działa na systemach Linux, OSX i prawdopodobnie na niektórych wersjach systemu Unix. Strunowy.
 # pt: Arquivo de dispositivo Meshtastic. Funciona no Linux, OSX e possivelmente em alguns tipos de Unix. Fragmento.
 Device = /dev/ttyACM0
 # en: Local database file name. String.
+# pl: Nazwa pliku lokalnej bazy danych. Strunowy.
 # pt: Nome do arquivo do banco de dados local. Fragmento.
 DatabaseFile = meshtastic.sqlite
 
 [APRS]
 # en: APRS functionality. Not actually used. Boolean.
+# pl: Funkcjonalność APRS. Właściwie nie używany. Logiczne.
 # pt: Funcionalidade APRS. Na verdade não usado. Boleano.
 Enabled = false
 # en: Forward APRS node coordinates to Meshtastic. Boolean.
+# pl: Przekaż współrzędne węzła APRS do Meshtastic. Logiczne.
 # pt: Encaminhe as coordenadas do nó APRS para o Meshtastic. Boleano.
 ToMeshtastic = false
 # en: Forward Meshtastic node coordinates to APRS. Boolean.
+# pl: Prześlij współrzędne węzła Meshtastic do APRS. Logiczne.
 # pt: Encaminhe as coordenadas do nó Meshtastic para o APRS. Boleano.
 FromMeshtastic = false
 # en: Valid APRS callsign. String.
+# pl: Ważny znak wywoławczy APRS. Strunowy.
 # pt: Indicativo APRS válido. Fragmento.
 CallSign = N0CALL-1
 # en: Valid APRS pass code. String.
+# pl: Ważny kod dostępu APRS. Strunowy.
 # pt: Senha APRS válida. Fragmento.
 Password = QwertyLOL123

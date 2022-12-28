@@ -4,7 +4,7 @@
 ![Python versions](https://shields.io/badge/python-3.7%20|%203.8%20|%203.9%20|%203.10-green)
 ![Snyk vulnerabilities](https://img.shields.io/snyk/vulnerabilities/github/tb0hdan/meshtastic-telegram-gateway)
 
-*Leia isto em outros idiomas: [English](README.md), [Portuguese](README.pt.md)*
+*Leia isto em outros idiomas: [English](README.md), [Polski](README.pl.md), [Português](README.pt.md)*
 
 bot de telegrama que encaminha mensagens de e para o dispositivo Meshtastic
 
