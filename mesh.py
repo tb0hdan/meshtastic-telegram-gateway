@@ -431,6 +431,21 @@ class MeshtasticDB:
             node=node_record,
         )
 
+    @staticmethod
+    @db_session
+    def get_last_coordinates(node_id: str):
+        """
+        get_last_coordinates - get last known node coordinates
+        """
+        node_record = MeshtasticNodeRecord.select(lambda n: n.nodeId == node_id).first()
+        if not node_record:
+            raise RuntimeError(f'node {node_id} not found')
+        location_record = MeshtasticLocationRecord.select(lambda n: n.node == node_id).last()
+        if not location_record:
+            raise RuntimeError(f'node {node_id} has no stored locations')
+        print(location_record)
+        return location_record.latitude, location_record.longitude
+
 
 class Filter:
     """
@@ -1090,7 +1105,9 @@ class RenderDataView(View):
     Specific data renderer
     """
 
-    def __init__(self, config: Config, meshtastic_connection: MeshtasticConnection, logger: logging.Logger):
+    def __init__(self, database: MeshtasticDB, config: Config,
+                 meshtastic_connection: MeshtasticConnection, logger: logging.Logger):
+        self.database = database
         self.config = config
         self.logger = logger
         self.meshtastic_connection = meshtastic_connection
@@ -1140,7 +1157,10 @@ class RenderDataView(View):
             latitude = position.get('latitude')
             longitude = position.get('longitude')
             if not (latitude and longitude):
-                continue
+                try:
+                    latitude, longitude = self.database.get_last_coordinates(node_info.get('id'))
+                except RuntimeError:
+                    continue
             user = node_info.get('user', {})
             hw_model = user.get('hwModel', 'unknown')
             snr = node_info.get('snr', 10.0)
@@ -1177,8 +1197,10 @@ class WebApp:  # pylint:disable=too-few-public-methods
     """
     WebApp: web application container
     """
-
-    def __init__(self, app: Flask, config: Config, meshtastic_connection: MeshtasticConnection, logger: logging.Logger):
+    # pylint:disable=too-many-arguments
+    def __init__(self, database: MeshtasticDB, app: Flask, config: Config,
+                 meshtastic_connection: MeshtasticConnection, logger: logging.Logger):
+        self.database = database
         self.app = app
         self.config = config
         self.logger = logger
@@ -1193,7 +1215,10 @@ class WebApp:  # pylint:disable=too-few-public-methods
         self.app.add_url_rule('/script.js', view_func=RenderScript.as_view(
             'script_page', config=self.config))
         self.app.add_url_rule('/data.json', view_func=RenderDataView.as_view(
-            'data_page', config=self.config, meshtastic_connection=self.meshtastic_connection, logger=self.logger))
+            'data_page',
+            database=self.database,
+            config=self.config,
+            meshtastic_connection=self.meshtastic_connection, logger=self.logger))
         # Index pages
         self.app.add_url_rule('/', view_func=RenderTemplateView.as_view(
             'root_page', template_name='index.html'))
@@ -1236,7 +1261,9 @@ class WebServer:  # pylint:disable=too-few-public-methods
     Web server wrapper around Flask app
     """
 
-    def __init__(self, config: Config, meshtastic_connection: MeshtasticConnection, logger: logging.Logger):
+    def __init__(self, database: MeshtasticDB, config: Config,
+                 meshtastic_connection: MeshtasticConnection, logger: logging.Logger):
+        self.database = database
         self.meshtastic_connection = meshtastic_connection
         self.config = config
         self.logger = logger
@@ -1250,7 +1277,7 @@ class WebServer:  # pylint:disable=too-few-public-methods
         :return:
         """
         if self.config.enforce_type(bool, self.config.WebApp.Enabled):
-            web_app = WebApp(self.app, self.config, self.meshtastic_connection, self.logger)
+            web_app = WebApp(self.database, self.app, self.config, self.meshtastic_connection, self.logger)
             web_app.register()
             self.server = ServerThread(self.app, self.config, self.logger)
             self.server.start()
@@ -1304,7 +1331,7 @@ def main():
     meshtastic_bot.set_logger(logger)
     meshtastic_bot.subscribe()
     #
-    web_server = WebServer(config, meshtastic_connection, logger)
+    web_server = WebServer(database, config, meshtastic_connection, logger)
     # non-blocking
     aprs_streamer.run()
     web_server.run()
