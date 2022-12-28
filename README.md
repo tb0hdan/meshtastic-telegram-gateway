@@ -62,7 +62,7 @@ Default value is 3600 seconds. Can be changed using `?tail=xxx` query string, e.
 
 ## Setup
 
-1. Run `cp mesh.ini.example mesh.ini`
+1. Run `cat mesh.ini.example|egrep -v '^#' > mesh.ini`
 2. Create new Telegram bot using [@BotFather](https://t.me/BotFather) contact. Copy token to clipboard.
 3. Put token from previous step into `mesh.ini`
 4. Put admin id and room id into `mesh.ini`

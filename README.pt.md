@@ -62,7 +62,7 @@ O valor padrão é 3600 segundos. Pode ser alterado usando a string de consulta 
 
 ## Configurar
 
-1. Execute `cp mesh.ini.example mesh.ini`
+1. Execute `cat mesh.ini.example|egrep -v '^#' > mesh.ini`
 2. Crie um novo bot do Telegram usando o contato [@BotFather](https://t.me/BotFather). Copie o token para a 
 área de transferência.
 3. Coloque o token da etapa anterior em `mesh.ini`
@@ -114,4 +114,3 @@ Locations: 1234. Messages: 20
 administrador.
 
 `/uptime` - retorna a versão/tempo de atividade do bot
-
