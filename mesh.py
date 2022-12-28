@@ -35,7 +35,7 @@ from meshtastic import (
     portnums_pb2 as meshtastic_portnums_pb2
 )
 
-from pony.orm import db_session, Database, Optional, PrimaryKey, Required, Set, set_sql_debug
+from pony.orm import db_session, desc, Database, Optional, PrimaryKey, Required, Set, set_sql_debug
 from pubsub import pub
 from telegram import Update
 from telegram.ext import CallbackContext
@@ -440,7 +440,8 @@ class MeshtasticDB:
         node_record = MeshtasticNodeRecord.select(lambda n: n.nodeId == node_id).first()
         if not node_record:
             raise RuntimeError(f'node {node_id} not found')
-        location_record = MeshtasticLocationRecord.select(lambda n: n.node == node_id).last()
+        record = MeshtasticLocationRecord.select(lambda n: n.node == node_id)
+        location_record = record.order_by(desc(MeshtasticLocationRecord.datetime)).first()
         if not location_record:
             raise RuntimeError(f'node {node_id} has no stored locations')
         print(location_record)
