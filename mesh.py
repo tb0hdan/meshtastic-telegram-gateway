@@ -1198,18 +1198,70 @@ class RenderDataView(View):
         return jsonify(nodes)
 
 
+class RenderAirRaidView(View):
+    """
+    Air Raid Alert renderer
+    """
+
+    # pylint:disable=too-many-arguments
+    def __init__(self, database: MeshtasticDB, config: Config,
+                 meshtastic_connection: MeshtasticConnection,
+                 telegram_connection: TelegramConnection,
+                 logger: logging.Logger):
+        self.database = database
+        self.config = config
+        self.meshtastic_connection = meshtastic_connection
+        self.telegram_connection = telegram_connection
+        self.logger = logger
+        self.region_table = {3: 'Khmelnystjka', 4: 'Vinnytsjka', 5: 'Rivnenska',
+                             8: 'Volynska', 9: 'Dnipro', 10: 'Zhytomyrska',
+                             11: 'Zakarpattya', 12: 'Zaporizhzhja', 13: 'Ivano-Fr',
+                             14: 'Kyiv obl', 15: 'Kirovohrad',  16: 'Luhansk',
+                             17: 'Mykolaiv',  18: 'Odesa',  19: 'Poltava',
+                             20: 'Sumy',  21: 'Ternopil',  22: 'Kharkiv',
+                             23: 'Kherson',  24: 'Cherkasy',  25: 'Chernihiv',
+                             26: 'Chernivtsi', 27: 'Lviv', 28: 'Donetsjk',
+                             31: 'Kyiv', 9999: 'Krym'}
+
+    def dispatch_request(self) -> AnyStr:
+        """
+        Process Flask request
+
+        :return:
+        """
+        msg = request.get_json()
+        alert_type = msg.get('alarmType')
+        region_id = msg.get('regionId', 0)
+        alert_place = self.region_table.get(region_id)
+        alert_status = msg.get('status')
+        alert_tz = msg.get('createdAt')
+        dt_f = datetime.strptime(alert_tz, '%Y-%m-%dT%H:%M:%SZ')
+        alert_time = f'{dt_f.hour + 2}:{dt_f.minute}:{dt_f.second}'
+        print(msg)
+        if region_id in [14, 31] and self.config.enforce_type(bool, self.config.WebApp.AirRaidEnabled):
+            new_msg = f'Alert: {alert_type}, {alert_place}, {alert_status} since {alert_time}'
+            self.telegram_connection.send_message(chat_id=self.config.enforce_type(int,
+                                                                               self.config.Telegram.NotificationsRoom),
+                                                  text=new_msg)
+            self.meshtastic_connection.send_text(new_msg)
+        return 'Ok'
+
+
 class WebApp:  # pylint:disable=too-few-public-methods
     """
     WebApp: web application container
     """
     # pylint:disable=too-many-arguments
     def __init__(self, database: MeshtasticDB, app: Flask, config: Config,
-                 meshtastic_connection: MeshtasticConnection, logger: logging.Logger):
+                 meshtastic_connection: MeshtasticConnection,
+                 telegram_connection: TelegramConnection,
+                 logger: logging.Logger):
         self.database = database
         self.app = app
         self.config = config
         self.logger = logger
         self.meshtastic_connection = meshtastic_connection
+        self.telegram_connection = telegram_connection
 
     def register(self) -> None:
         """
@@ -1224,6 +1276,23 @@ class WebApp:  # pylint:disable=too-few-public-methods
             database=self.database,
             config=self.config,
             meshtastic_connection=self.meshtastic_connection, logger=self.logger))
+        # This should be moved out to separate directory
+        self.app.add_url_rule('/airraid/' + self.config.enforce_type(str, self.config.WebApp.AirRaidPrivate),
+                              view_func=RenderAirRaidView.as_view(
+                              'airraid_page',
+                              database=self.database,
+                              config=self.config,
+                              meshtastic_connection=self.meshtastic_connection,
+                              telegram_connection=self.telegram_connection,
+                              logger=self.logger), methods=['POST'])
+        self.app.add_url_rule('/airraid/' + self.config.enforce_type(str, self.config.WebApp.AirRaidPrivate) + '/',
+                              view_func=RenderAirRaidView.as_view(
+                              'airraid_page_with_slash',
+                              database=self.database,
+                              config=self.config,
+                              meshtastic_connection=self.meshtastic_connection,
+                              telegram_connection=self.telegram_connection,
+                              logger=self.logger), methods=['POST'])
         # Index pages
         self.app.add_url_rule('/', view_func=RenderTemplateView.as_view(
             'root_page', template_name='index.html'))
@@ -1265,11 +1334,14 @@ class WebServer:  # pylint:disable=too-few-public-methods
     """
     Web server wrapper around Flask app
     """
-
+    # pylint:disable=too-many-arguments
     def __init__(self, database: MeshtasticDB, config: Config,
-                 meshtastic_connection: MeshtasticConnection, logger: logging.Logger):
+                 meshtastic_connection: MeshtasticConnection,
+                 telegram_connection: TelegramConnection,
+                 logger: logging.Logger):
         self.database = database
         self.meshtastic_connection = meshtastic_connection
+        self.telegram_connection = telegram_connection
         self.config = config
         self.logger = logger
         self.app = Flask(__name__)
@@ -1282,7 +1354,10 @@ class WebServer:  # pylint:disable=too-few-public-methods
         :return:
         """
         if self.config.enforce_type(bool, self.config.WebApp.Enabled):
-            web_app = WebApp(self.database, self.app, self.config, self.meshtastic_connection, self.logger)
+            web_app = WebApp(self.database, self.app, self.config,
+                             self.meshtastic_connection,
+                             self.telegram_connection,
+                             self.logger)
             web_app.register()
             self.server = ServerThread(self.app, self.config, self.logger)
             self.server.start()
@@ -1336,7 +1411,10 @@ def main():
     meshtastic_bot.set_logger(logger)
     meshtastic_bot.subscribe()
     #
-    web_server = WebServer(database, config, meshtastic_connection, logger)
+    web_server = WebServer(database, config,
+                           meshtastic_connection,
+                           telegram_connection,
+                           logger)
     # non-blocking
     aprs_streamer.run()
     web_server.run()

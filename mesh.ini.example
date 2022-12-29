@@ -63,6 +63,12 @@ Center_Longitude = 30.5
 # pl: Czas trwania ogona w sekundach dla mapy. Liczba całkowita.
 # pt: Duração da cauda em segundos para o mapa. Inteiro.
 LastHeardDefault = 3600
+# en: Ukraine only
+# pl: Tylko Ukraina
+# pt: Ucrânia apenas
+AirRaidEnabled = false
+AirRaidPrivate = aaabbbccc
+#
 
 [Meshtastic]
 # en: Meshtastic admin node. Both public and private messages are supported. String.
