@@ -32,6 +32,7 @@ from meshtastic import (
     BROADCAST_ADDR as MESHTASTIC_BROADCAST_ADDR,
     LOCAL_ADDR as MESHTASTIC_LOCAL_ADDR,
     serial_interface as meshtastic_serial_interface,
+    tcp_interface as meshtastic_tcp_interface,
     portnums_pb2 as meshtastic_portnums_pb2
 )
 
@@ -211,7 +212,10 @@ class MeshtasticConnection:
 
         :return:
         """
-        self.interface = meshtastic_serial_interface.SerialInterface(devPath=self.dev_path, debugOut=sys.stdout)
+        if not self.dev_path.starts_with('tcp:'):
+            self.interface = meshtastic_serial_interface.SerialInterface(devPath=self.dev_path, debugOut=sys.stdout)
+        else:
+            self.interface = meshtastic_tcp_interface.TCPInterface(self.dev_path.lstrip('tcp:'), debugOut=sys.stdout)
 
     def send_text(self, *args, **kwargs) -> None:
         """

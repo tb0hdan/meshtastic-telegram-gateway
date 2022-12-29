@@ -69,10 +69,11 @@ LastHeardDefault = 3600
 # pl: Węzeł administratora Meshtastic. Obsługiwane są zarówno wiadomości publiczne, jak i prywatne. Strunowy.
 # pt: Nó de administração Meshtastic. Ambas as mensagens públicas e privadas são suportadas. Fragmento.
 Admin = !deadbeef
-# en: Meshtastic device file. Works on Linux, OSX and possibly some Unix flavors. String.
-# pl: Plik urządzenia Meshtastic. Działa na systemach Linux, OSX i prawdopodobnie na niektórych wersjach systemu Unix. Strunowy.
-# pt: Arquivo de dispositivo Meshtastic. Funciona no Linux, OSX e possivelmente em alguns tipos de Unix. Fragmento.
-Device = /dev/ttyACM0
+# en: Meshtastic device file. For TCP connections prepend with tcp:, e.g. tcp:meshtastic.local or tcp:1.2.3.4. Works on Linux, OSX and possibly some Unix flavors. String.
+# pl: Plik urządzenia Meshtastic. W przypadku połączeń TCP poprzedź tcp:, np. tcp:meshtastic.local lub tcp:1.2.3.4. Działa na systemach Linux, OSX i prawdopodobnie na niektórych wersjach systemu Unix. 
+Strunowy.
+# pt: Arquivo de dispositivo Meshtastic. Para conexões TCP, inclua tcp:, por exemplo tcp:meshtastic.local ou tcp:1.2.3.4. Funciona no Linux, OSX e possivelmente em alguns tipos de Unix. 
+Fragmento. Device = /dev/ttyACM0
 # en: Local database file name. String.
 # pl: Nazwa pliku lokalnej bazy danych. Strunowy.
 # pt: Nome do arquivo do banco de dados local. Fragmento.
