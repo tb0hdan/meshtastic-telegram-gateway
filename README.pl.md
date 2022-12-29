@@ -33,6 +33,14 @@ Pokój czatu telegramu. Nicky (pole Twoje imię i nazwisko dla Meshtastic) są p
 
 ![Meshtastic T-Beam v1.1](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/img/tbeam_11.jpeg)
 
+## Typowy przypadek użycia
+
+![Meshtastic diagram](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/MeshtasticBot.drawio.png)
+
+### Połączone miasta
+
+![Meshtastic cross diagram](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/MeshtasticBot-cross.drawio.png)
+
 ## Obsługiwane oprogramowanie
 
 Python 3.7+ jest wymagany.

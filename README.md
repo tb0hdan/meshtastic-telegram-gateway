@@ -33,8 +33,6 @@ Telegram chat room. Nicks (Your Name field for Meshtastic) are passed through in
 
 ![Meshtastic T-Beam v1.1](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/img/tbeam_11.jpeg)
 
-
-
 ## Typical use case
 
 ![Meshtastic diagram](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/MeshtasticBot.drawio.png)
@@ -42,7 +40,6 @@ Telegram chat room. Nicks (Your Name field for Meshtastic) are passed through in
 ### Interconnecting cities
 
 ![Meshtastic cross diagram](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/MeshtasticBot-cross.drawio.png)
-
 
 ## Supported software
 
