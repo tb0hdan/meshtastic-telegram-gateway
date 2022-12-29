@@ -212,7 +212,7 @@ class MeshtasticConnection:
 
         :return:
         """
-        if not self.dev_path.starts_with('tcp:'):
+        if not self.dev_path.startswith('tcp:'):
             self.interface = meshtastic_serial_interface.SerialInterface(devPath=self.dev_path, debugOut=sys.stdout)
         else:
             self.interface = meshtastic_tcp_interface.TCPInterface(self.dev_path.lstrip('tcp:'), debugOut=sys.stdout)
