@@ -1236,7 +1236,9 @@ class RenderAirRaidView(View):
         alert_status = msg.get('status')
         alert_tz = msg.get('createdAt')
         dt_f = datetime.strptime(alert_tz, '%Y-%m-%dT%H:%M:%SZ')
-        alert_time = f'{dt_f.hour + 2}:{dt_f.minute}:{dt_f.second}'
+        tzinfo = datetime.now().astimezone().tzinfo
+        dt_f = dt_f + tzinfo.utcoffset(None)
+        alert_time = dt_f.strftime("%H:%M:%S")
         print(msg)
         if region_id in [14, 31] and self.config.enforce_type(bool, self.config.WebApp.AirRaidEnabled):
             new_msg = f'Alert: {alert_type}, {alert_place}, {alert_status} since {alert_time}'
