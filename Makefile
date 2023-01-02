@@ -18,5 +18,5 @@ run:
 	@while :; do ./mesh.py; sleep 3; done
 
 tag:
-        @git tag -a v$(VERSION) -m v$(VERSION)
-        @git push --tags
+	@git tag -a v$(VERSION) -m v$(VERSION)
+	@git push --tags
