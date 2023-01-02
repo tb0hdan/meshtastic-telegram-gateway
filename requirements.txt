@@ -4,7 +4,7 @@ haversine~=2.7.0
 humanize~=4.4.0
 meshtastic==2.0.8
 pypng==0.20220715.0
-python-telegram-bot==13.15
+python-telegram-bot==20.0
 Pypubsub~=4.0.3
 pony~=0.7.16
 Werkzeug~=2.2.2
