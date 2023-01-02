@@ -297,13 +297,15 @@ class WebServer:  # pylint:disable=too-few-public-methods
     def __init__(self, database: MeshtasticDB, config: Config,
                  meshtastic_connection: MeshtasticConnection,
                  telegram_connection: TelegramConnection,
-                 logger: logging.Logger):
+                 logger: logging.Logger,
+                 static_folder: str,
+                 template_folder: str):
         self.database = database
         self.meshtastic_connection = meshtastic_connection
         self.telegram_connection = telegram_connection
         self.config = config
         self.logger = logger
-        self.app = Flask(__name__)
+        self.app = Flask(__name__, static_folder=static_folder, template_folder=template_folder)
         self.server = None
 
     def run(self) -> None:

@@ -3,6 +3,7 @@
 
 #
 import logging
+import os
 import sys
 import time
 #
@@ -19,7 +20,7 @@ from mtg.log import setup_logger, LOGFORMAT
 from mtg.webapp import WebServer
 #
 
-
+# pylint:disable=too-many-locals
 def main():
     """
     Main function :)
@@ -60,10 +61,15 @@ def main():
     meshtastic_bot.set_logger(logger)
     meshtastic_bot.subscribe()
     #
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    template_folder = os.path.join(basedir, "templates")
+    static_folder = os.path.join(basedir, "static")
     web_server = WebServer(database, config,
                            meshtastic_connection,
                            telegram_connection,
-                           logger)
+                           logger,
+                           static_folder=static_folder,
+                           template_folder=template_folder)
     # non-blocking
     aprs_streamer.run()
     web_server.run()
