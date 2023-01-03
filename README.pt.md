@@ -31,7 +31,7 @@ Sala de bate-papo do telegrama. Nicks (seu campo de nome para Meshtastic) são p
 
 [TomTop](https://www.tomtop.com/p-e13012-4.html)
 
-![Meshtastic T-Beam v1.1](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/img/tbeam_11.jpeg)
+![Meshtastic T-Beam v1.1](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/img/tbeam_11.jpeg)
 
 ## Caso de uso típico
 
@@ -51,11 +51,11 @@ Quando habilitado, este bot escuta na porta especificada e renderiza o mapa do d
 
 1. Marcador de cluster
 
-![Marcador de cluster](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/img/gmaps.png)
+![Marcador de cluster](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/img/gmaps.png)
 
 2. Detalhes do dispositivo
 
-![Detalhes do dispositivo](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/img/gmaps_details.png)
+![Detalhes do dispositivo](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/img/gmaps_details.png)
 
 3. Mapa real da comunidade de Kyiv
 

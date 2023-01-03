@@ -63,8 +63,8 @@ def main():
     meshtastic_bot.set_logger(logger)
     meshtastic_bot.subscribe()
     #
-    template_folder = os.path.join(basedir, "templates")
-    static_folder = os.path.join(basedir, "static")
+    template_folder = os.path.join(basedir, "web", "templates")
+    static_folder = os.path.join(basedir, "web", "static")
     web_server = WebServer(database, config,
                            meshtastic_connection,
                            telegram_connection,

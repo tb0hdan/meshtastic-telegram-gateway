@@ -31,7 +31,7 @@ Telegram chat room. Nicks (Your Name field for Meshtastic) are passed through in
 
 [TomTop](https://www.tomtop.com/p-e13012-4.html)
 
-![Meshtastic T-Beam v1.1](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/img/tbeam_11.jpeg)
+![Meshtastic T-Beam v1.1](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/img/tbeam_11.jpeg)
 
 ## Typical use case
 
@@ -51,11 +51,11 @@ When enabled, this bot listens on specified port and renders device map.
 
 1. Cluster markerer
 
-![Cluster Markerer](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/img/gmaps.png)
+![Cluster Markerer](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/img/gmaps.png)
 
 2. Device details
 
-![Device Details](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/img/gmaps_details.png)
+![Device Details](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/img/gmaps_details.png)
 
 3. Actual Kyiv community map
 

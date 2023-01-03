@@ -31,7 +31,7 @@ Pokój czatu telegramu. Nicky (pole Twoje imię i nazwisko dla Meshtastic) są p
 
 [TomTop](https://www.tomtop.com/p-e13012-4.html)
 
-![Meshtastic T-Beam v1.1](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/img/tbeam_11.jpeg)
+![Meshtastic T-Beam v1.1](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/img/tbeam_11.jpeg)
 
 ## Typowy przypadek użycia
 
@@ -51,11 +51,11 @@ Po włączeniu ten bot nasłuchuje na określonym porcie i renderuje mapę urzą
 
 1. Znacznik klastrów
 
-![Znacznik klastrów](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/img/gmaps.png)
+![Znacznik klastrów](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/img/gmaps.png)
 
 2. Szczegóły urządzenia
 
-![Szczegóły urządzenia](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/img/gmaps_details.png)
+![Szczegóły urządzenia](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/img/gmaps_details.png)
 
 3. Aktualna mapa społeczności Kijowa
 
