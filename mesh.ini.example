@@ -84,6 +84,8 @@ Device = /dev/ttyACM0
 # pt: Nome do arquivo do banco de dados local. Fragmento.
 DatabaseFile = meshtastic.sqlite
 # en: Log node info to file
+# pl: Zapisz informacje o węźle do pliku
+# pt: Registrar informações do nó no arquivo
 NodeLogEnabled = false
 NodeLogFile = /tmp/node_log.csv
 
