@@ -83,6 +83,9 @@ Device = /dev/ttyACM0
 # pl: Nazwa pliku lokalnej bazy danych. Strunowy.
 # pt: Nome do arquivo do banco de dados local. Fragmento.
 DatabaseFile = meshtastic.sqlite
+# en: Log node info to file
+NodeLogEnabled = false
+NodeLogFile = /tmp/node_log.csv
 
 [APRS]
 # en: APRS functionality. Not actually used. Boolean.

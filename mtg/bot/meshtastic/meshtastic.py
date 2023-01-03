@@ -18,6 +18,7 @@ from mtg.database import MeshtasticDB
 from mtg.filter import MeshtasticFilter
 from mtg.geo import get_lat_lon_distance
 from mtg.log import VERSION
+from mtg.output.file import CSVFileWriter
 
 class MeshtasticBot:
     """
@@ -33,6 +34,8 @@ class MeshtasticBot:
         self.meshtastic_connection = meshtastic_connection
         # track ping request/reply
         self.ping_container = {}
+        # file logger
+        self.writer = CSVFileWriter(dst=self.config.enforce_type(str, self.config.Meshtastic.NodeLogFile))
 
     def set_logger(self, logger: logging.Logger):
         """
@@ -42,6 +45,7 @@ class MeshtasticBot:
         :return:
         """
         self.logger = logger
+        self.writer.set_logger(self.logger)
 
     def set_filter(self, filter_class: MeshtasticFilter):
         """
@@ -257,6 +261,9 @@ class MeshtasticBot:
         if decoded.get('portnum') != 'TEXT_MESSAGE_APP':
             # notifications
             if decoded.get('portnum') == 'POSITION_APP':
+                # Log if writer is enabled
+                if from_id is not None and self.config.enforce_type(bool, self.config.Meshtastic.NodeLogEnabled):
+                    self.writer.write(packet)
                 self.database.store_location(packet)
                 return
             # pong
