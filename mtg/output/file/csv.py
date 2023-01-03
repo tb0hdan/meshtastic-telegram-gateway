@@ -1,7 +1,7 @@
 import csv
 import time
 
-class CSVLogWriter:
+class CSVFileWriter:
     def __init__(self, dst='logfile.csv'):
         self.logger = None
         self.dst = dst
