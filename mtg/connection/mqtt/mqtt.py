@@ -15,10 +15,15 @@ class MQTT:
         self.client.on_message = self.on_message
         self.client.username_pw_set(user, password)
         #
+        self.config = None
+        #
         self.logger = logger
         # for connection
         self.host = host
         self.port = port
+
+    def set_config(self, config):
+        self.config = config
 
     def on_connect(self, client, userdata, flags, rc):
         self.logger.info("Connected with result code "+str(rc))

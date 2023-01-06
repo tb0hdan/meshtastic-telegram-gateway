@@ -48,6 +48,7 @@ def main():
     #
     mqtt_connection = MQTT(config.MQTT.Host, config.MQTT.User, config.MQTT.Password,
                            logger, config.enforce_type(int, config.MQTT.Port))
+    mqtt_connection.set_config(config)
     database = MeshtasticDB(os.path.join(basedir, config.Meshtastic.DatabaseFile),
                             meshtastic_connection, logger)
     #
