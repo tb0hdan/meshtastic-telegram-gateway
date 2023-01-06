@@ -13,6 +13,7 @@ from mtg.bot.telegram import TelegramBot
 from mtg.config import Config
 from mtg.connection.aprs import APRSStreamer
 from mtg.connection.meshtastic import MeshtasticConnection
+from mtg.connection.mqtt import MQTT
 from mtg.connection.telegram import TelegramConnection
 from mtg.database import sql_debug, MeshtasticDB
 from mtg.filter import CallSignFilter, MeshtasticFilter, TelegramFilter
@@ -44,6 +45,9 @@ def main():
     telegram_connection = TelegramConnection(config.Telegram.Token, logger)
     meshtastic_connection = MeshtasticConnection(config.Meshtastic.Device, logger)
     meshtastic_connection.connect()
+    #
+    mqtt_connection = MQTT(config.MQTT.Host, config.MQTT.User, config.MQTT.Password,
+                           logger, config.enforce_type(int, config.MQTT.Port))
     database = MeshtasticDB(os.path.join(basedir, config.Meshtastic.DatabaseFile),
                             meshtastic_connection, logger)
     #
@@ -75,6 +79,7 @@ def main():
     aprs_streamer.run()
     web_server.run()
     telegram_bot.run()
+    mqtt_connection.run()
     # blocking
     while True:
         try:

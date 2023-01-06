@@ -110,3 +110,10 @@ CallSign = N0CALL-1
 # pl: Ważny kod dostępu APRS. Strunowy.
 # pt: Senha APRS válida. Fragmento.
 Password = QwertyLOL123
+
+[MQTT]
+Enabled = false
+Host = mqtt.eclipseprojects.io
+Port = 1883
+User = john
+Password = doe

@@ -154,9 +154,8 @@ class MeshtasticDB:
             node=node_record,
         )
 
-    @staticmethod
     @db_session
-    def get_last_coordinates(node_id: str):
+    def get_last_coordinates(self, node_id: str):
         """
         get_last_coordinates - get last known node coordinates
         """
@@ -167,5 +166,5 @@ class MeshtasticDB:
         location_record = record.order_by(desc(MeshtasticLocationRecord.datetime)).first()
         if not location_record:
             raise RuntimeError(f'node {node_id} has no stored locations')
-        print(location_record)
+        self.logger.debug(location_record)
         return location_record.latitude, location_record.longitude

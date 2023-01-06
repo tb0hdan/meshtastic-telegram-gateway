@@ -196,7 +196,7 @@ class RenderAirRaidView(View):
         tzinfo = datetime.now().astimezone().tzinfo
         dt_f = dt_f + tzinfo.utcoffset(None)
         alert_time = dt_f.strftime("%H:%M:%S")
-        print(msg)
+        self.logger.info(msg)
         if region_id in [14, 31] and self.config.enforce_type(bool, self.config.WebApp.AirRaidEnabled):
             new_msg = f'Alert: {alert_type}, {alert_place}, {alert_status} since {alert_time}'
             self.telegram_connection.send_message(chat_id=self.config.enforce_type(int,
