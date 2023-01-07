@@ -33,13 +33,22 @@ Sala de bate-papo do telegrama. Nicks (seu campo de nome para Meshtastic) são p
 
 ![Meshtastic T-Beam v1.1](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/img/tbeam_11.jpeg)
 
+
 ## Caso de uso típico
 
 ![Meshtastic diagram](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/MeshtasticBot.drawio.png)
 
-### Cidades interligadas
+## Cidades interligadas
+
+### Usando MQTT (recomendado)
+
+![Meshtastic cross MQTT diagram](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/MeshtasticBot-cross-mqtt.drawio.png)
+
+### Usando vários bots de telegrama
 
 ![Meshtastic cross diagram](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/MeshtasticBot-cross.drawio.png)
+
+
 
 ## Software suportado
 

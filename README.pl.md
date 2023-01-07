@@ -33,13 +33,22 @@ Pokój czatu telegramu. Nicky (pole Twoje imię i nazwisko dla Meshtastic) są p
 
 ![Meshtastic T-Beam v1.1](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/img/tbeam_11.jpeg)
 
+
 ## Typowy przypadek użycia
 
 ![Meshtastic diagram](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/MeshtasticBot.drawio.png)
 
-### Połączone miasta
+## Połączone miasta
+
+### Używanie MQTT (zalecane)
+
+![Meshtastic cross MQTT diagram](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/MeshtasticBot-cross-mqtt.drawio.png)
+
+### Korzystanie z wielu botów telegramowych
 
 ![Meshtastic cross diagram](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/MeshtasticBot-cross.drawio.png)
+
+
 
 ## Obsługiwane oprogramowanie
 
