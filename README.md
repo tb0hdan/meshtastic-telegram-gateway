@@ -37,7 +37,13 @@ Telegram chat room. Nicks (Your Name field for Meshtastic) are passed through in
 
 ![Meshtastic diagram](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/MeshtasticBot.drawio.png)
 
-### Interconnecting cities
+## Interconnecting cities
+
+### Using MQTT (recommended)
+
+![Meshtastic cross MQTT diagram](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/MeshtasticBot-cross-mqtt.drawio.png)
+
+### Using multiple telegram bots
 
 ![Meshtastic cross diagram](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/MeshtasticBot-cross.drawio.png)
 
