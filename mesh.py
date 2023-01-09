@@ -51,6 +51,7 @@ def main():
     mqtt_connection.set_config(config)
     mqtt_handler = MQTTHandler(logger)
     mqtt_connection.set_handler(mqtt_handler.handler)
+    mqtt_handler.set_node_callback(meshtastic_connection.on_mqtt_node)
     #
     database = MeshtasticDB(os.path.join(basedir, config.Meshtastic.DatabaseFile),
                             meshtastic_connection, logger)

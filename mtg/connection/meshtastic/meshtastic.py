@@ -24,6 +24,7 @@ class MeshtasticConnection:
         self.interface = None
         self.logger = logger
         self.startup_ts = startup_ts
+        self.mqtt_nodes = []
 
     @property
     def get_startup_ts(self):
@@ -74,6 +75,14 @@ class MeshtasticConnection:
         time.sleep(20)
         self.connect()
         self.logger.info("Reboot completed...")
+
+    def on_mqtt_node(self, node_id):
+        if not node_id in self.mqtt_nodes:
+            self.mqtt_nodes.append(node_id)
+
+    @property
+    def nodes_mqtt(self) -> List:
+        return self.mqtt_nodes
 
     @property
     def nodes(self) -> Dict:
