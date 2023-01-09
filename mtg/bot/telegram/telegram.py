@@ -196,9 +196,25 @@ class TelegramBot:
         table = self.meshtastic_connection.interface.showNodes(includeSelf=False)
         if not table:
             table = "No other nodes"
-        context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text=self.format_nodes(table),
-                                 parse_mode='MarkdownV2')
+        formatted = self.format_nodes(table)
+        if len(formatted) <= 4096:
+            context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text=formatted),
+                                     parse_mode='MarkdownV2')
+        else:
+            parts = []
+            part = []
+            for line in formatted.splitlines('\n'):
+                if len('\n'.join(part) + line) < 4096:
+                    part.append(line)
+                else:
+                    parts.append(part)
+                    part = [line]
+            for part in parts:
+                context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text='\n'.join(part)),
+                                     parse_mode='MarkdownV2')
+
 
     def run(self):
         """
