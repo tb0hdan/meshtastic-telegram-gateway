@@ -199,7 +199,7 @@ class TelegramBot:
         formatted = self.format_nodes(table)
         if len(formatted) <= 4096:
             context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text=formatted),
+                                     text=formatted,
                                      parse_mode='MarkdownV2')
         else:
             parts = []
@@ -212,8 +212,8 @@ class TelegramBot:
                     part = [line]
             for part in parts:
                 context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text='\n'.join(part)),
-                                     parse_mode='MarkdownV2')
+                                         text='\n'.join(part),
+                                         parse_mode='MarkdownV2')
 
 
     def run(self):
