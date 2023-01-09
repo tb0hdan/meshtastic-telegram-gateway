@@ -21,6 +21,8 @@ class MQTT:
         # for connection
         self.host = host
         self.port = port
+        # for processing
+        self.handler = None
 
     def set_config(self, config):
         self.config = config
@@ -30,7 +32,11 @@ class MQTT:
         client.subscribe('msh/#')
 
     def on_message(self, client, userdata, msg):
-        self.logger.info(msg.topic+" "+str(msg.payload))
+        if self.handler is not None:
+            self.handler(msg.topic, msg.payload)
+
+    def set_handler(self, handler):
+        self.handler = handler
 
     def run_loop(self):
         while True:
