@@ -162,7 +162,7 @@ class MeshtasticDB:
         node_record = MeshtasticNodeRecord.select(lambda n: n.nodeId == node_id).first()
         if not node_record:
             raise RuntimeError(f'node {node_id} not found')
-        record = MeshtasticLocationRecord.select(lambda n: n.node == node_id)
+        record = MeshtasticLocationRecord.select(lambda n: n.nodeId == node_id)
         location_record = record.order_by(desc(MeshtasticLocationRecord.datetime)).first()
         if not location_record:
             raise RuntimeError(f'node {node_id} has no stored locations')
