@@ -193,7 +193,8 @@ class TelegramBot:
         :param context:
         :return:
         """
-        table = self.meshtastic_connection.interface.showNodes(includeSelf=False)
+        include_self = self.config.enforce_type(bool, self.config.Telegram.NodeIncludeSelf)
+        table = self.meshtastic_connection.interface.showNodes(includeSelf=include_self)
         if not table:
             table = "No other nodes"
         formatted = self.format_nodes(table)

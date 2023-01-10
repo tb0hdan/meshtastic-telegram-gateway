@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 #
 from datetime import datetime, timedelta
@@ -10,7 +11,7 @@ from urllib.parse import parse_qs
 #
 import flask
 #
-from flask import Flask, jsonify, make_response, request, render_template
+from flask import Flask, jsonify, make_response, request, render_template, send_file
 from flask.views import View
 from werkzeug.serving import make_server
 #
@@ -36,6 +37,10 @@ class RenderTemplateView(View):
         """
         return render_template(self.template_name, timestamp=int(time.time()))
 
+class RenderFavicon(View):
+    def dispatch_request(self) -> flask.Response:
+        return send_file(os.path.abspath('web/static/images/favicon.ico'),
+                         mimetype='image/x-icon')
 
 class RenderScript(View):
     """
@@ -113,18 +118,21 @@ class RenderDataView(View):
         if len(name_qs) > 0:
             name = name_qs[0].decode()
         nodes = []
+        # node default color
+        default_color = "red"
         for node_info in self.meshtastic_connection.nodes_with_user:
+            user_info = node_info.get('user', {})
+            node_id = user_info.get('id')
             device_metrics = node_info.get('deviceMetrics', {})
             position = node_info.get('position', {})
             latitude = position.get('latitude')
             longitude = position.get('longitude')
             if not (latitude and longitude):
                 try:
-                    latitude, longitude = self.database.get_last_coordinates(node_info.get('id'))
+                    latitude, longitude = self.database.get_last_coordinates(node_id)
                 except RuntimeError:
                     continue
-            user = node_info.get('user', {})
-            hw_model = user.get('hwModel', 'unknown')
+            hw_model = user_info.get('hwModel', 'unknown')
             snr = node_info.get('snr', 10.0)
             # No signal info, use default MAX (10.0)
             if snr is None:
@@ -138,19 +146,27 @@ class RenderDataView(View):
             if diff > timedelta(seconds=tail_value):
                 continue
             # name filter
-            if len(name) > 0 and user.get('longName') != name:
+            if len(name) > 0 and user_info.get('longName') != name:
                 continue
             # Channel and Air utilization
             ch_util = int(device_metrics.get('channelUtilization', 0))
             air_util = int(device_metrics.get('airUtilTx', 0))
             #
-            nodes.append([user.get('longName'), str(round(latitude, 5)),
+            color = default_color
+            if self.meshtastic_connection.node_has_mqtt(node_id):
+                if self.meshtastic_connection.node_mqtt_status(node_id) == 'online':
+                    color = 'green'
+                else:
+                    color = 'blue'
+            nodes.append([user_info.get('longName'), str(round(latitude, 5)),
                           str(round(longitude, 5)), self.format_hw(hw_model), snr,
                           last_heard_dt.strftime("%d/%m/%Y, %H:%M:%S"),
                           battery_level,
                           altitude,
                           ch_util,
                           air_util,
+                          color,
+                          self.meshtastic_connection.node_mqtt_status(node_id)
                           ])
         return jsonify(nodes)
 
@@ -252,6 +268,8 @@ class WebApp:  # pylint:disable=too-few-public-methods
                               meshtastic_connection=self.meshtastic_connection,
                               telegram_connection=self.telegram_connection,
                               logger=self.logger), methods=['POST'])
+        # Favicon
+        self.app.add_url_rule('/favicon.ico', view_func=RenderFavicon.as_view('favicon'))
         # Index pages
         self.app.add_url_rule('/', view_func=RenderTemplateView.as_view(
             'root_page', template_name='index.html'))
@@ -278,7 +296,7 @@ class ServerThread(Thread):
 
         :return:
         """
-        self.logger.info('starting server')
+        self.logger.debug('starting server')
         self.server.serve_forever()
 
     def shutdown(self) -> None:

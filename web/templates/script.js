@@ -20,9 +20,13 @@ function draw_markers(locations) {
         disableAutoPan: true,
     });
 
+
+   markers = locations.map((item, i) => {
+    const color = item[10];
+
     const svgMarker = {
         path: "M-1.547 12l6.563-6.609-1.406-1.406-5.156 5.203-2.063-2.109-1.406 1.406zM0 0q2.906 0 4.945 2.039t2.039 4.945q0 1.453-0.727 3.328t-1.758 3.516-2.039 3.070-1.711 2.273l-0.75 0.797q-0.281-0.328-0.75-0.867t-1.688-2.156-2.133-3.141-1.664-3.445-0.75-3.375q0-2.906 2.039-4.945t4.945-2.039z",
-        fillColor: "red",
+        fillColor: color,
         fillOpacity: 1.0,
         strokeWeight: 0,
         rotation: 0,
@@ -30,7 +34,6 @@ function draw_markers(locations) {
         anchor: new google.maps.Point(0, 20),
     };
 
-   markers = locations.map((item, i) => {
     const label = item[0];
     const marker = new google.maps.Marker({
       position: new google.maps.LatLng(item[1], item[2]),
@@ -46,6 +49,8 @@ function draw_markers(locations) {
     // new in 1.3.35+ and 2.x
     const chUtil = item[8];
     const airUtil = item[9];
+    // MQTT
+    const MQTT = item[11];
     // markers can only be keyboard focusable when they have click listeners
     // open info window when marker is clicked
     const urlSearchParams = new URLSearchParams(window.location.search);
@@ -68,6 +73,7 @@ function draw_markers(locations) {
                             '<br>AirUtil: ' + airUtil + '% ' +
                             '<br>Battery level: ' + batteryLevel + '% ' +
                             '<br>Altitude: ' + altitude + 'm ' +
+                            '<br>MQTT: ' + MQTT +
       '</div>');
       infoWindow.open(map, marker);
     });

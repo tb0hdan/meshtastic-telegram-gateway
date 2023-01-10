@@ -41,4 +41,4 @@ def conditional_log(message, logger, condition):
     :return:
     """
     if condition:
-        logger.info(message)
+        logger.debug(message)

@@ -33,6 +33,8 @@ MapLinkEnabled = false
 # pl: Odpowiedz za pomocą następującego łącza do polecenia `/map`. Zazwyczaj własna strona internetowa z serwerem proxy do aplikacji internetowej bota. Strunowy.
 # pt: Responda com o seguinte link para o comando `/map`. Normalmente, seu próprio site com proxy para o webapp do bot. Fragmento.
 MapLink = https://yourwebsite.com
+NodeIncludeSelf = false
+
  
 [WebApp]
 # en: TCP port for built-in web application. Integer.
@@ -88,6 +90,7 @@ DatabaseFile = meshtastic.sqlite
 # pt: Registrar informações do nó no arquivo
 NodeLogEnabled = false
 NodeLogFile = /tmp/node_log.csv
+
 
 [APRS]
 # en: APRS functionality. Not actually used. Boolean.
