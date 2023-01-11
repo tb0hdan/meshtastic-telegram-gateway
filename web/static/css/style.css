@@ -1,8 +1,22 @@
-#map {
-    height: 100%;
-}
 html, body {
     height: 100%;
+    width: 100%;
+}
+
+body {
     margin: 0;
     padding: 0;
+}
+
+#container {
+    height: 100%;
+}
+
+#map {
+    height: 100%;
+    width: 100%;
+}
+
+
+#side-panel {
 }
