@@ -40,6 +40,7 @@ class TelegramBot:
         uptime_handler = CommandHandler('uptime', self.uptime)
         qr_handler = CommandHandler('qr', self.qr_code)
         maplink_handler = CommandHandler('map', self.map_link)
+        resetdb_handler = CommandHandler('reset_db', self.reset_db)
 
         dispatcher = self.telegram_connection.dispatcher
 
@@ -49,6 +50,7 @@ class TelegramBot:
         dispatcher.add_handler(qr_handler)
         dispatcher.add_handler(uptime_handler)
         dispatcher.add_handler(maplink_handler)
+        dispatcher.add_handler(resetdb_handler)
 
         echo_handler = MessageHandler(Filters.text & (~Filters.command), self.echo)
         dispatcher.add_handler(echo_handler)
@@ -122,6 +124,20 @@ class TelegramBot:
             return
         context.bot.send_message(chat_id=update.effective_chat.id, text="Requesting reboot...")
         self.meshtastic_connection.reboot()
+
+    def reset_db(self, update: Update, context: CallbackContext) -> None:
+        """
+        Telegram reset node DB command
+
+        :param update:
+        :param context:
+        :return:
+        """
+        if update.effective_chat.id != self.config.enforce_type(int, self.config.Telegram.Admin):
+            self.logger.info("Reset node DB requested by non-admin: %d", update.effective_chat.id)
+            return
+        context.bot.send_message(chat_id=update.effective_chat.id, text="Requesting node DB reset...")
+        self.meshtastic_connection.reset_db()
 
     def qr_code(self, update: Update, context: CallbackContext) -> None:
         """

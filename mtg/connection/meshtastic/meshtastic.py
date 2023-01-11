@@ -76,6 +76,11 @@ class MeshtasticConnection:
         self.connect()
         self.logger.info("Reboot completed...")
 
+    def reset_db(self):
+        self.logger.info('Reset node DB requested...')
+        self.interface.getNode(MESHTASTIC_LOCAL_ADDR, False).resetNodeDb()
+        self.logger.info('Reset node DB completed...')
+
     def on_mqtt_node(self, node_id, payload):
         self.logger.info(f'{node_id} is {payload}')
         self.mqtt_nodes[node_id] = payload

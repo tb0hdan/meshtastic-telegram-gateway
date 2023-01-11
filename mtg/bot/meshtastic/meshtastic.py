@@ -183,6 +183,9 @@ class MeshtasticBot:
         if msg.startswith('/reboot') and from_id == self.config.Meshtastic.Admin:
             self.meshtastic_connection.reboot()
             return
+        if msg.startswith('/reset_db') and from_id == self.config.Meshtastic.Admin:
+            self.meshtastic_connection.reset_db()
+            return
         self.meshtastic_connection.send_text("unknown command", destinationId=from_id)
 
     def process_uptime(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
