@@ -166,7 +166,7 @@ class TelegramBot:
         :return:
         """
         url = self.meshtastic_connection.interface.localNode.getURL(includeAll=False)
-        self.logger.info(f"Primary channel URL {url}")
+        self.logger.debug(f"Primary channel URL {url}")
         qr_url = pyqrcode.create(url)
         _, tmp = tempfile.mkstemp()
         qr_url.png(tmp, scale=5)

@@ -82,7 +82,7 @@ class MeshtasticConnection:
         self.logger.info('Reset node DB completed...')
 
     def on_mqtt_node(self, node_id, payload):
-        self.logger.info(f'{node_id} is {payload}')
+        self.logger.debug(f'{node_id} is {payload}')
         self.mqtt_nodes[node_id] = payload
 
     @property
