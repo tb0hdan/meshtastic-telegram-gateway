@@ -218,11 +218,12 @@ class TelegramBot:
             for column in line.split(','):
                 column = column.strip()
                 if i == 0:
-                    column = f'**{column}**'
+                    column = f'**{column}**`'
                 new_line.append(column + ', ')
                 i += 1
             reassembled_line = ''.join(new_line).rstrip(', ')
-            new_nodes.append(f'{reassembled_line}')
+            reassembled_line = f'{reassembled_line}`'
+            new_nodes.append(reassembled_line)
         return '\n'.join(new_nodes)
 
     @check_room
