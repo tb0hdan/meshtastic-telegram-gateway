@@ -208,6 +208,7 @@ class TelegramBot:
         nodes = re.sub(r'[╒═╤╕╘╧╛╞╪╡├─┼┤]', '', nodes)
         nodes = nodes.replace('│', ',')
         new_nodes = []
+        header = True
         for line in nodes.split('\n'):
             line = line.lstrip(',').rstrip(',').rstrip('\n')
             if not line:
@@ -218,11 +219,19 @@ class TelegramBot:
             for column in line.split(','):
                 column = column.strip()
                 if i == 0:
-                    column = f'**{column}**`'
+                    if not header:
+                        column = f'**{column}**`'
+                    else:
+                        column = f'**{column}**'.replace('.', '\.')
                 new_line.append(column + ', ')
-                i += 1
+                if not header:
+                    i += 1
             reassembled_line = ''.join(new_line).rstrip(', ')
-            reassembled_line = f'{reassembled_line}`'
+            if not header:
+                reassembled_line = f'{reassembled_line}`'
+            else:
+                reassembled_line = f'{reassembled_line}'
+            header = False
             new_nodes.append(reassembled_line)
         return '\n'.join(new_nodes)
 
