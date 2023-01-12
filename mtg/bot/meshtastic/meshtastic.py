@@ -243,6 +243,7 @@ class MeshtasticBot:
         # use map URL
         if self.config.enforce_type(bool, self.config.Telegram.MapLinkEnabled):
             map_link = self.config.Telegram.MapLink
+            long_name = long_name.replace(' ', '%20')
             if '?tail=' in map_link:
                 long_name = f'{map_link}&name={long_name}'
             else:
