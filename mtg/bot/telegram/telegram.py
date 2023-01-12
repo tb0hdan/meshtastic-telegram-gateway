@@ -184,7 +184,7 @@ class TelegramBot:
             firmware = self.meshtastic_connection.interface.myInfo.firmware_version
         formatted_time = humanize.naturaltime(time.time() - self.meshtastic_connection.get_startup_ts)
         context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text=f'Bot v{VERSION}/FW: {firmware} started {formatted_time}')
+                                 text=f'Bot v{VERSION}/FW: v{firmware} started {formatted_time}')
 
     @check_room
     def map_link(self, update: Update, context: CallbackContext) -> None:
@@ -213,10 +213,14 @@ class TelegramBot:
             if not line:
                 continue
             # clear column value
+            i = 0
             new_line = []
             for column in line.split(','):
                 column = column.strip()
+                if i == 0:
+                    column = f'**{column}**'
                 new_line.append(column + ', ')
+                i += 1
             reassembled_line = ''.join(new_line).rstrip(', ')
             new_nodes.append(f'`{reassembled_line}`')
         return '\n'.join(new_nodes)
