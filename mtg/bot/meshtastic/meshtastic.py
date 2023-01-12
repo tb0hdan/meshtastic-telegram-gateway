@@ -240,6 +240,13 @@ class MeshtasticBot:
             return
         user_info = node_info.get('user')
         long_name = user_info.get('longName')
+        # use map URL
+        if self.config.enforce_type(bool, self.config.Telegram.MapLinkEnabled):
+            map_link = self.config.Telegram.MapLink
+            if '?tail=' in map_link:
+                long_name = f'{map_link}&name={long_name}'
+            else:
+                long_name = f'{map_link}?name={long_name}'
         msg = f"{from_id} -> {long_name}"
         self.telegram_connection.send_message(chat_id=self.config.enforce_type(int,
                                                                                self.config.Telegram.NotificationsRoom),
