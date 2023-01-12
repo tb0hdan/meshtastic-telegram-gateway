@@ -34,8 +34,9 @@ MapLinkEnabled = false
 # pt: Responda com o seguinte link para o comando `/map`. Normalmente, seu próprio site com proxy para o webapp do bot. Fragmento.
 MapLink = https://yourwebsite.com
 NodeIncludeSelf = false
+BotInRooms = true
 
- 
+
 [WebApp]
 # en: TCP port for built-in web application. Integer.
 # pl: Port TCP dla wbudowanej aplikacji internetowej. Liczba całkowita.

@@ -1,3 +1,4 @@
+import functools
 import logging
 import os
 import re
@@ -19,6 +20,20 @@ from mtg.connection.meshtastic import MeshtasticConnection
 from mtg.connection.telegram import TelegramConnection
 from mtg.filter import TelegramFilter
 from mtg.log import VERSION
+
+
+def check_room(func):
+    @functools.wraps(func)
+    def wrapper(*args):
+        bot = args[0]
+        update = args[1]
+        rooms = [bot.config.enforce_type(int, bot.config.Telegram.NotificationsRoom),
+                 bot.config.enforce_type(int, bot.config.Telegram.Room)]
+        bot_in_rooms = bot.config.enforce_type(bool, bot.config.Telegram.BotInRooms)
+        if update.effective_chat.id in rooms and not bot_in_rooms:
+            return
+        return func(*args)
+    return wrapper
 
 
 class TelegramBot:
@@ -100,6 +115,7 @@ class TelegramBot:
         """
         self.telegram_connection.poll()
 
+    @check_room
     @staticmethod
     def start(update: Update, context: CallbackContext) -> None:
         """
@@ -111,6 +127,7 @@ class TelegramBot:
         """
         context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
 
+    @check_room
     def reboot(self, update: Update, context: CallbackContext) -> None:
         """
         Telegram reboot command
@@ -125,6 +142,7 @@ class TelegramBot:
         context.bot.send_message(chat_id=update.effective_chat.id, text="Requesting reboot...")
         self.meshtastic_connection.reboot()
 
+    @check_room
     def reset_db(self, update: Update, context: CallbackContext) -> None:
         """
         Telegram reset node DB command
@@ -139,6 +157,7 @@ class TelegramBot:
         context.bot.send_message(chat_id=update.effective_chat.id, text="Requesting node DB reset...")
         self.meshtastic_connection.reset_db()
 
+    @check_room
     def qr_code(self, update: Update, context: CallbackContext) -> None:
         """
         qr - Return image containing current channel QR
@@ -156,6 +175,7 @@ class TelegramBot:
             context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo_handle)
             os.remove(tmp)
 
+    @check_room
     def uptime(self, update: Update, context: CallbackContext) -> None:
         """
         uptime - Returns bot uptime
@@ -167,6 +187,7 @@ class TelegramBot:
         context.bot.send_message(chat_id=update.effective_chat.id,
                                  text=f'Bot v{VERSION}/FW: {firmware} started {formatted_time}')
 
+    @check_room
     def map_link(self, update: Update, context: CallbackContext) -> None:
         """
         map_link - Returns map link (if enabled)
@@ -201,6 +222,7 @@ class TelegramBot:
             new_nodes.append(f'`{reassembled_line}`')
         return '\n'.join(new_nodes)
 
+    @check_room
     def nodes(self, update: Update, context: CallbackContext) -> None:
         """
         Returns list of nodes to user
