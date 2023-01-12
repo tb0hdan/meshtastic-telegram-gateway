@@ -116,8 +116,7 @@ class TelegramBot:
         self.telegram_connection.poll()
 
     @check_room
-    @staticmethod
-    def start(update: Update, context: CallbackContext) -> None:
+    def start(_, update: Update, context: CallbackContext) -> None:
         """
         Telegram /start command handler.
 
