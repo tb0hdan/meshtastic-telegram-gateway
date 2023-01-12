@@ -222,7 +222,7 @@ class TelegramBot:
                 new_line.append(column + ', ')
                 i += 1
             reassembled_line = ''.join(new_line).rstrip(', ')
-            new_nodes.append(f'`{reassembled_line}`')
+            new_nodes.append(f'{reassembled_line}')
         return '\n'.join(new_nodes)
 
     @check_room
