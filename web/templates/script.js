@@ -99,6 +99,24 @@ function getMarkers() {
     });
 }
 
+function getPolyline() {
+    console.log('(Re)drawing track...');
+    $.get('/track.json' + window.location.search, function(data) {
+        console.log(data);
+        const flightPath = new google.maps.Polyline({
+            path: data,
+            geodesic: true,
+            strokeColor: "#FF0000",
+            strokeOpacity: 1.0,
+            strokeWeight: 2,
+        });
+        // clear
+        flightPath.setMap(null)
+        // re(draw)
+        flightPath.setMap(map);
+    });
+}
+
 
 function initialize() {
     var center = new google.maps.LatLng({{center_latitude}}, {{center_longitude}});
@@ -117,6 +135,10 @@ function initialize() {
 
     // global
     markerCluster = new markerClusterer.MarkerClusterer({ map, markers });
+    // markers
     getMarkers();
     setInterval(getMarkers, {{redraw_markers_every}}000);
+    // polyline
+    getPolyline();
+    setInterval(getPolyline, {{redraw_markers_every}}000);
 }

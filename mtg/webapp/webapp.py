@@ -66,6 +66,45 @@ class RenderScript(View):
         response.headers['Content-Type'] = 'application/javascript'
         return response
 
+class RenderTrackView(View):
+    """
+    Specific data renderer
+    """
+
+    def __init__(self, database: MeshtasticDB, config: Config,
+                 meshtastic_connection: MeshtasticConnection, logger: logging.Logger):
+        self.database = database
+        self.config = config
+        self.logger = logger
+        self.meshtastic_connection = meshtastic_connection
+
+    def dispatch_request(self) -> flask.Response:  # pylint:disable=too-many-locals
+        """
+        Process Flask request
+
+        :return:
+        """
+        query_string = parse_qs(request.query_string)
+        tail_value = self.config.enforce_type(int, self.config.WebApp.LastHeardDefault)
+        #
+        tail = query_string.get(b'tail', [])
+        if len(tail) > 0:
+            try:
+                tail_value = int(tail[0].decode())
+            except ValueError:
+                self.logger.error("Wrong tail value: ", tail)
+        #
+        name = ''
+        name_qs = query_string.get(b'name', [])
+        if len(name_qs) > 0:
+            name = name_qs[0].decode()
+        if len(name) == 0:
+            return jsonify([])
+
+        data = self.database.get_node_track(name, tail_value)
+
+        return jsonify(data)
+
 
 class RenderDataView(View):
     """
@@ -251,6 +290,13 @@ class WebApp:  # pylint:disable=too-few-public-methods
             database=self.database,
             config=self.config,
             meshtastic_connection=self.meshtastic_connection, logger=self.logger))
+
+        self.app.add_url_rule('/track.json', view_func=RenderTrackView.as_view(
+            'track_page',
+            database=self.database,
+            config=self.config,
+            meshtastic_connection=self.meshtastic_connection, logger=self.logger))
+
         # This should be moved out to separate directory
         self.app.add_url_rule('/airraid/' + self.config.enforce_type(str, self.config.WebApp.AirRaidPrivate),
                               view_func=RenderAirRaidView.as_view(

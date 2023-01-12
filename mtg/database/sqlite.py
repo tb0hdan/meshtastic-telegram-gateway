@@ -1,7 +1,7 @@
 import logging
 import time
 #
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import (
     AnyStr,
 )
@@ -140,6 +140,8 @@ class MeshtasticDB:
         :return:
         """
         from_id = packet.get("fromId")
+        if not from_id:
+            return
         _, node_record = self.get_node_record(from_id)
         # Save location
         position = packet.get('decoded', {}).get('position', {})
@@ -168,3 +170,15 @@ class MeshtasticDB:
             raise RuntimeError(f'node {node_id} has no stored locations')
         self.logger.debug(location_record)
         return location_record.latitude, location_record.longitude
+
+    @db_session
+    def get_node_track(self, node_name, tail=3600):
+        data = []
+        node_record = MeshtasticNodeRecord.select(lambda n: n.nodeName == node_name).first()
+        if not node_record:
+            return data
+        record = MeshtasticLocationRecord.select(lambda n: n.node == node_record and n.datetime >= datetime.now() - timedelta(seconds=tail))
+        location_record = record.order_by(desc(MeshtasticLocationRecord.datetime))
+        for lr in location_record:
+            data.append({"lat": lr.latitude, "lng": lr.longitude})
+        return data
