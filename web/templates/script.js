@@ -14,7 +14,20 @@ let markers = [];
 let markerCluster;
 
 
+
 function draw_markers(locations) {
+    const urlSearchParams = new URLSearchParams(window.location.search);
+    const params = Object.fromEntries(urlSearchParams.entries())
+
+    href = window.location.search;
+    if ( params['name'] == undefined ) {
+        if ( href.length > 0 ) {
+            href += '&name='
+        } else {
+            href += '?name='
+        }
+    }
+
     const infoWindow = new google.maps.InfoWindow({
         content: "",
         disableAutoPan: true,
@@ -53,18 +66,8 @@ function draw_markers(locations) {
     const MQTT = item[11];
     // markers can only be keyboard focusable when they have click listeners
     // open info window when marker is clicked
-    const urlSearchParams = new URLSearchParams(window.location.search);
-    const params = Object.fromEntries(urlSearchParams.entries())
-    href = window.location.search;
-    if ( params['name'] == undefined ) {
-        if ( href.length > 0 ) {
-            href += '&name=' + label
-        } else {
-            href += '?name=' + label
-        }
-    }
     marker.addListener("click", () => {
-      infoWindow.setContent('<div><a href="' + href + '">' + label + '</a>' +
+      infoWindow.setContent('<div><a href="' + href + label + '">' + label + '</a>' +
                             '<hr>' +
                             'Last heard: ' + lastHeard +
                             '<br>HW Model: ' + hwModel +
