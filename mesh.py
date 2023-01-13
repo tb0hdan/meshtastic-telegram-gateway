@@ -2,6 +2,7 @@
 """Meshtastic Telegram Gateway"""
 
 #
+import argparse
 import logging
 import os
 import sys
@@ -22,13 +23,13 @@ from mtg.webapp import WebServer
 #
 
 # pylint:disable=too-many-locals
-def main():
+def main(args):
     """
     Main function :)
 
     :return:
     """
-    config = Config()
+    config = Config(config_path=args.config)
     config.read()
     level = logging.INFO
     if config.enforce_type(bool, config.DEFAULT.Debug):
@@ -95,5 +96,26 @@ def main():
             sys.exit(0)
 
 
+def post2mesh(args):
+    print('pst', args.message)
+
+def cmd():
+    parser = argparse.ArgumentParser()
+    subparser = parser.add_subparsers(title="commands", help="commands")
+
+    post = subparser.add_parser("post2mesh", help="site command")
+    post.add_argument("-m", "--message", help="message to post to Meshtastic")
+    post.set_defaults(func=post2mesh)
+    #
+    run = subparser.add_parser("run", help="run")
+    run.add_argument("-c", "--config", help="path to config", default="./mesh.ini")
+    run.set_defaults(func=main)
+
+    argv = sys.argv[1:]
+    if len(argv) == 0:
+        argv = ['run']
+    args = parser.parse_args(argv)
+    print(args.func(args))
+
 if __name__ == '__main__':
-    main()
+    cmd()
