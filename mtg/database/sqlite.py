@@ -188,6 +188,7 @@ class MeshtasticDB:
         node_record = MeshtasticNodeRecord.select(lambda n: n.nodeName == node_name).first()
         if not node_record:
             return data
+        # pylint:disable=unnecessary-lambda-assignment
         cnd = lambda n: n.node == node_record and n.datetime >= datetime.now() - timedelta(seconds=tail)
         record = MeshtasticLocationRecord.select(cnd)
         location_record = record.order_by(desc(MeshtasticLocationRecord.datetime))
