@@ -1,1 +1,1 @@
-from .meshtastic import MeshtasticConnection
+from .meshtastic import FIFO, MeshtasticConnection

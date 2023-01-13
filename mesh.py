@@ -3,6 +3,7 @@
 
 #
 import argparse
+import errno
 import logging
 import os
 import sys
@@ -13,7 +14,7 @@ from mtg.bot.meshtastic import MeshtasticBot
 from mtg.bot.telegram import TelegramBot
 from mtg.config import Config
 from mtg.connection.aprs import APRSStreamer
-from mtg.connection.meshtastic import MeshtasticConnection
+from mtg.connection.meshtastic import FIFO, MeshtasticConnection
 from mtg.connection.mqtt import MQTT, MQTTHandler
 from mtg.connection.telegram import TelegramConnection
 from mtg.database import sql_debug, MeshtasticDB
@@ -21,6 +22,7 @@ from mtg.filter import CallSignFilter, MeshtasticFilter, TelegramFilter
 from mtg.log import setup_logger, LOGFORMAT
 from mtg.webapp import WebServer
 #
+
 
 # pylint:disable=too-many-locals
 def main(args):
@@ -44,7 +46,7 @@ def main(args):
     basedir = os.path.abspath(os.path.dirname(__file__))
     #
     telegram_connection = TelegramConnection(config.Telegram.Token, logger)
-    meshtastic_connection = MeshtasticConnection(config.Meshtastic.Device, logger)
+    meshtastic_connection = MeshtasticConnection(config.Meshtastic.Device, logger, config)
     meshtastic_connection.connect()
     #
     mqtt_connection = MQTT(config.MQTT.Host, config.MQTT.User, config.MQTT.Password,
@@ -83,6 +85,8 @@ def main(args):
                            template_folder=template_folder)
     # non-blocking
     aprs_streamer.run()
+    # FIFO watcher
+    meshtastic_connection.run()
     web_server.run()
     telegram_bot.run()
     mqtt_connection.run()
@@ -97,7 +101,17 @@ def main(args):
 
 
 def post2mesh(args):
-    print('pst', args.message)
+    if args.message is None:
+        print('Cannot send empty message...')
+        return
+    try:
+        os.mkfifo(FIFO)
+    except OSError as exc:
+        if exc.errno != errno.EEXIST:
+            raise
+    with open(FIFO, 'w') as fifo:
+        fifo.write(args.message + '\n')
+
 
 def cmd():
     parser = argparse.ArgumentParser()
@@ -116,6 +130,7 @@ def cmd():
         argv = ['run']
     args = parser.parse_args(argv)
     print(args.func(args))
+
 
 if __name__ == '__main__':
     cmd()

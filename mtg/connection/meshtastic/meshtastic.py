@@ -1,7 +1,10 @@
+import errno
 import logging
+import os
 import sys
 import time
 #
+from threading import Thread
 from typing import (
     Dict,
     List,
@@ -9,20 +12,23 @@ from typing import (
 #
 from meshtastic import (
     LOCAL_ADDR as MESHTASTIC_LOCAL_ADDR,
+    BROADCAST_ADDR as MESHTASTIC_BROADCAST_ADDR,
     serial_interface as meshtastic_serial_interface,
     tcp_interface as meshtastic_tcp_interface,
 )
 
+FIFO = '/tmp/mtg.fifo'
 
 class MeshtasticConnection:
     """
     Meshtastic device connection
     """
 
-    def __init__(self, dev_path: str, logger: logging.Logger, startup_ts = time.time()):
+    def __init__(self, dev_path: str, logger: logging.Logger, config, startup_ts = time.time()):
         self.dev_path = dev_path
         self.interface = None
         self.logger = logger
+        self.config = config
         self.startup_ts = startup_ts
         self.mqtt_nodes = {}
 
@@ -143,3 +149,27 @@ class MeshtasticConnection:
                 continue
             node_list.append(node_info)
         return node_list
+
+    def run_loop(self):
+        try:
+            os.mkfifo(FIFO)
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                raise
+
+        self.logger.debug("Opening FIFO...")
+        while True:
+            with open(FIFO) as fifo:
+                for line in fifo:
+                    line = line.rstrip('\n')
+                    self.send_text(line, destinationId=MESHTASTIC_BROADCAST_ADDR)
+
+    def run(self):
+        """
+        Meshtastic connection runner
+
+        :return:
+        """
+        if self.config.enforce_type(bool, self.config.Meshtastic.FIFOEnabled):
+            thread = Thread(target=self.run_loop, daemon=True)
+            thread.start()
