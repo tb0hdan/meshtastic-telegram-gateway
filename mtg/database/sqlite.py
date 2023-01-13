@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+""" SQLite database module """
+
+
 import logging
 import time
 #
@@ -16,6 +20,9 @@ from mtg.log import conditional_log
 DB = Database()
 
 def sql_debug():
+    """
+    sql_debug - wrapper to enable debugging
+    """
     set_sql_debug(True)
 
 class MeshtasticNodeRecord(DB.Entity):  # pylint:disable=too-few-public-methods
@@ -171,14 +178,19 @@ class MeshtasticDB:
         self.logger.debug(location_record)
         return location_record.latitude, location_record.longitude
 
+    @staticmethod
     @db_session
-    def get_node_track(self, node_name, tail=3600):
+    def get_node_track(node_name, tail=3600):
+        """
+        get_node_track - return list of waypoints for building node track
+        """
         data = []
         node_record = MeshtasticNodeRecord.select(lambda n: n.nodeName == node_name).first()
         if not node_record:
             return data
-        record = MeshtasticLocationRecord.select(lambda n: n.node == node_record and n.datetime >= datetime.now() - timedelta(seconds=tail))
+        cnd = lambda n: n.node == node_record and n.datetime >= datetime.now() - timedelta(seconds=tail)
+        record = MeshtasticLocationRecord.select(cnd)
         location_record = record.order_by(desc(MeshtasticLocationRecord.datetime))
-        for lr in location_record:
-            data.append({"lat": lr.latitude, "lng": lr.longitude})
+        for l_r in location_record:
+            data.append({"lat": l_r.latitude, "lng": l_r.longitude})
         return data

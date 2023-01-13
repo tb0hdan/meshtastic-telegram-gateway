@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" Telegram bot module """
+
 import functools
 import logging
 import os
@@ -10,6 +13,7 @@ from threading import Thread
 import humanize
 import pyqrcode
 #
+from setproctitle import setthreadtitle
 from telegram import Update
 from telegram.ext import CallbackContext
 from telegram.ext import CommandHandler
@@ -23,15 +27,21 @@ from mtg.log import VERSION
 
 
 def check_room(func):
+    """
+    check_room - decorator that checks for room permissions
+    """
     @functools.wraps(func)
     def wrapper(*args):
+        """
+        wrapper - decorator wrapper functions
+        """
         bot = args[0]
         update = args[1]
         rooms = [bot.config.enforce_type(int, bot.config.Telegram.NotificationsRoom),
                  bot.config.enforce_type(int, bot.config.Telegram.Room)]
         bot_in_rooms = bot.config.enforce_type(bool, bot.config.Telegram.BotInRooms)
         if update.effective_chat.id in rooms and not bot_in_rooms:
-            return
+            return None
         return func(*args)
     return wrapper
 
@@ -48,6 +58,7 @@ class TelegramBot:
         self.logger = None
         self.meshtastic_connection = meshtastic_connection
         self.telegram_connection = telegram_connection
+        self.name = 'Telegram Bot'
 
         start_handler = CommandHandler('start', self.start)
         node_handler = CommandHandler('nodes', self.nodes)
@@ -113,10 +124,11 @@ class TelegramBot:
 
         :return:
         """
+        setthreadtitle(self.name)
         self.telegram_connection.poll()
 
     @check_room
-    def start(_, update: Update, context: CallbackContext) -> None:
+    def start(self, update: Update, context: CallbackContext) -> None:
         """
         Telegram /start command handler.
 
@@ -124,7 +136,9 @@ class TelegramBot:
         :param context:
         :return:
         """
-        context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
+        chat_id = update.effective_chat.id
+        self.logger.info(f"Got /start from {chat_id}")
+        context.bot.send_message(chat_id=chat_id, text="I'm a bot, please talk to me!")
 
     @check_room
     def reboot(self, update: Update, context: CallbackContext) -> None:
@@ -222,7 +236,7 @@ class TelegramBot:
                     if not header:
                         column = f'**{column}**`'
                     else:
-                        column = f'**{column}**'.replace('.', '\.')
+                        column = f'**{column}**'.replace('.', r'\.')
                 new_line.append(column + ', ')
                 if not header:
                     i += 1
@@ -274,5 +288,5 @@ class TelegramBot:
 
         :return:
         """
-        thread = Thread(target=self.poll)
+        thread = Thread(target=self.poll, name=self.name)
         thread.start()

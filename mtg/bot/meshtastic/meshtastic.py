@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+""" Meshtastic bot module """
+
+
 import logging
 import time
 
@@ -20,7 +24,7 @@ from mtg.geo import get_lat_lon_distance
 from mtg.log import VERSION
 from mtg.output.file import CSVFileWriter
 
-class MeshtasticBot:
+class MeshtasticBot: # pylint:disable=too-many-instance-attributes
     """
     Meshtastic bot
     """

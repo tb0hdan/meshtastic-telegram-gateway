@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+""" Configuration module """
+
+
 import configparser
 
 class Config:

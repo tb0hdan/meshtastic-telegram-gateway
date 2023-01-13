@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+""" APRS connection module """
+
+
 import logging
 #
 from threading import Thread
@@ -5,6 +9,7 @@ from threading import Thread
 import aprslib
 #
 from pubsub import pub
+from setproctitle import setthreadtitle
 #
 from mtg.config import Config
 from mtg.filter import CallSignFilter
@@ -19,6 +24,7 @@ class APRSStreamer:
         self.config = config
         self.logger = None
         self.exit = False
+        self.name = 'APRS Streamer'
 
     def set_logger(self, logger: logging.Logger):
         """
@@ -76,6 +82,7 @@ class APRSStreamer:
 
         :return:
         """
+        setthreadtitle(self.name)
         self.aprs_is = aprslib.IS(self.config.APRS.Callsign,
                                   self.config.APRS.Password,
                                   host='euro.aprs2.net',
@@ -103,5 +110,5 @@ class APRSStreamer:
         """
         if self.config.enforce_type(bool, self.config.APRS.Enabled):
             pub.subscribe(self.process, 'APRS')
-            thread = Thread(target=self.run_loop, daemon=True)
+            thread = Thread(target=self.run_loop, daemon=True, name=self.name)
             thread.start()

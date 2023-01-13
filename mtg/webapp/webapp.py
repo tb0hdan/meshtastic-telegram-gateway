@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+""" Web application module """
+
+
 import logging
 import os
 import time
@@ -13,6 +17,7 @@ import flask
 #
 from flask import Flask, jsonify, make_response, request, render_template, send_file
 from flask.views import View
+from setproctitle import setthreadtitle
 from werkzeug.serving import make_server
 #
 from mtg.config import Config
@@ -38,6 +43,9 @@ class RenderTemplateView(View):
         return render_template(self.template_name, timestamp=int(time.time()))
 
 class RenderFavicon(View):
+    """
+    RenderFavicon - favicon.ico file renderer
+    """
     def dispatch_request(self) -> flask.Response:
         return send_file(os.path.abspath('web/static/images/favicon.ico'),
                          mimetype='image/x-icon')
@@ -336,12 +344,14 @@ class ServerThread(Thread):
         self.server = make_server('', self.config.enforce_type(int, self.config.WebApp.Port), app)
         self.ctx = app.app_context()
         self.ctx.push()
+        self.name = 'WebApp Server'
 
     def run(self) -> None:
         """
 
         :return:
         """
+        setthreadtitle(self.name)
         self.logger.debug('starting server')
         self.server.serve_forever()
 

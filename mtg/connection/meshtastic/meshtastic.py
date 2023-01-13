@@ -1,6 +1,7 @@
-import errno
+# -*- coding: utf-8 -*-
+""" Meshtastic connection module """
+
 import logging
-import os
 import sys
 import time
 #
@@ -16,6 +17,9 @@ from meshtastic import (
     serial_interface as meshtastic_serial_interface,
     tcp_interface as meshtastic_tcp_interface,
 )
+from setproctitle import setthreadtitle
+
+from mtg.utils import create_fifo
 
 FIFO = '/tmp/mtg.fifo'
 
@@ -31,6 +35,7 @@ class MeshtasticConnection:
         self.config = config
         self.startup_ts = startup_ts
         self.mqtt_nodes = {}
+        self.name = 'Meshtastic Connection'
 
     @property
     def get_startup_ts(self):
@@ -83,22 +88,37 @@ class MeshtasticConnection:
         self.logger.info("Reboot completed...")
 
     def reset_db(self):
+        """
+        reset_db - reset Meshtastic device internal node table
+        """
         self.logger.info('Reset node DB requested...')
         self.interface.getNode(MESHTASTIC_LOCAL_ADDR, False).resetNodeDb()
         self.logger.info('Reset node DB completed...')
 
     def on_mqtt_node(self, node_id, payload):
+        """
+        on_mqtt_node - update node info when MQTT payload arrives. Callback method
+        """
         self.logger.debug(f'{node_id} is {payload}')
         self.mqtt_nodes[node_id] = payload
 
     @property
     def nodes_mqtt(self) -> List:
-        return [node_id for node_id in self.mqtt_nodes]
+        """
+        nodes_mqtt - getter for node list from MQTT
+        """
+        return list(self.mqtt_nodes)
 
     def node_has_mqtt(self, node_id):
+        """
+        node_has_mqtt - return MQTT status for node. Boolean
+        """
         return node_id in self.mqtt_nodes
 
     def node_mqtt_status(self, node_id):
+        """
+        node_mqtt_status - return MQTT status for node. String
+        """
         return self.mqtt_nodes.get(node_id, 'N/A')
 
     @property
@@ -151,15 +171,17 @@ class MeshtasticConnection:
         return node_list
 
     def run_loop(self):
-        try:
-            os.mkfifo(FIFO)
-        except OSError as exc:
-            if exc.errno != errno.EEXIST:
-                raise
+        """
+        Meshtastic loop runner. Used for messages
+
+        :return:
+        """
+        setthreadtitle(self.name)
 
         self.logger.debug("Opening FIFO...")
+        create_fifo(FIFO)
         while True:
-            with open(FIFO) as fifo:
+            with open(FIFO, encoding='utf-8') as fifo:
                 for line in fifo:
                     line = line.rstrip('\n')
                     self.send_text(line, destinationId=MESHTASTIC_BROADCAST_ADDR)
@@ -171,5 +193,5 @@ class MeshtasticConnection:
         :return:
         """
         if self.config.enforce_type(bool, self.config.Meshtastic.FIFOEnabled):
-            thread = Thread(target=self.run_loop, daemon=True)
+            thread = Thread(target=self.run_loop, daemon=True, name=self.name)
             thread.start()

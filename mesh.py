@@ -3,7 +3,6 @@
 
 #
 import argparse
-import errno
 import logging
 import os
 import sys
@@ -20,6 +19,7 @@ from mtg.connection.telegram import TelegramConnection
 from mtg.database import sql_debug, MeshtasticDB
 from mtg.filter import CallSignFilter, MeshtasticFilter, TelegramFilter
 from mtg.log import setup_logger, LOGFORMAT
+from mtg.utils import create_fifo
 from mtg.webapp import WebServer
 #
 
@@ -101,19 +101,25 @@ def main(args):
 
 
 def post2mesh(args):
+    """
+    post2mesh - send messages from console using Meshtastic networks. For alerts etc
+
+    :return:
+    """
     if args.message is None:
         print('Cannot send empty message...')
         return
-    try:
-        os.mkfifo(FIFO)
-    except OSError as exc:
-        if exc.errno != errno.EEXIST:
-            raise
-    with open(FIFO, 'w') as fifo:
+    create_fifo(FIFO)
+    with open(FIFO, 'w', encoding='utf-8') as fifo:
         fifo.write(args.message + '\n')
 
 
 def cmd():
+    """
+    cmd - Run argument parser and process command line parameters
+
+    :return:
+    """
     parser = argparse.ArgumentParser()
     subparser = parser.add_subparsers(title="commands", help="commands")
 

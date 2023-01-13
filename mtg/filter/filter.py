@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+""" Filter module """
+
+
 import logging
 
 from mtg.database import MeshtasticDB
@@ -58,4 +62,3 @@ class CallSignFilter(Filter):
         self.connection = connection
         self.connection_type = "Callsign"
         self.logger = logger
-

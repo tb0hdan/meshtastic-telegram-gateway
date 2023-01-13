@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+""" Logger module """
+
+
 import logging
 
 with open('VERSION', 'r', encoding='utf-8') as fh:

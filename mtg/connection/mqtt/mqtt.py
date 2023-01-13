@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+""" MQTT connection module """
+
 import socket
 import time
 #
@@ -5,11 +8,15 @@ from threading import Thread
 #
 import paho.mqtt.client as mqtt
 #
-from mtg.config import Config
+from setproctitle import setthreadtitle
+#
 
 
 class MQTT:
-    def __init__(self, host, user, password, logger, port=1883):
+    """
+    MQTT - MQTT connection class
+    """
+    def __init__(self, host, user, password, logger, port=1883):  # pylint:disable=too-many-arguments
         self.client = mqtt.Client()
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
@@ -23,22 +30,40 @@ class MQTT:
         self.port = port
         # for processing
         self.handler = None
+        #
+        self.name = 'MQTT Connection'
 
     def set_config(self, config):
+        """
+        set_config - configuration setter
+        """
         self.config = config
 
-    def on_connect(self, client, userdata, flags, rc):
-        self.logger.info("Connected with result code "+str(rc))
+    def on_connect(self, client, _userdata, _flags, result_code):
+        """
+        on_connect - MQTT callback for connection event
+        """
+        self.logger.info("Connected with result code "+str(result_code))
         client.subscribe('msh/#')
 
-    def on_message(self, client, userdata, msg):
+    def on_message(self, _client, _userdata, msg):
+        """
+        on_message - MQTT callback for message event
+        """
         if self.handler is not None:
             self.handler(msg.topic, msg.payload)
 
     def set_handler(self, handler):
+        """
+        set_handler - MQTT handler setter
+        """
         self.handler = handler
 
     def run_loop(self):
+        """
+        run_loop - MQTT connectio loop. Also sets thread name
+        """
+        setthreadtitle(self.name)
         while True:
             try:
                 self.client.connect(self.host, self.port, 60)
@@ -59,5 +84,5 @@ class MQTT:
         """
         if self.config.enforce_type(bool, self.config.MQTT.Enabled):
             self.logger.info('Starting MQTT client...')
-            thread = Thread(target=self.run_loop, daemon=True)
+            thread = Thread(target=self.run_loop, daemon=True, name=self.name)
             thread.start()
