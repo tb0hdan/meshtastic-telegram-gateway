@@ -67,6 +67,7 @@ class TelegramBot:
         qr_handler = CommandHandler('qr', self.qr_code)
         maplink_handler = CommandHandler('map', self.map_link)
         resetdb_handler = CommandHandler('reset_db', self.reset_db)
+        traceroute_handler = CommandHandler('traceroute', self.traceroute)
 
         dispatcher = self.telegram_connection.dispatcher
 
@@ -77,6 +78,7 @@ class TelegramBot:
         dispatcher.add_handler(uptime_handler)
         dispatcher.add_handler(maplink_handler)
         dispatcher.add_handler(resetdb_handler)
+        dispatcher.add_handler(traceroute_handler)
 
         echo_handler = MessageHandler(Filters.text & (~Filters.command), self.echo)
         dispatcher.add_handler(echo_handler)
@@ -171,6 +173,25 @@ class TelegramBot:
         self.meshtastic_connection.reset_db()
 
     @check_room
+    def traceroute(self, update: Update, context: CallbackContext) -> None:
+        """
+        Telegram traceroute command
+
+        :param update:
+        :param context:
+        :return:
+        """
+        if update.effective_chat.id != self.config.enforce_type(int, self.config.Telegram.Admin):
+            self.logger.info("Traceroute requested by non-admin: %d", update.effective_chat.id)
+            return
+        context.bot.send_message(chat_id=update.effective_chat.id, text="Sending traceroute...")
+        loraConfig = getattr(self.meshtastic_connection.interface.localNode.localConfig, 'lora')
+        hopLimit = getattr(loraConfig, 'hop_limit')
+        dest = update.message.text
+        self.logger.info(f"Sending traceroute request to {dest} (this could take a while)")
+        self.meshtastic_connection.interface.sendTraceRoute(dest, hopLimit)
+
+    @check_room
     def qr_code(self, update: Update, context: CallbackContext) -> None:
         """
         qr - Return image containing current channel QR
@@ -194,11 +215,13 @@ class TelegramBot:
         uptime - Returns bot uptime
         """
         firmware = 'unknown'
+        reboot_count = 'unknown'
         if self.meshtastic_connection.interface.myInfo:
             firmware = self.meshtastic_connection.interface.myInfo.firmware_version
+            reboot_count = self.meshtastic_connection.interface.myInfo.reboot_count
         formatted_time = humanize.naturaltime(time.time() - self.meshtastic_connection.get_startup_ts)
         context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text=f'Bot v{VERSION}/FW: v{firmware} started {formatted_time}')
+                                 text=f'Bot v{VERSION}/FW: v{firmware}/Reboots: {reboot_count}. Started {formatted_time}')
 
     @check_room
     def map_link(self, update: Update, context: CallbackContext) -> None:

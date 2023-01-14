@@ -223,7 +223,7 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
         if self.ping_container.get(from_id, {}):
             timestamp = self.ping_container[from_id].get('timestamp', 0)
             processing_time += time.time() - timestamp
-        msg = f"Pong from {remote_name} at {rx_snr:.2f} SNR time={processing_time:.3f}s"
+        msg = f"Pong from {remote_name} at {rx_snr:.2f} SNR, time={processing_time:.3f}s"
         self.meshtastic_connection.send_text(msg, destinationId=from_id)
 
     def notify_on_new_node(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
