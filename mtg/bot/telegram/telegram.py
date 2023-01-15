@@ -187,7 +187,7 @@ class TelegramBot:
         context.bot.send_message(chat_id=update.effective_chat.id, text="Sending traceroute... See bot logs")
         lora_config = getattr(self.meshtastic_connection.interface.localNode.localConfig, 'lora')
         hop_limit = getattr(lora_config, 'hop_limit')
-        dest = update.message.text
+        dest = update.message.text.lstrip('/traceroute ')
         self.logger.info(f"Sending traceroute request to {dest} (this could take a while)")
         self.meshtastic_connection.interface.sendTraceRoute(dest, hop_limit)
 

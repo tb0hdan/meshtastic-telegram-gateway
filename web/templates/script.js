@@ -100,9 +100,16 @@ function getMarkers() {
 }
 
 function getPolyline() {
+    const urlSearchParams = new URLSearchParams(window.location.search);
+    const params = Object.fromEntries(urlSearchParams.entries())
+
+    href = window.location.search;
+    if ( params['name'] == undefined ) {
+        return;
+    };
+
     console.log('(Re)drawing track...');
     $.get('/track.json' + window.location.search, function(data) {
-        console.log(data);
         const flightPath = new google.maps.Polyline({
             path: data,
             geodesic: true,
