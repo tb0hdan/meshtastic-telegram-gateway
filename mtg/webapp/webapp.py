@@ -136,9 +136,9 @@ class RenderDataView(View):
         :return:
         """
         if hw_model == 'TBEAM':
-            return '<a href="https://meshtastic.org/docs/hardware/supported/tbeam">TBEAM</a>'
+            return '<a href="https://meshtastic.org/docs/hardware/devices/tbeam/">TBEAM</a>'
         if hw_model.startswith('TLORA'):
-            return '<a href="https://meshtastic.org/docs/hardware/supported/lora">TLORA</a>'
+            return '<a href="https://meshtastic.org/docs/hardware/devices/lora/">TLORA</a>'
         if hw_model.startswith('T_ECHO'):
             return '<a href="https://meshtastic.org/docs/hardware/devices/techo">T-ECHO</a>'
         if hw_model.startswith('DIY'):
