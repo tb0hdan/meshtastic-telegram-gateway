@@ -184,12 +184,12 @@ class TelegramBot:
         if update.effective_chat.id != self.config.enforce_type(int, self.config.Telegram.Admin):
             self.logger.info("Traceroute requested by non-admin: %d", update.effective_chat.id)
             return
-        context.bot.send_message(chat_id=update.effective_chat.id, text="Sending traceroute...")
-        loraConfig = getattr(self.meshtastic_connection.interface.localNode.localConfig, 'lora')
-        hopLimit = getattr(loraConfig, 'hop_limit')
+        context.bot.send_message(chat_id=update.effective_chat.id, text="Sending traceroute... See bot logs")
+        lora_config = getattr(self.meshtastic_connection.interface.localNode.localConfig, 'lora')
+        hop_limit = getattr(lora_config, 'hop_limit')
         dest = update.message.text
         self.logger.info(f"Sending traceroute request to {dest} (this could take a while)")
-        self.meshtastic_connection.interface.sendTraceRoute(dest, hopLimit)
+        self.meshtastic_connection.interface.sendTraceRoute(dest, hop_limit)
 
     @check_room
     def qr_code(self, update: Update, context: CallbackContext) -> None:
@@ -220,8 +220,8 @@ class TelegramBot:
             firmware = self.meshtastic_connection.interface.myInfo.firmware_version
             reboot_count = self.meshtastic_connection.interface.myInfo.reboot_count
         formatted_time = humanize.naturaltime(time.time() - self.meshtastic_connection.get_startup_ts)
-        context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text=f'Bot v{VERSION}/FW: v{firmware}/Reboots: {reboot_count}. Started {formatted_time}')
+        text= f'Bot v{VERSION}/FW: v{firmware}/Reboots: {reboot_count}. Started {formatted_time}'
+        context.bot.send_message(chat_id=update.effective_chat.id, text=text)
 
     @check_room
     def map_link(self, update: Update, context: CallbackContext) -> None:
