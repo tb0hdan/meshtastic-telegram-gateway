@@ -18,6 +18,7 @@ import flask
 from flask import Flask, jsonify, make_response, request, render_template, send_file
 from flask.views import View
 from setproctitle import setthreadtitle
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.serving import make_server
 #
 from mtg.config import Config
@@ -380,6 +381,7 @@ class WebServer:  # pylint:disable=too-few-public-methods
         self.config = config
         self.logger = logger
         self.app = Flask(__name__, static_folder=static_folder, template_folder=template_folder)
+        self.app.wsgi_app = ProxyFix(self.app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
         self.server = None
 
     def run(self) -> None:
