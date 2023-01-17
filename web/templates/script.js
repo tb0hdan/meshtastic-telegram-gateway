@@ -125,9 +125,26 @@ function getPolyline() {
     });
 }
 
-
 function initialize() {
-    var center = new google.maps.LatLng({{center_latitude}}, {{center_longitude}});
+    const urlSearchParams = new URLSearchParams(window.location.search);
+    const params = Object.fromEntries(urlSearchParams.entries())
+    const center_lat = {{center_latitude}};
+    const center_lon =  {{center_longitude}};
+    href = window.location.search;
+    if ( params['name'] == undefined ) {
+        initialize_normal(center_lat, center_lon);
+        return;
+    };
+
+
+    $.get('/track.json' + window.location.search, function(data) {
+        initialize_normal(data[0].lat, data[0].lng);
+        return;
+    });
+}
+
+function initialize_normal(center_lat, center_lon) {
+    var center = new google.maps.LatLng(center_lat, center_lon);
     // global
     map = new google.maps.Map(document.getElementById('map'), {
           zoom: 10,
