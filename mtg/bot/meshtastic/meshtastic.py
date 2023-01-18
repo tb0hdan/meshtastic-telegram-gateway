@@ -269,6 +269,9 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
         to_id = packet.get('toId')
         decoded = packet.get('decoded')
         from_id = packet.get('fromId')
+        if from_id is None:
+            from_id = hex(packet.get('from')).replace('0x', '!')
+            packet['fromId'] = from_id
         # Send notifications if they're enabled
         if from_id is not None and self.config.enforce_type(bool, self.config.Telegram.NotificationsEnabled):
             self.notify_on_new_node(packet, interface)
@@ -300,6 +303,10 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
         if node_info is not None:
             user_info = node_info.get('user')
             long_name = user_info.get('longName')
+        else: # get from DB
+            found, record = self.database.get_node_record(from_id)
+            if found:
+                long_name = record.nodeName
         msg = decoded.get('text', '')
         # skip commands
         if msg.startswith('/'):

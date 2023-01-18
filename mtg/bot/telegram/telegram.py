@@ -117,6 +117,8 @@ class TelegramBot:
         full_user = update.effective_user.first_name
         if update.effective_user.last_name is not None:
             full_user += ' ' + update.effective_user.last_name
+        if not (update.message and update.message.text):
+            return
         self.logger.debug(f"{update.effective_chat.id} {full_user} {update.message.text}")
         self.meshtastic_connection.send_text(f"{full_user}: {update.message.text}")
 
