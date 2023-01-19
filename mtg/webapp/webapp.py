@@ -25,6 +25,7 @@ from mtg.config import Config
 from mtg.connection.meshtastic import MeshtasticConnection
 from mtg.connection.telegram import TelegramConnection
 from mtg.database import MeshtasticDB
+from mtg.utils import Memcache
 
 #
 class RenderTemplateView(View):
@@ -228,12 +229,14 @@ class RenderAirRaidView(View):
     def __init__(self, database: MeshtasticDB, config: Config,
                  meshtastic_connection: MeshtasticConnection,
                  telegram_connection: TelegramConnection,
-                 logger: logging.Logger):
+                 logger: logging.Logger,
+                 memcache: Memcache):
         self.database = database
         self.config = config
         self.meshtastic_connection = meshtastic_connection
         self.telegram_connection = telegram_connection
         self.logger = logger
+        self.memcache = memcache
         self.region_table = {3: 'Khmelnystjka', 4: 'Vinnytsjka', 5: 'Rivnenska',
                              8: 'Volynska', 9: 'Dnipro', 10: 'Zhytomyrska',
                              11: 'Zakarpattya', 12: 'Zaporizhzhja', 13: 'Ivano-Fr',
@@ -263,10 +266,12 @@ class RenderAirRaidView(View):
         self.logger.info(msg)
         if region_id in [14, 31] and self.config.enforce_type(bool, self.config.WebApp.AirRaidEnabled):
             new_msg = f'Alert: {alert_type}, {alert_place}, {alert_status} since {alert_time}'
-            self.telegram_connection.send_message(chat_id=self.config.enforce_type(int,
-                                                                               self.config.Telegram.NotificationsRoom),
-                                                  text=new_msg)
-            self.meshtastic_connection.send_text(new_msg)
+            if not self.memcache.get(new_msg):
+                self.memcache.set(new_msg, True, expires=60)
+                self.telegram_connection.send_message(chat_id=self.config.enforce_type(int,
+                                                      self.config.Telegram.NotificationsRoom),
+                                                      text=new_msg)
+                self.meshtastic_connection.send_text(new_msg)
         return 'Ok'
 
 
@@ -278,13 +283,15 @@ class WebApp:  # pylint:disable=too-few-public-methods
     def __init__(self, database: MeshtasticDB, app: Flask, config: Config,
                  meshtastic_connection: MeshtasticConnection,
                  telegram_connection: TelegramConnection,
-                 logger: logging.Logger):
+                 logger: logging.Logger,
+                 memcache: Memcache):
         self.database = database
         self.app = app
         self.config = config
         self.logger = logger
         self.meshtastic_connection = meshtastic_connection
         self.telegram_connection = telegram_connection
+        self.memcache = memcache
 
     def register(self) -> None:
         """
@@ -314,7 +321,8 @@ class WebApp:  # pylint:disable=too-few-public-methods
                               config=self.config,
                               meshtastic_connection=self.meshtastic_connection,
                               telegram_connection=self.telegram_connection,
-                              logger=self.logger), methods=['POST'])
+                              logger=self.logger,
+                              memcache=self.memcache), methods=['POST'])
         self.app.add_url_rule('/airraid/' + self.config.enforce_type(str, self.config.WebApp.AirRaidPrivate) + '/',
                               view_func=RenderAirRaidView.as_view(
                               'airraid_page_with_slash',
@@ -322,7 +330,8 @@ class WebApp:  # pylint:disable=too-few-public-methods
                               config=self.config,
                               meshtastic_connection=self.meshtastic_connection,
                               telegram_connection=self.telegram_connection,
-                              logger=self.logger), methods=['POST'])
+                              logger=self.logger,
+                              memcache=self.memcache), methods=['POST'])
         # Favicon
         self.app.add_url_rule('/favicon.ico', view_func=RenderFavicon.as_view('favicon'))
         # Index pages
@@ -391,10 +400,12 @@ class WebServer:  # pylint:disable=too-few-public-methods
         :return:
         """
         if self.config.enforce_type(bool, self.config.WebApp.Enabled):
+            memcache = Memcache(self.logger)
             web_app = WebApp(self.database, self.app, self.config,
                              self.meshtastic_connection,
                              self.telegram_connection,
-                             self.logger)
+                             self.logger,
+                             memcache)
             web_app.register()
             self.server = ServerThread(self.app, self.config, self.logger)
             self.server.start()
