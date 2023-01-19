@@ -8,6 +8,8 @@ import os
 import sys
 import time
 #
+import sentry_sdk
+from sentry_sdk.integrations.flask import FlaskIntegration
 #
 from mtg.bot.meshtastic import MeshtasticBot
 from mtg.bot.telegram import TelegramBot
@@ -38,6 +40,12 @@ def main(args):
         level = logging.DEBUG
         sql_debug()
 
+    # setup APM
+    if config.enforce_type(bool, config.DEFAULT.SentryEnabled):
+        sentry_sdk.init(dsn=config.DEFAULT.SentryDSN,
+                        traces_sample_rate=1.0,
+                        integrations=[FlaskIntegration()]
+        )
     # our logger
     logger = setup_logger('mesh', level)
     # meshtastic logger

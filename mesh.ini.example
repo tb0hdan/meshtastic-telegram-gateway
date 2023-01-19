@@ -3,6 +3,10 @@
 # pl: Włącz globalny tryb debugowania. Logiczne.
 # pt: Ativar modo de depuração global. Boleano.
 Debug = false
+# Sentry.io APM
+SentryDSN = https://123.ingest.sentry.io/456
+SentryEnabled = false
+
 
 [Telegram]
 # en: Telegram user id that will have admin privileges. Positive integer.

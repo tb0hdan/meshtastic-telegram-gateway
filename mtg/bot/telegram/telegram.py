@@ -24,7 +24,7 @@ from mtg.connection.meshtastic import MeshtasticConnection
 from mtg.connection.telegram import TelegramConnection
 from mtg.filter import TelegramFilter
 from mtg.log import VERSION
-
+from mtg.utils import split_message
 
 def check_room(func):
     """
@@ -292,20 +292,12 @@ class TelegramBot:
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text=formatted,
                                      parse_mode='MarkdownV2')
-        else:
-            parts = []
-            part = []
-            for line in formatted.splitlines('\n'):
-                if len('\n'.join(part) + line) < 4096:
-                    part.append(line)
-                else:
-                    parts.append(part)
-                    part = [line]
-            for part in parts:
-                context.bot.send_message(chat_id=update.effective_chat.id,
-                                         text='\n'.join(part),
-                                         parse_mode='MarkdownV2')
-
+            return
+        split_message(formatted, 4096,
+                      lambda msg: context.bot.send_message(chat_id=update.effective_chat.id,
+                                                           text=msg,
+                                                           parse_mode='MarkdownV2')
+        )
 
     def run(self):
         """

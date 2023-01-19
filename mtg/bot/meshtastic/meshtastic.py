@@ -90,8 +90,7 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
         pub.subscribe(self.on_connection, "meshtastic.connection.established")
         pub.subscribe(self.on_connection, "meshtastic.connection.lost")
 
-    @staticmethod
-    def process_distance_command(packet, interface: meshtastic_serial_interface.SerialInterface) -> None:  # pylint:disable=too-many-locals
+    def process_distance_command(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:  # pylint:disable=too-many-locals
         """
         Process /distance Meshtastic command
 
@@ -102,16 +101,16 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
         from_id = packet.get('fromId')
         mynode_info = interface.nodes.get(from_id)
         if not mynode_info:
-            interface.sendText("distance err: no node info", destinationId=from_id)
+            self.meshtastic_connection.send_text("distance err: no node info", destinationId=from_id)
             return
         position = mynode_info.get('position', {})
         if not position:
-            interface.sendText("distance err: no position", destinationId=from_id)
+            self.meshtastic_connection.send_text("distance err: no position", destinationId=from_id)
             return
         my_latitude = position.get('latitude')
         my_longitude = position.get('longitude')
         if not (my_latitude and my_longitude):
-            interface.sendText("distance err: no lat/lon", destinationId=from_id)
+            self.meshtastic_connection.send_text("distance err: no lat/lon", destinationId=from_id)
             return
         for node in interface.nodes:
             node_info = interface.nodes.get(node)
@@ -132,9 +131,9 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
             distance = round(get_lat_lon_distance((my_latitude, my_longitude), (latitude, longitude)))
             distance = humanize.intcomma(distance)
             msg = f"{long_name}: {distance}m"
-            interface.sendText(msg, destinationId=from_id)
+            self.meshtastic_connection.send_text(msg, destinationId=from_id)
 
-    def process_ping_command(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
+    def process_ping_command(self, packet, _interface: meshtastic_serial_interface.SerialInterface) -> None:
         """
         Process /ping Meshtastic command
 
@@ -145,7 +144,7 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
         from_id = packet.get('fromId')
         self.ping_container[from_id] = {'timestamp': time.time()}
         payload = str.encode("test string")
-        interface.sendData(payload,
+        self.meshtastic_connection.send_data(payload,
                            MESHTASTIC_BROADCAST_ADDR,
                            portNum=meshtastic_portnums_pb2.PortNum.REPLY_APP,
                            wantAck=True, wantResponse=True)

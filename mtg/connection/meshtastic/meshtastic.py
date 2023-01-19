@@ -16,10 +16,11 @@ from meshtastic import (
     BROADCAST_ADDR as MESHTASTIC_BROADCAST_ADDR,
     serial_interface as meshtastic_serial_interface,
     tcp_interface as meshtastic_tcp_interface,
+    mesh_pb2
 )
 from setproctitle import setthreadtitle
 
-from mtg.utils import create_fifo
+from mtg.utils import create_fifo, split_message
 
 FIFO = '/tmp/mtg.fifo'
 
@@ -55,7 +56,7 @@ class MeshtasticConnection:
         else:
             self.interface = meshtastic_tcp_interface.TCPInterface(self.dev_path.lstrip('tcp:'), debugOut=sys.stdout)
 
-    def send_text(self, *args, **kwargs) -> None:
+    def send_text(self, msg, **kwargs) -> None:
         """
         Send Meshtastic message
 
@@ -63,7 +64,21 @@ class MeshtasticConnection:
         :param kwargs:
         :return:
         """
-        self.interface.sendText(*args, **kwargs)
+        if len(msg) < mesh_pb2.Constants.DATA_PAYLOAD_LEN:
+            self.interface.sendText(msg, **kwargs)
+            return
+        split_message(msg, mesh_pb2.Constants.DATA_PAYLOAD_LEN // 2, self.interface.sendText, **kwargs)
+        return
+
+    def send_data(self, *args, **kwargs) -> None:
+        """
+        Send Meshtastic data message
+
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        self.interface.sendData(*args, **kwargs)
 
     def node_info(self, node_id) -> Dict:
         """
