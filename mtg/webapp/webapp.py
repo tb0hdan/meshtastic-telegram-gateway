@@ -401,6 +401,7 @@ class WebServer:  # pylint:disable=too-few-public-methods
         """
         if self.config.enforce_type(bool, self.config.WebApp.Enabled):
             memcache = Memcache(self.logger)
+            memcache.run_noblock()
             web_app = WebApp(self.database, self.app, self.config,
                              self.meshtastic_connection,
                              self.telegram_connection,

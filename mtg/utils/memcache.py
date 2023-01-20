@@ -55,6 +55,7 @@ class Memcache:
         """
         setthreadtitle(self.name)
         while True:
+            time.sleep(0.1)
             for key in list(self.cache):
                 expires = self.get_ex(key).get('expires')
                 if time.time() > expires > 0:
