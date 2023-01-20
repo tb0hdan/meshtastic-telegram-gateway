@@ -66,6 +66,5 @@ class Memcache:
         """
         run_noblock - non-blocking reaper
         """
-        locker = Thread(target=self.reaper, name=self.name)
-        locker.setDaemon(True)
+        locker = Thread(target=self.reaper, daemon=True, name=self.name)
         locker.start()
