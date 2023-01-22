@@ -105,8 +105,6 @@ class MeshtasticDB:
                     hwModel=hw_model,
                 )
                 return False, node_record
-            else:
-                return False, None
         conditional_log(f'using found record... {node_record}, {node_info}', self.logger, True)
         # Update lastHeard and return record
         node_record.lastHeard = last_heard  # pylint:disable=invalid-name
