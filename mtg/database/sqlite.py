@@ -188,7 +188,10 @@ class MeshtasticDB:
         get_node_track - return list of waypoints for building node track
         """
         data = []
-        node_record = MeshtasticNodeRecord.select(lambda n: n.nodeName == node_name).first()
+        if node_name.startswith('!'):
+            node_record = MeshtasticNodeRecord.select(lambda n: n.nodeId == node_name).first()
+        else:
+            node_record = MeshtasticNodeRecord.select(lambda n: n.nodeName == node_name).first()
         if not node_record:
             return data
         # pylint:disable=unnecessary-lambda-assignment
