@@ -20,6 +20,8 @@ def split_message(msg, chunk_len, callback, **kwargs):
             parts.append(part)
             part = [line]
     for part in parts:
+        if len(part) == 0:
+            continue
         line = '\n'.join(part)
         if len(line) < chunk_len:
             callback(line, **kwargs)
