@@ -16,9 +16,8 @@ from meshtastic import (
 from pubsub import pub
 
 from mtg.config import Config
-from mtg.connection.meshtastic import MeshtasticConnection
 from mtg.connection.telegram import TelegramConnection
-from mtg.database import MeshtasticDB
+from mtg.database import MeshtasticDB, RichConnection
 from mtg.filter import MeshtasticFilter
 from mtg.geo import get_lat_lon_distance
 from mtg.log import VERSION
@@ -28,7 +27,7 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
     """
     Meshtastic bot
     """
-    def __init__(self, database: MeshtasticDB, config: Config, meshtastic_connection: MeshtasticConnection,
+    def __init__(self, database: MeshtasticDB, config: Config, meshtastic_connection: RichConnection,
                  telegram_connection: TelegramConnection):
         self.database = database
         self.config = config

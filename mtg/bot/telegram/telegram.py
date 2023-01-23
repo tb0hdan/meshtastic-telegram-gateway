@@ -20,8 +20,8 @@ from telegram.ext import CommandHandler
 from telegram.ext import MessageHandler, Filters
 #
 from mtg.config import Config
-from mtg.connection.meshtastic import MeshtasticConnection
 from mtg.connection.telegram import TelegramConnection
+from mtg.database import RichConnection
 from mtg.filter import TelegramFilter
 from mtg.log import VERSION
 from mtg.utils import split_message
@@ -51,7 +51,7 @@ class TelegramBot:
     Telegram bot
     """
 
-    def __init__(self, config: Config, meshtastic_connection: MeshtasticConnection,
+    def __init__(self, config: Config, meshtastic_connection: RichConnection,
                  telegram_connection: TelegramConnection):
         self.config = config
         self.filter = None

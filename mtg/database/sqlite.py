@@ -12,9 +12,9 @@ from typing import (
 #
 from pony.orm import db_session, desc, Database, Optional, PrimaryKey, Required, Set, set_sql_debug
 #
-from mtg.connection.meshtastic import MeshtasticConnection
 from mtg.log import conditional_log
 #
+from .richconnection import RichConnection
 
 # has to be global variable ;-(
 DB = Database()
@@ -75,7 +75,7 @@ class MeshtasticDB:
     Meshtastic events database
     """
 
-    def __init__(self, db_file: AnyStr, connection: MeshtasticConnection, logger: logging.Logger):
+    def __init__(self, db_file: AnyStr, connection: RichConnection, logger: logging.Logger):
         self.connection = connection
         self.logger = logger
         DB.bind(provider='sqlite', filename=db_file, create_db=True)

@@ -22,6 +22,7 @@ from setproctitle import setthreadtitle
 
 from mtg.utils import create_fifo, split_message
 
+
 FIFO = '/tmp/mtg.fifo'
 
 class MeshtasticConnection:

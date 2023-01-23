@@ -4,9 +4,9 @@
 
 import logging
 
-from mtg.database import MeshtasticDB
+from mtg.database import MeshtasticDB, RichConnection
 from mtg.config import Config
-from mtg.connection.meshtastic import MeshtasticConnection
+
 
 class Filter:
     """
@@ -14,7 +14,7 @@ class Filter:
     """
     connection_type = ""
 
-    def __init__(self, database: MeshtasticDB, config: Config, connection: MeshtasticConnection,
+    def __init__(self, database: MeshtasticDB, config: Config, connection: RichConnection,
                  logger: logging.Logger):
         self.database = database
         self.connection = connection
@@ -26,7 +26,7 @@ class TelegramFilter(Filter):
     """
     Telegram users filter
     """
-    def __init__(self, database: MeshtasticDB, config: Config, connection: MeshtasticConnection,
+    def __init__(self, database: MeshtasticDB, config: Config, connection: RichConnection,
                  logger: logging.Logger):
         super().__init__(database, config, connection, logger)
         self.database = database
@@ -40,7 +40,7 @@ class MeshtasticFilter(Filter):
     """
     Meshtastic users filter
     """
-    def __init__(self, database: MeshtasticDB, config: Config, connection: MeshtasticConnection,
+    def __init__(self, database: MeshtasticDB, config: Config, connection: RichConnection,
                  logger: logging.Logger):
         super().__init__(database, config, connection, logger)
         self.database = database
@@ -54,7 +54,7 @@ class CallSignFilter(Filter):
     """
     APRS callsign filter
     """
-    def __init__(self, database: MeshtasticDB, config: Config, connection: MeshtasticConnection,
+    def __init__(self, database: MeshtasticDB, config: Config, connection: RichConnection,
                  logger: logging.Logger):
         super().__init__(database, config, connection, logger)
         self.database = database

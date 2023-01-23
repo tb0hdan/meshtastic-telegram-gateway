@@ -15,10 +15,10 @@ from mtg.bot.meshtastic import MeshtasticBot
 from mtg.bot.telegram import TelegramBot
 from mtg.config import Config
 from mtg.connection.aprs import APRSStreamer
-from mtg.connection.meshtastic import FIFO, MeshtasticConnection
+from mtg.connection.meshtastic import FIFO#, MeshtasticConnection
 from mtg.connection.mqtt import MQTT, MQTTHandler
 from mtg.connection.telegram import TelegramConnection
-from mtg.database import sql_debug, MeshtasticDB
+from mtg.database import sql_debug, MeshtasticDB, RichConnection
 from mtg.filter import CallSignFilter, MeshtasticFilter, TelegramFilter
 from mtg.log import setup_logger, LOGFORMAT
 from mtg.utils import create_fifo
@@ -54,7 +54,7 @@ def main(args):
     basedir = os.path.abspath(os.path.dirname(__file__))
     #
     telegram_connection = TelegramConnection(config.Telegram.Token, logger)
-    meshtastic_connection = MeshtasticConnection(config.Meshtastic.Device, logger, config)
+    meshtastic_connection = RichConnection(config.Meshtastic.Device, logger, config)
     meshtastic_connection.connect()
     #
     mqtt_connection = MQTT(config.MQTT.Host, config.MQTT.User, config.MQTT.Password,

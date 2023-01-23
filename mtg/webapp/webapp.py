@@ -22,9 +22,8 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.serving import make_server
 #
 from mtg.config import Config
-from mtg.connection.meshtastic import MeshtasticConnection
 from mtg.connection.telegram import TelegramConnection
-from mtg.database import MeshtasticDB
+from mtg.database import MeshtasticDB, RichConnection
 from mtg.utils import Memcache
 
 #
@@ -82,7 +81,7 @@ class RenderTrackView(View):
     """
 
     def __init__(self, database: MeshtasticDB, config: Config,
-                 meshtastic_connection: MeshtasticConnection, logger: logging.Logger):
+                 meshtastic_connection: RichConnection, logger: logging.Logger):
         self.database = database
         self.config = config
         self.logger = logger
@@ -122,7 +121,7 @@ class RenderDataView(View):
     """
 
     def __init__(self, database: MeshtasticDB, config: Config,
-                 meshtastic_connection: MeshtasticConnection, logger: logging.Logger):
+                 meshtastic_connection: RichConnection, logger: logging.Logger):
         self.database = database
         self.config = config
         self.logger = logger
@@ -227,7 +226,7 @@ class RenderAirRaidView(View):
 
     # pylint:disable=too-many-arguments
     def __init__(self, database: MeshtasticDB, config: Config,
-                 meshtastic_connection: MeshtasticConnection,
+                 meshtastic_connection: RichConnection,
                  telegram_connection: TelegramConnection,
                  logger: logging.Logger,
                  memcache: Memcache):
@@ -281,7 +280,7 @@ class WebApp:  # pylint:disable=too-few-public-methods
     """
     # pylint:disable=too-many-arguments
     def __init__(self, database: MeshtasticDB, app: Flask, config: Config,
-                 meshtastic_connection: MeshtasticConnection,
+                 meshtastic_connection: RichConnection,
                  telegram_connection: TelegramConnection,
                  logger: logging.Logger,
                  memcache: Memcache):
@@ -379,7 +378,7 @@ class WebServer:  # pylint:disable=too-few-public-methods
     """
     # pylint:disable=too-many-arguments
     def __init__(self, database: MeshtasticDB, config: Config,
-                 meshtastic_connection: MeshtasticConnection,
+                 meshtastic_connection: RichConnection,
                  telegram_connection: TelegramConnection,
                  logger: logging.Logger,
                  static_folder: str,
