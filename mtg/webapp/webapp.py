@@ -22,8 +22,9 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.serving import make_server
 #
 from mtg.config import Config
+from mtg.connection.rich import RichConnection
 from mtg.connection.telegram import TelegramConnection
-from mtg.database import MeshtasticDB, RichConnection
+from mtg.database import MeshtasticDB
 from mtg.utils import Memcache
 
 #

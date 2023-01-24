@@ -20,8 +20,8 @@ from telegram.ext import CommandHandler
 from telegram.ext import MessageHandler, Filters
 #
 from mtg.config import Config
+from mtg.connection.rich import RichConnection
 from mtg.connection.telegram import TelegramConnection
-from mtg.database import RichConnection
 from mtg.filter import TelegramFilter
 from mtg.log import VERSION
 from mtg.utils import split_message

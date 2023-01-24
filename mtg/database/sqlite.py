@@ -13,8 +13,8 @@ from typing import (
 from pony.orm import db_session, desc, Database, Optional, PrimaryKey, Required, Set, set_sql_debug
 #
 from mtg.log import conditional_log
-#
-from .richconnection import RichConnection
+# Actually RichConnectio is used. This import avoids circular dependency
+from mtg.connection.meshtastic import MeshtasticConnection
 
 # has to be global variable ;-(
 DB = Database()
@@ -75,11 +75,14 @@ class MeshtasticDB:
     Meshtastic events database
     """
 
-    def __init__(self, db_file: AnyStr, connection: RichConnection, logger: logging.Logger):
-        self.connection = connection
+    def __init__(self, db_file: AnyStr, logger: logging.Logger):
+        self.connection = None
         self.logger = logger
         DB.bind(provider='sqlite', filename=db_file, create_db=True)
         DB.generate_mapping(create_tables=True)
+
+    def set_meshtastic(self, connection):
+        self.connection = connection
 
     @db_session
     def get_node_record(self, node_id: AnyStr) -> MeshtasticNodeRecord:

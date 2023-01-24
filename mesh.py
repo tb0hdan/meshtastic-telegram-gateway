@@ -15,10 +15,11 @@ from mtg.bot.meshtastic import MeshtasticBot
 from mtg.bot.telegram import TelegramBot
 from mtg.config import Config
 from mtg.connection.aprs import APRSStreamer
-from mtg.connection.meshtastic import FIFO#, MeshtasticConnection
+from mtg.connection.meshtastic import FIFO
 from mtg.connection.mqtt import MQTT, MQTTHandler
+from mtg.connection.rich import RichConnection
 from mtg.connection.telegram import TelegramConnection
-from mtg.database import sql_debug, MeshtasticDB, RichConnection
+from mtg.database import sql_debug, MeshtasticDB
 from mtg.filter import CallSignFilter, MeshtasticFilter, TelegramFilter
 from mtg.log import setup_logger, LOGFORMAT
 from mtg.utils import create_fifo
@@ -53,8 +54,12 @@ def main(args):
                         format=LOGFORMAT)
     basedir = os.path.abspath(os.path.dirname(__file__))
     #
+    database = MeshtasticDB(os.path.join(basedir, config.Meshtastic.DatabaseFile), logger)
+    #
     telegram_connection = TelegramConnection(config.Telegram.Token, logger)
-    meshtastic_connection = RichConnection(config.Meshtastic.Device, logger, config)
+    meshtastic_connection = RichConnection(config.Meshtastic.Device, logger, config,
+                                           database)
+    database.set_meshtastic(meshtastic_connection)
     meshtastic_connection.connect()
     #
     mqtt_connection = MQTT(config.MQTT.Host, config.MQTT.User, config.MQTT.Password,
@@ -63,9 +68,6 @@ def main(args):
     mqtt_handler = MQTTHandler(logger)
     mqtt_connection.set_handler(mqtt_handler.handler)
     mqtt_handler.set_node_callback(meshtastic_connection.on_mqtt_node)
-    #
-    database = MeshtasticDB(os.path.join(basedir, config.Meshtastic.DatabaseFile),
-                            meshtastic_connection, logger)
     #
     aprs_streamer = APRSStreamer(config)
     call_sign_filter = CallSignFilter(database, config, meshtastic_connection, logger)

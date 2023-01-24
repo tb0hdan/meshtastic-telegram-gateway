@@ -4,7 +4,8 @@
 
 import logging
 
-from mtg.database import MeshtasticDB, RichConnection
+from mtg.database import MeshtasticDB
+from mtg.connection.rich import RichConnection
 from mtg.config import Config
 
 

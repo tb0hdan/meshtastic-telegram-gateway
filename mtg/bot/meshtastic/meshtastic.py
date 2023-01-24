@@ -3,6 +3,7 @@
 
 
 import logging
+import random
 import time
 
 import humanize
@@ -16,8 +17,9 @@ from meshtastic import (
 from pubsub import pub
 
 from mtg.config import Config
+from mtg.connection.rich import RichConnection
 from mtg.connection.telegram import TelegramConnection
-from mtg.database import MeshtasticDB, RichConnection
+from mtg.database import MeshtasticDB
 from mtg.filter import MeshtasticFilter
 from mtg.geo import get_lat_lon_distance
 from mtg.log import VERSION
@@ -267,6 +269,7 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
         to_id = packet.get('toId')
         decoded = packet.get('decoded')
         from_id = packet.get('fromId')
+        # from fix
         if from_id is None:
             from_id = hex(packet.get('from')).replace('0x', '!')
             packet['fromId'] = from_id
