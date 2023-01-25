@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 """ Meshtastic bot module """
 
-
 import logging
-import random
 import time
 
 import humanize
@@ -257,6 +255,7 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
                                                                                self.config.Telegram.NotificationsRoom),
                                               text=f"New node: {msg}")
 
+    # pylint:disable=too-many-branches
     def on_receive(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
         """
         onReceive is called when a packet arrives

@@ -13,8 +13,7 @@ from typing import (
 from pony.orm import db_session, desc, Database, Optional, PrimaryKey, Required, Set, set_sql_debug
 #
 from mtg.log import conditional_log
-# Actually RichConnectio is used. This import avoids circular dependency
-from mtg.connection.meshtastic import MeshtasticConnection
+
 
 # has to be global variable ;-(
 DB = Database()
@@ -24,6 +23,7 @@ def sql_debug():
     sql_debug - wrapper to enable debugging
     """
     set_sql_debug(True)
+
 
 class MeshtasticNodeRecord(DB.Entity):  # pylint:disable=too-few-public-methods
     """
@@ -82,10 +82,16 @@ class MeshtasticDB:
         DB.generate_mapping(create_tables=True)
 
     def set_meshtastic(self, connection):
+        """
+        set_meshtastic - set up meshtastic connection
+        """
         self.connection = connection
 
     @db_session
     def get_filter(self, connection, identifier):
+        """
+        get_filter - get blacklist status for connection and identifier
+        """
         record = FilterRecord.select(lambda n: n.connection == connection and n.item == identifier)
         if record:
             return True, record

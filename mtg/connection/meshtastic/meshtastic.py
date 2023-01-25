@@ -26,11 +26,12 @@ from mtg.utils import create_fifo, split_message
 
 FIFO = '/tmp/mtg.fifo'
 
+# pylint:disable=too-many-instance-attributes
 class MeshtasticConnection:
     """
     Meshtastic device connection
     """
-
+    # pylint:disable=too-many-arguments
     def __init__(self, dev_path: str, logger: logging.Logger, config, filter_class, startup_ts = time.time()):
         self.dev_path = dev_path
         self.interface = None
@@ -188,6 +189,7 @@ class MeshtasticConnection:
             node_list.append(node_info)
         return node_list
 
+    # pylint:disable=too-many-branches
     def format_nodes(self, include_self=False):
         """
         Formats node list to be more compact

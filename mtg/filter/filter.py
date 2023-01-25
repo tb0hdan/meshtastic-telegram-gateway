@@ -19,6 +19,9 @@ class Filter:
         self.logger = logger
 
     def banned(self, identifier):
+        """
+        banned - returns True if identifier is banned
+        """
         status, record = self.database.get_filter(self.connection_type, identifier)
         if not status:
             return False

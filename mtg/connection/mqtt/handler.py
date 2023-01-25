@@ -37,4 +37,7 @@ class MQTTHandler:
         self.node_callback = callback
 
     def set_filter(self, filter_class):
+        """
+        set_filter - set up filter class
+        """
         self.filter = filter_class
