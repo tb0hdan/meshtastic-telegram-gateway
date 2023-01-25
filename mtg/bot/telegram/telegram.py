@@ -114,7 +114,7 @@ class TelegramBot:
                               update.effective_chat.id,
                               self.config.enforce_type(int, self.config.Telegram.Room))
             return
-        if self.filter.banned(update.effective_user.id):
+        if self.filter.banned(str(update.effective_user.id)):
             self.logger.debug(f"User {update.effective_user.id} is in a blacklist...")
             return
         full_user = update.effective_user.first_name
