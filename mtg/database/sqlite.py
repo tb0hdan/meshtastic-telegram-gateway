@@ -92,7 +92,7 @@ class MeshtasticDB:
         """
         get_filter - get blacklist status for connection and identifier
         """
-        record = FilterRecord.select(lambda n: n.connection == connection and n.item == identifier)
+        record = FilterRecord.select(lambda n: n.connection == connection and n.item == identifier).first()
         if record:
             return True, record
         return False, None

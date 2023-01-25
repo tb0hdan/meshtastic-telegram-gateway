@@ -39,7 +39,12 @@ def check_room(func):
         rooms = [bot.config.enforce_type(int, bot.config.Telegram.NotificationsRoom),
                  bot.config.enforce_type(int, bot.config.Telegram.Room)]
         bot_in_rooms = bot.config.enforce_type(bool, bot.config.Telegram.BotInRooms)
+        # check rooms
         if update.effective_chat.id in rooms and not bot_in_rooms:
+            return None
+        # check blacklist as well
+        if bot.filter.banned(str(update.effective_user.id)):
+            bot.logger.debug(f"User {update.effective_user.id} is in a blacklist...")
             return None
         return func(*args)
     return wrapper

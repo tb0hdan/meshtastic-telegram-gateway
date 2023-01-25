@@ -42,6 +42,7 @@ class RichConnection(MeshtasticConnection):
             position = node_info.get('position', {})
             if not (position.get('latitude') and position.get('longitude')):
                 self.logger.debug(f"Node {node_id} doesn't have position...")
+                lat, lon = 0.0, 0.0
                 try:
                     lat, lon = self.database.get_last_coordinates(node_id)
                 except RuntimeError:
