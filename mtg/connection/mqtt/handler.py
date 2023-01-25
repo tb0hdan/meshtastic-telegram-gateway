@@ -11,6 +11,7 @@ class MQTTHandler:
     def __init__(self, logger):
         self.logger = logger
         self.node_callback = None
+        self.filter = None
 
     def handler(self, topic, payload):
         """
@@ -23,6 +24,9 @@ class MQTTHandler:
         if len(topic.split(NODE_PREFIX)) != 2:
             return
         node = NODE_PREFIX + topic.split(NODE_PREFIX)[1]
+        if self.filter and self.filter.banned(node):
+            self.logger.debug(f"User {node} is in a blacklist...")
+            return
         if self.node_callback is not None and topic.startswith('msh/2/stat/'):
             self.node_callback(node, payload)
 
@@ -31,3 +35,6 @@ class MQTTHandler:
         set_node_callback - node callback function setter
         """
         self.node_callback = callback
+
+    def set_filter(self, filter_class):
+        self.filter = filter_class

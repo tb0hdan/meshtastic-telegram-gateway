@@ -59,7 +59,7 @@ class MeshtasticMessageRecord(DB.Entity):  # pylint:disable=too-few-public-metho
     node = Optional(MeshtasticNodeRecord)
 
 
-class MeshtasticFilterRecord(DB.Entity):
+class FilterRecord(DB.Entity):
     """
     MeshtasticFilterRecord: filter representation in DB
     """
@@ -83,6 +83,13 @@ class MeshtasticDB:
 
     def set_meshtastic(self, connection):
         self.connection = connection
+
+    @db_session
+    def get_filter(self, connection, identifier):
+        record = FilterRecord.select(lambda n: n.connection == connection and n.item == identifier)
+        if record:
+            return True, record
+        return False, None
 
     @db_session
     def get_node_record(self, node_id: AnyStr) -> MeshtasticNodeRecord:

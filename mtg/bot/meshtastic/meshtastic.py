@@ -273,6 +273,10 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
         if from_id is None:
             from_id = hex(packet.get('from')).replace('0x', '!')
             packet['fromId'] = from_id
+        # check for blacklist
+        if self.filter.banned(from_id):
+            self.logger.debug(f"User {from_id} is in a blacklist...")
+            return
         # Send notifications if they're enabled
         if from_id is not None and self.config.enforce_type(bool, self.config.Telegram.NotificationsEnabled):
             self.notify_on_new_node(packet, interface)

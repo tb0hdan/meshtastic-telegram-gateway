@@ -114,6 +114,9 @@ class TelegramBot:
                               update.effective_chat.id,
                               self.config.enforce_type(int, self.config.Telegram.Room))
             return
+        if self.filter.banned(update.effective_user.id):
+            self.logger.debug(f"User {update.effective_user.id} is in a blacklist...")
+            return
         full_user = update.effective_user.first_name
         if update.effective_user.last_name is not None:
             full_user += ' ' + update.effective_user.last_name
@@ -236,44 +239,6 @@ class TelegramBot:
         context.bot.send_message(chat_id=update.effective_chat.id,
                                  text=msg)
 
-    @staticmethod
-    def format_nodes(nodes):
-        """
-        Formats node list to be more compact
-
-        :param nodes:
-        :return:
-        """
-        nodes = re.sub(r'[╒═╤╕╘╧╛╞╪╡├─┼┤]', '', nodes)
-        nodes = nodes.replace('│', ',')
-        new_nodes = []
-        header = True
-        for line in nodes.split('\n'):
-            line = line.lstrip(',').rstrip(',').rstrip('\n')
-            if not line:
-                continue
-            # clear column value
-            i = 0
-            new_line = []
-            for column in line.split(','):
-                column = column.strip()
-                if i == 0:
-                    if not header:
-                        column = f'**{column}**`'
-                    else:
-                        column = f'**{column}**'.replace('.', r'\.')
-                new_line.append(column + ', ')
-                if not header:
-                    i += 1
-            reassembled_line = ''.join(new_line).rstrip(', ')
-            if not header:
-                reassembled_line = f'{reassembled_line}`'
-            else:
-                reassembled_line = f'{reassembled_line}'
-            header = False
-            new_nodes.append(reassembled_line)
-        return '\n'.join(new_nodes)
-
     @check_room
     def nodes(self, update: Update, context: CallbackContext) -> None:
         """
@@ -284,10 +249,7 @@ class TelegramBot:
         :return:
         """
         include_self = self.config.enforce_type(bool, self.config.Telegram.NodeIncludeSelf)
-        table = self.meshtastic_connection.interface.showNodes(includeSelf=include_self)
-        if not table:
-            table = "No other nodes"
-        formatted = self.format_nodes(table)
+        formatted = self.meshtastic_connection.format_nodes(include_self=include_self)
         if len(formatted) <= 4096:
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text=formatted,

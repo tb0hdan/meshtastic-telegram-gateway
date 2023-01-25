@@ -14,8 +14,8 @@ class RichConnection(MeshtasticConnection):
     """
     RichConnection - enriched Meshtastic connection
     """
-    def __init__(self, dev_path: str, logger: logging.Logger, config, db: MeshtasticDB, startup_ts = time.time()):
-        super().__init__(dev_path, logger, config, startup_ts)
+    def __init__(self, dev_path: str, logger: logging.Logger, config, filter_class, db: MeshtasticDB, startup_ts = time.time()):
+        super().__init__(dev_path, logger, config, filter_class, startup_ts)
         self.config = config
         self.db = db
         self.logger = logger

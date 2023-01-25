@@ -55,9 +55,10 @@ def main(args):
     basedir = os.path.abspath(os.path.dirname(__file__))
     #
     database = MeshtasticDB(os.path.join(basedir, config.Meshtastic.DatabaseFile), logger)
+    meshtastic_filter = MeshtasticFilter(database, config, logger)
     #
     telegram_connection = TelegramConnection(config.Telegram.Token, logger)
-    meshtastic_connection = RichConnection(config.Meshtastic.Device, logger, config,
+    meshtastic_connection = RichConnection(config.Meshtastic.Device, logger, config, meshtastic_filter,
                                            database)
     database.set_meshtastic(meshtastic_connection)
     meshtastic_connection.connect()
@@ -70,17 +71,18 @@ def main(args):
     mqtt_handler.set_node_callback(meshtastic_connection.on_mqtt_node)
     #
     aprs_streamer = APRSStreamer(config)
-    call_sign_filter = CallSignFilter(database, config, meshtastic_connection, logger)
+    call_sign_filter = CallSignFilter(database, config, logger)
     aprs_streamer.set_filter(call_sign_filter)
     aprs_streamer.set_logger(logger)
     #
     telegram_bot = TelegramBot(config, meshtastic_connection, telegram_connection)
-    telegram_filter = TelegramFilter(database, config, meshtastic_connection, logger)
+    telegram_filter = TelegramFilter(database, config, logger)
     telegram_bot.set_filter(telegram_filter)
     telegram_bot.set_logger(logger)
     #
     meshtastic_bot = MeshtasticBot(database, config, meshtastic_connection, telegram_connection)
-    meshtastic_filter = MeshtasticFilter(database, config, meshtastic_connection, logger)
+    # set filter for MQTT
+    mqtt_handler.set_filter(meshtastic_filter)
     meshtastic_bot.set_filter(meshtastic_filter)
     meshtastic_bot.set_logger(logger)
     meshtastic_bot.subscribe()
