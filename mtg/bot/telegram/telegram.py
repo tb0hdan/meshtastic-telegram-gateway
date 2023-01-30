@@ -84,7 +84,8 @@ class TelegramBot:
         dispatcher.add_handler(resetdb_handler)
         dispatcher.add_handler(traceroute_handler)
 
-        echo_handler = MessageHandler(Filters.text & (~Filters.command), self.echo)
+        # echo_handler = MessageHandler(Filters.text & (~Filters.command), self.echo)
+        echo_handler = MessageHandler(~Filters.command, self.echo)
         dispatcher.add_handler(echo_handler)
 
     def set_logger(self, logger: logging.Logger):
@@ -124,10 +125,18 @@ class TelegramBot:
         full_user = update.effective_user.first_name
         if update.effective_user.last_name is not None:
             full_user += ' ' + update.effective_user.last_name
-        if not (update.message and update.message.text):
+        message = ''
+        if update.message and update.message.text:
+            message += update.message.text
+
+        if update.message.sticker:
+            message += f"sent sticker {update.message.sticker.set_name}: {update.message.sticker.emoji}"
+
+        # check if we got our message
+        if not message:
             return
-        self.logger.debug(f"{update.effective_chat.id} {full_user} {update.message.text}")
-        self.meshtastic_connection.send_text(f"{full_user}: {update.message.text}")
+        self.logger.debug(f"{update.effective_chat.id} {full_user} {message}")
+        self.meshtastic_connection.send_text(f"{full_user}: {message}")
 
     def poll(self) -> None:
         """
