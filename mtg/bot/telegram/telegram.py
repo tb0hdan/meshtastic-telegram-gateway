@@ -84,7 +84,6 @@ class TelegramBot:
         dispatcher.add_handler(resetdb_handler)
         dispatcher.add_handler(traceroute_handler)
 
-        # echo_handler = MessageHandler(Filters.text & (~Filters.command), self.echo)
         echo_handler = MessageHandler(~Filters.command, self.echo)
         dispatcher.add_handler(echo_handler)
 
