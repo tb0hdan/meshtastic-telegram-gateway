@@ -128,7 +128,7 @@ class TelegramBot:
         if update.message and update.message.text:
             message += update.message.text
 
-        if update.message.sticker:
+        if update.message and update.message.sticker:
             message += f"sent sticker {update.message.sticker.set_name}: {update.message.sticker.emoji}"
 
         # check if we got our message
