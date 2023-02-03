@@ -69,6 +69,7 @@ class TelegramBot:
         reboot_handler = CommandHandler('reboot', self.reboot)
         uptime_handler = CommandHandler('uptime', self.uptime)
         qr_handler = CommandHandler('qr', self.qr_code)
+        ch_handler = CommandHandler('ch', self.channel_url)
         maplink_handler = CommandHandler('map', self.map_link)
         resetdb_handler = CommandHandler('reset_db', self.reset_db)
         traceroute_handler = CommandHandler('traceroute', self.traceroute)
@@ -79,6 +80,7 @@ class TelegramBot:
         dispatcher.add_handler(node_handler)
         dispatcher.add_handler(reboot_handler)
         dispatcher.add_handler(qr_handler)
+        dispatcher.add_handler(ch_handler)
         dispatcher.add_handler(uptime_handler)
         dispatcher.add_handler(maplink_handler)
         dispatcher.add_handler(resetdb_handler)
@@ -225,6 +227,19 @@ class TelegramBot:
         with open(tmp, 'rb') as photo_handle:
             context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo_handle)
             os.remove(tmp)
+
+    @check_room
+    def channel_url(self, update: Update, context: CallbackContext) -> None:
+        """
+        channel_url - Return current channel URL
+
+        :param update:
+        :param context:
+        :return:
+        """
+        url = self.meshtastic_connection.interface.localNode.getURL(includeAll=False)
+        self.logger.debug(f"Primary channel URL {url}")
+        context.bot.send_message(chat_id=update.effective_chat.id, text=url)
 
     @check_room
     def uptime(self, update: Update, context: CallbackContext) -> None:

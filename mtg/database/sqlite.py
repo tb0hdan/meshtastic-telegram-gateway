@@ -25,6 +25,16 @@ def sql_debug():
     set_sql_debug(True)
 
 
+class FirmwareReleaseRecord(DB.Entity):  # pylint:disable=too-few-public-methods
+    """
+    FirmwareReleaseRecord: firmware release record representation in DB
+    """
+    release = PrimaryKey(str)
+    created_at = Required(datetime)
+    url = Required(str)
+    download_url = Required(str)
+
+
 class MeshtasticNodeRecord(DB.Entity):  # pylint:disable=too-few-public-methods
     """
     MeshtasticNodeRecord: node record representation in DB

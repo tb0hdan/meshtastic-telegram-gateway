@@ -94,7 +94,7 @@ class RenderTrackView(View):
 
         :return:
         """
-        query_string = parse_qs(request.query_string)
+        query_string = parse_qs(request.query_string.decode())
         tail_value = self.config.enforce_type(int, self.config.WebApp.LastHeardDefault)
         #
         tail = query_string.get(b'tail', [])
@@ -152,7 +152,7 @@ class RenderDataView(View):
 
         :return:
         """
-        query_string = parse_qs(request.query_string)
+        query_string = parse_qs(request.query_string.decode())
         tail_value = self.config.enforce_type(int, self.config.WebApp.LastHeardDefault)
         #
         tail = query_string.get(b'tail', [])
