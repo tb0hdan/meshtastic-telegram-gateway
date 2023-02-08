@@ -47,6 +47,10 @@ Telegram chat room. Nicks (Your Name field for Meshtastic) are passed through in
 
 ![Meshtastic cross diagram](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/MeshtasticBot-cross.drawio.png)
 
+### Proposed hybrid architecture, used by community in Ukraine
+
+![Meshtastic Ukraine hybrid architecture](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/mesh_hybrid.drawio.png)
+
 ## Supported software
 
 Python 3.7+ is required.
