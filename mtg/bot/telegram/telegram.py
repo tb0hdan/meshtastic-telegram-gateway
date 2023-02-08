@@ -4,6 +4,7 @@
 import functools
 import logging
 import os
+import pkg_resources
 import tempfile
 import time
 #
@@ -251,8 +252,9 @@ class TelegramBot:
         if self.meshtastic_connection.interface.myInfo:
             firmware = self.meshtastic_connection.interface.myInfo.firmware_version
             reboot_count = self.meshtastic_connection.interface.myInfo.reboot_count
+        the_version = pkg_resources.get_distribution("meshtastic").version
         formatted_time = humanize.naturaltime(time.time() - self.meshtastic_connection.get_startup_ts)
-        text= f'Bot v{VERSION}/FW: v{firmware}/Reboots: {reboot_count}. Started {formatted_time}'
+        text= f'Bot v{VERSION}/FW: v{firmware}/Meshlib: v{the_version}/Reboots: {reboot_count}. Started {formatted_time}'
         context.bot.send_message(chat_id=update.effective_chat.id, text=text)
 
     @check_room

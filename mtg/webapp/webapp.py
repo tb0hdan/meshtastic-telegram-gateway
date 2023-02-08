@@ -97,17 +97,17 @@ class RenderTrackView(View):
         query_string = parse_qs(request.query_string.decode())
         tail_value = self.config.enforce_type(int, self.config.WebApp.LastHeardDefault)
         #
-        tail = query_string.get(b'tail', [])
+        tail = query_string.get('tail', [])
         if len(tail) > 0:
             try:
-                tail_value = int(tail[0].decode())
+                tail_value = int(tail[0])
             except ValueError:
                 self.logger.error("Wrong tail value: ", tail)
         #
         name = ''
-        name_qs = query_string.get(b'name', [])
+        name_qs = query_string.get('name', [])
         if len(name_qs) > 0:
-            name = name_qs[0].decode()
+            name = name_qs[0]
         if len(name) == 0:
             return jsonify([])
 
@@ -155,17 +155,17 @@ class RenderDataView(View):
         query_string = parse_qs(request.query_string.decode())
         tail_value = self.config.enforce_type(int, self.config.WebApp.LastHeardDefault)
         #
-        tail = query_string.get(b'tail', [])
+        tail = query_string.get('tail', [])
         if len(tail) > 0:
             try:
-                tail_value = int(tail[0].decode())
+                tail_value = int(tail[0])
             except ValueError:
                 self.logger.error("Wrong tail value: ", tail)
         #
         name = ''
-        name_qs = query_string.get(b'name', [])
+        name_qs = query_string.get('name', [])
         if len(name_qs) > 0:
-            name = name_qs[0].decode()
+            name = name_qs[0]
         nodes = []
         # node default color
         default_color = "red"

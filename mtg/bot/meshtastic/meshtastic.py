@@ -2,6 +2,7 @@
 """ Meshtastic bot module """
 
 import logging
+import pkg_resources
 import time
 
 import humanize
@@ -197,9 +198,11 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
         firmware = 'unknown'
         if interface.myInfo:
             firmware = interface.myInfo.firmware_version
+            reboot_count = interface.myInfo.reboot_count
+        the_version = pkg_resources.get_distribution("meshtastic").version
         from_id = packet.get('fromId')
         formatted_time = humanize.naturaltime(time.time() - self.meshtastic_connection.get_startup_ts)
-        self.meshtastic_connection.send_text(f'Bot v{VERSION}/FW: {firmware} started {formatted_time}',
+        self.meshtastic_connection.send_text(f'Bot v{VERSION}/FW: v{firmware}/Meshlib: v{the_version}/Reboots: {reboot_count}. Started {formatted_time}',
                                              destinationId=from_id)
 
     def process_pong(self, packet) -> None:
