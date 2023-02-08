@@ -51,6 +51,11 @@ Telegram chat room. Nicks (Your Name field for Meshtastic) are passed through in
 
 ![Meshtastic Ukraine hybrid architecture](https://raw.githubusercontent.com/tb0hdan/meshtastic-telegram-gateway/master/doc/mesh_hybrid.drawio.png)
 
+Legend:
+- R - Radio only. With good setup (height + something similar to [Diamond X510](https://www.diamondantenna.net/x510series.html))
+- M - Radio (with some Baofeng-like antenna) + MQTT
+- C - Radio only. Mobile clients
+
 ## Supported software
 
 Python 3.7+ is required.
