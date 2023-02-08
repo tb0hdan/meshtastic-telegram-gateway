@@ -202,8 +202,9 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
         the_version = pkg_resources.get_distribution("meshtastic").version
         from_id = packet.get('fromId')
         formatted_time = humanize.naturaltime(time.time() - self.meshtastic_connection.get_startup_ts)
-        self.meshtastic_connection.send_text(f'Bot v{VERSION}/FW: v{firmware}/Meshlib: v{the_version}/Reboots: {reboot_count}. Started {formatted_time}',
-                                             destinationId=from_id)
+        text = f'Bot v{VERSION}/FW: v{firmware}/Meshlib: v{the_version}/Reboots: {reboot_count}.'
+        text += f'Started {formatted_time}'
+        self.meshtastic_connection.send_text(text, destinationId=from_id)
 
     def process_pong(self, packet) -> None:
         """
