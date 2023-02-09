@@ -129,7 +129,7 @@ dmypy.json
 .pyre/
 
 # local
-logfile
+logfile*
 mesh.ini
 meshtastic.sqlite
 meshtastic.sqlite.bkp
