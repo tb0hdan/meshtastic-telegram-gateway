@@ -33,8 +33,9 @@ class RenderTemplateView(View):
     Generic HTML template renderer
     """
 
-    def __init__(self, template_name):
+    def __init__(self, template_name, config):
         self.template_name = template_name
+        self.config = config
 
     def dispatch_request(self) -> AnyStr:
         """
@@ -42,7 +43,12 @@ class RenderTemplateView(View):
 
         :return:
         """
-        return render_template(self.template_name, timestamp=int(time.time()))
+        debug=self.config.enforce_type(bool, self.config.DEFAULT.Debug)
+        sentry_enabled=self.config.enforce_type(bool, self.config.DEFAULT.SentryEnabled)
+        sentry_dsn=self.config.DEFAULT.SentryDSN
+        return render_template(self.template_name, debug=debug,
+                               sentry_enabled=sentry_enabled,
+                               sentry_dsn=sentry_dsn, timestamp=int(time.time()),)
 
 class RenderFavicon(View):
     """
@@ -72,6 +78,9 @@ class RenderScript(View):
             redraw_markers_every=self.config.WebApp.RedrawMarkersEvery,
             center_latitude=self.config.enforce_type(float, self.config.WebApp.Center_Latitude),
             center_longitude=self.config.enforce_type(float, self.config.WebApp.Center_Longitude),
+            debug=self.config.enforce_type(bool, self.config.DEFAULT.Debug),
+            sentry_enabled=self.config.enforce_type(bool, self.config.DEFAULT.SentryEnabled),
+            sentry_dsn=self.config.DEFAULT.SentryDSN
         ))
         response.headers['Content-Type'] = 'application/javascript'
         return response
@@ -336,11 +345,11 @@ class WebApp:  # pylint:disable=too-few-public-methods
         self.app.add_url_rule('/favicon.ico', view_func=RenderFavicon.as_view('favicon'))
         # Index pages
         self.app.add_url_rule('/', view_func=RenderTemplateView.as_view(
-            'root_page', template_name='index.html'))
+            'root_page', template_name='index.html', config=self.config))
         self.app.add_url_rule('/index.htm', view_func=RenderTemplateView.as_view(
-            'index_page', template_name='index.html'))
+            'index_page', template_name='index.html', config=self.config))
         self.app.add_url_rule('/index.html', view_func=RenderTemplateView.as_view(
-            'index_html_page', template_name='index.html'))
+            'index_html_page', template_name='index.html', config=self.config))
 
 
 class ServerThread(Thread):

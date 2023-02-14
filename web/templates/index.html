@@ -4,7 +4,14 @@
 <meta charset="utf-8">
 <title>Meshtastic map</title>
   <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js" type="text/javascript"></script>
-  <script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
+  {% if sentry_enabled %}
+    {% if debug %}
+        <script src="//browser.sentry-cdn.com/7.37.2/bundle.debug.min.js" integrity="sha384-O+ykYxyDA9/a9LjgfppBzYeCrvwqC1OJlcPOo4AUql83ig6FnybDP1D9D+x+01Ji" crossorigin="anonymous"></script>
+    {% else %}
+        <script src="//browser.sentry-cdn.com/7.37.2/bundle.tracing.min.js" integrity="sha384-fvPQDlndgINMbEsMXtCyqYrvvpsE2UTMA4Vh/PMVlnbH3fuBwzyPMtYDKrqANFf4" crossorigin="anonymous"></script>
+    {% endif %}
+  {% endif %}
+  <script src="//unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
   <script src="/script.js?{{timestamp}}" type="text/javascript"></script>
   <link rel="stylesheet" href="/static/css/style.css?{{timestamp}}">
   <link rel="shortcut icon" href="/favicon.ico">

@@ -7,6 +7,15 @@ jQuery(function($) {
     var script = document.createElement('script');
     script.src = "//maps.googleapis.com/maps/api/js?key={{api_key}}&callback=initialize";
     document.body.appendChild(script);
+    {% if sentry_enabled %}
+    Sentry.init({
+      dsn: "{{sentry_dsn}}",
+      maxBreadcrumbs: 50,
+      {% if debug %}
+      debug: true,
+      {% endif %}
+    });
+    {% endif %}
 });
 
 let map;
@@ -130,6 +139,7 @@ function initialize() {
     const params = Object.fromEntries(urlSearchParams.entries())
     const center_lat = {{center_latitude}};
     const center_lon =  {{center_longitude}};
+
     href = window.location.search;
     if ( params['name'] == undefined ) {
         initialize_normal(center_lat, center_lon);
