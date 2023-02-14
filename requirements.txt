@@ -2,7 +2,7 @@ aprslib==0.7.2
 flask~=2.2.2
 haversine~=2.7.0
 humanize~=4.6.0
-meshtastic==2.0.11
+meshtastic==2.0.12
 paho-mqtt==1.6.1
 pypng==0.20220715.0
 python-telegram-bot==13.15
