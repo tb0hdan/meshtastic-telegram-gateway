@@ -8,6 +8,7 @@ import os
 import sys
 import time
 #
+import reverse_geocoder as rg
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
 #
@@ -27,7 +28,7 @@ from mtg.webapp import WebServer
 #
 
 
-# pylint:disable=too-many-locals
+# pylint:disable=too-many-locals,too-many-statements
 def main(args):
     """
     Main function :)
@@ -47,6 +48,8 @@ def main(args):
                         traces_sample_rate=1.0,
                         integrations=[FlaskIntegration()]
         )
+    # warm up reverse cache
+    rg.search((50.5, 30.5))
     # our logger
     logger = setup_logger('mesh', level)
     # meshtastic logger
@@ -59,7 +62,7 @@ def main(args):
     #
     telegram_connection = TelegramConnection(config.Telegram.Token, logger)
     meshtastic_connection = RichConnection(config.Meshtastic.Device, logger, config, meshtastic_filter,
-                                           database)
+                                           database, rg_fn=rg.search)
     database.set_meshtastic(meshtastic_connection)
     meshtastic_connection.connect()
     #

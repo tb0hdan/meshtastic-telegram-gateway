@@ -16,12 +16,13 @@ class RichConnection(MeshtasticConnection):
     """
     # pylint:disable=too-many-arguments
     def __init__(self, dev_path: str, logger: logging.Logger, config, filter_class,
-                 database: MeshtasticDB, startup_ts = time.time()):
+                 database: MeshtasticDB, startup_ts = time.time(), rg_fn = None):
         super().__init__(dev_path, logger, config, filter_class, startup_ts)
         self.config = config
         self.database = database
         self.logger = logger
         random.seed()
+        self.rg_fn = rg_fn
 
     @property
     def nodes_with_position(self) -> List:
@@ -54,5 +55,8 @@ class RichConnection(MeshtasticConnection):
                 node_info['position'] = {'latitude': lat, 'longitude': lon,
                                          'latitudeI': latitude_i, 'longitudeI': longitude_i,
                                          'altitude': 100}
+            rg_results = self.rg_fn((node_info['position']['latitude'], node_info['position']['longitude']))
+            if rg_results:
+                node_info['position']['admin1'] = rg_results[0]['admin1']
             node_list.append(node_info)
         return node_list
