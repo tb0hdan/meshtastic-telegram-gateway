@@ -272,7 +272,13 @@ class RenderAirRaidView(View):
         tzinfo = datetime.now().astimezone().tzinfo
         dt_f = dt_f + tzinfo.utcoffset(None)
         alert_time = dt_f.strftime("%H:%M:%S")
-        self.logger.info(msg)
+        self.logger.info(f"{msg}: {alert_place}")
+        for node in self.meshtastic_connection.nodes_with_position:
+            name = node
+            position = node.get('position', {}).get('admin1')
+            if not position:
+                continue
+            self.logger.info(f"{name} {position} {alert_place}")
         if region_id in [14, 31] and self.config.enforce_type(bool, self.config.WebApp.AirRaidEnabled):
             new_msg = f'Alert: {alert_type}, {alert_place}, {alert_status} since {alert_time}'
             if not self.memcache.get(new_msg):
