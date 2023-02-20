@@ -13,6 +13,7 @@ import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
 #
 from mtg.bot.meshtastic import MeshtasticBot
+from mtg.bot.openai import OpenAIBot
 from mtg.bot.telegram import TelegramBot
 from mtg.config import Config
 from mtg.connection.aprs import APRSStreamer
@@ -83,7 +84,8 @@ def main(args):
     telegram_bot.set_filter(telegram_filter)
     telegram_bot.set_logger(logger)
     #
-    meshtastic_bot = MeshtasticBot(database, config, meshtastic_connection, telegram_connection)
+    openAIBot = OpenAIBot()
+    meshtastic_bot = MeshtasticBot(database, config, meshtastic_connection, telegram_connection, openAIBot)
     # set filter for MQTT
     mqtt_handler.set_filter(meshtastic_filter)
     meshtastic_bot.set_filter(meshtastic_filter)

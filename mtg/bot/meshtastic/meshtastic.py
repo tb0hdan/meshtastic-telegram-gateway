@@ -29,7 +29,7 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
     Meshtastic bot
     """
     def __init__(self, database: MeshtasticDB, config: Config, meshtastic_connection: RichConnection,
-                 telegram_connection: TelegramConnection):
+                 telegram_connection: TelegramConnection, bot_handler):
         self.database = database
         self.config = config
         self.filter = None
@@ -40,6 +40,8 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
         self.ping_container = {}
         # file logger
         self.writer = CSVFileWriter(dst=self.config.enforce_type(str, self.config.Meshtastic.NodeLogFile))
+        # bot
+        self.bot_handler = bot_handler
 
     def set_logger(self, logger: logging.Logger):
         """
@@ -297,8 +299,20 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
                 self.process_pong(packet)
                 return
             return
+        # get msg
+        msg = decoded.get('text', '')
+
         # ignore non-broadcast messages
         if to_id != MESHTASTIC_BROADCAST_ADDR:
+            if msg.startswith('/'):
+                self.process_meshtastic_command(packet, interface)
+                return
+
+            text = self.bot_handler.get_response(from_id, msg)
+            if text:
+                print(f"{from_id}: {msg} -> {text}")
+                self.meshtastic_connection.send_text(text, destinationId=from_id)
+
             return
         # Save messages
         try:
@@ -315,7 +329,6 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
             found, record = self.database.get_node_record(from_id)
             if found:
                 long_name = record.nodeName
-        msg = decoded.get('text', '')
         # skip commands
         if msg.startswith('/'):
             self.process_meshtastic_command(packet, interface)
