@@ -257,6 +257,7 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
             else:
                 long_name = f'{map_link}?name={long_name}'
         msg = f"{from_id} -> {long_name}"
+        self.meshtastic_connection.send_text(self.config.Meshtastic.WelcomeMessage, destinationId=from_id)
         self.telegram_connection.send_message(chat_id=self.config.enforce_type(int,
                                                                                self.config.Telegram.NotificationsRoom),
                                               text=f"New node: {msg}")

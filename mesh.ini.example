@@ -96,6 +96,7 @@ DatabaseFile = meshtastic.sqlite
 NodeLogEnabled = false
 NodeLogFile = /tmp/node_log.csv
 FIFOEnabled = false
+WelcomeMessage = Welcome to our community
 
 [APRS]
 # en: APRS functionality. Not actually used. Boolean.

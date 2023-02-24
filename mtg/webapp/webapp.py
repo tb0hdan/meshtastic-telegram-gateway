@@ -255,6 +255,8 @@ class RenderAirRaidView(View):
                              23: 'Kherson',  24: 'Cherkasy',  25: 'Chernihiv',
                              26: 'Chernivtsi', 27: 'Lviv', 28: 'Donetsjk',
                              31: 'Kyiv', 9999: 'Krym'}
+        self.translation_table = {'Dnipropetrovsk': 'Dnipro',
+                                  'Kiev': 'Kyiv obl'}
 
     def dispatch_request(self) -> AnyStr:
         """
@@ -273,20 +275,31 @@ class RenderAirRaidView(View):
         dt_f = dt_f + tzinfo.utcoffset(None)
         alert_time = dt_f.strftime("%H:%M:%S")
         self.logger.info(f"{msg}: {alert_place}")
+        new_msg = f'Alert: {alert_type}, {alert_place}, {alert_status} since {alert_time}'
+        if not self.config.enforce_type(bool, self.config.WebApp.AirRaidEnabled):
+            return 'Ok'
+        if self.memcache.get(new_msg):
+            return 'Ok'
+        # set
+        self.memcache.set(new_msg, True, expires=60)
+        # Telegram - Kyiv/obl only
+        if region_id in [14, 31]:
+            self.telegram_connection.send_message(chat_id=self.config.enforce_type(int,
+                                                  self.config.Telegram.NotificationsRoom),
+                                                  text=new_msg)
         for node in self.meshtastic_connection.nodes_with_position:
-            name = node
+            user = node.get('user', {})
+            node_id = user.get('id')
+            name = user.get('longName')
             position = node.get('position', {}).get('admin1')
             if not position:
                 continue
-            self.logger.info(f"{name} {position} {alert_place}")
-        if region_id in [14, 31] and self.config.enforce_type(bool, self.config.WebApp.AirRaidEnabled):
-            new_msg = f'Alert: {alert_type}, {alert_place}, {alert_status} since {alert_time}'
-            if not self.memcache.get(new_msg):
-                self.memcache.set(new_msg, True, expires=60)
-                self.telegram_connection.send_message(chat_id=self.config.enforce_type(int,
-                                                      self.config.Telegram.NotificationsRoom),
-                                                      text=new_msg)
-                self.meshtastic_connection.send_text(new_msg)
+            #
+            translated = self.translation_table.get(position, position)
+            self.logger.info(f"{node_id},{name},{position} {alert_place}")
+            if translated == alert_place:
+                self.logger.info(f"Sending alert to {node_id}....")
+                self.meshtastic_connection.send_text(new_msg, destinationId=node_id)
         return 'Ok'
 
 

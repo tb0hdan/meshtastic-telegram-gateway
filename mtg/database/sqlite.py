@@ -121,7 +121,7 @@ class MeshtasticDB:
         node_name = node_info.get('user', {}).get('longName', '')
         hw_model = node_info.get('user', {}).get('hwModel', '')
         if not node_record:
-            if node_name and hw_model:
+            if node_name and hw_model and node_name:
                 conditional_log(f'creating new record... {node_info}', self.logger, True)
                 # create new record
                 node_record = MeshtasticNodeRecord(
@@ -134,6 +134,7 @@ class MeshtasticDB:
             return False, None
         conditional_log(f'using found record... {node_record}, {node_info}', self.logger, True)
         # Update lastHeard and return record
+        node_name = node_name if node_name else node_record.nodeName
         node_record.nodeName = node_name  if node_name else node_id # pylint:disable=invalid-name
         node_record.lastHeard = last_heard  # pylint:disable=invalid-name
         return True, node_record
