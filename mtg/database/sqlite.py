@@ -45,6 +45,8 @@ class MeshtasticNodeRecord(DB.Entity):  # pylint:disable=too-few-public-methods
     hwModel = Required(str)
     locations = Set(lambda: MeshtasticLocationRecord)
     messages = Set(lambda: MeshtasticMessageRecord)
+    # New in 1.1.12
+    # shortName = Optional(str)
 
 
 class MeshtasticLocationRecord(DB.Entity):  # pylint:disable=too-few-public-methods
@@ -58,7 +60,9 @@ class MeshtasticLocationRecord(DB.Entity):  # pylint:disable=too-few-public-meth
     longitude = Required(float)
     rxSnr = Required(float)
     node = Optional(MeshtasticNodeRecord)
-
+    # New fields in 1.1.12
+    #channelUtil = Optional(float)
+    #airUtil = Optional(float)
 
 class MeshtasticMessageRecord(DB.Entity):  # pylint:disable=too-few-public-methods
     """

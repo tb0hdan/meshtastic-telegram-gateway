@@ -256,7 +256,7 @@ class RenderAirRaidView(View):
                              26: 'Chernivtsi', 27: 'Lviv', 28: 'Donetsjk',
                              31: 'Kyiv', 9999: 'Krym'}
         self.translation_table = {'Dnipropetrovsk': 'Dnipro',
-                                  'Kiev': 'Kyiv obl'}
+                                  'Kiev': 'Kyiv obl', 'Odessa': 'Odesa'}
 
     def dispatch_request(self) -> AnyStr:
         """

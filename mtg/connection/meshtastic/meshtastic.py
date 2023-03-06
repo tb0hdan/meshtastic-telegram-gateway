@@ -6,7 +6,7 @@ import re
 import sys
 import time
 #
-from threading import Thread
+from threading import RLock, Thread
 from typing import (
     Dict,
     List,
@@ -40,6 +40,7 @@ class MeshtasticConnection:
         self.startup_ts = startup_ts
         self.mqtt_nodes = {}
         self.name = 'Meshtastic Connection'
+        self.lock = RLock()
         self.filter = filter_class
 
     @property
@@ -69,9 +70,10 @@ class MeshtasticConnection:
         :return:
         """
         if len(msg) < mesh_pb2.Constants.DATA_PAYLOAD_LEN // 2:
-            self.interface.sendText(msg, **kwargs)
-            return
-        split_message(msg, mesh_pb2.Constants.DATA_PAYLOAD_LEN // 2, self.interface.sendText, **kwargs)
+            with self.lock:
+                self.interface.sendText(msg, **kwargs)
+                return
+        split_message(msg, mesh_pb2.Constants.DATA_PAYLOAD_LEN // 2, self.send_text, **kwargs)
         return
 
     def send_data(self, *args, **kwargs) -> None:
@@ -82,7 +84,8 @@ class MeshtasticConnection:
         :param kwargs:
         :return:
         """
-        self.interface.sendData(*args, **kwargs)
+        with self.lock:
+            self.interface.sendData(*args, **kwargs)
 
     def node_info(self, node_id) -> Dict:
         """
