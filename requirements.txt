@@ -1,6 +1,6 @@
 aprslib==0.7.2
 flask~=2.2.3
-haversine~=2.7.0
+haversine~=2.8.0
 humanize~=4.6.0
 meshtastic==2.0.12
 paho-mqtt==1.6.1
