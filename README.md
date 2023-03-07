@@ -93,7 +93,7 @@ Default value is 3600 seconds. Can be changed using `?tail=xxx` query string, e.
 6. Run `sudo pip3 install -r requirements.txt`
 7. Run `gpasswd -a youruser dialout`
 8. Relogin
-9. Run `make run`
+9. Run `/start.sh`
 10. Enjoy
 
 
