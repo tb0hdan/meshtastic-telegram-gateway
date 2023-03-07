@@ -229,7 +229,7 @@ class RenderDataView(View):
         return jsonify(nodes)
 
 
-class RenderAirRaidView(View):
+class RenderAirRaidView(View): # pylint:disable=too-many-instance-attributes
     """
     Air Raid Alert renderer
     """
@@ -258,7 +258,7 @@ class RenderAirRaidView(View):
         self.translation_table = {'Dnipropetrovsk': 'Dnipro',
                                   'Kiev': 'Kyiv obl', 'Odessa': 'Odesa'}
 
-    def dispatch_request(self) -> AnyStr:
+    def dispatch_request(self) -> AnyStr: # pylint:disable=too-many-locals
         """
         Process Flask request
 

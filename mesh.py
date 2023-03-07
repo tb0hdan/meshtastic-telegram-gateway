@@ -84,8 +84,8 @@ def main(args):
     telegram_bot.set_filter(telegram_filter)
     telegram_bot.set_logger(logger)
     #
-    openAIBot = OpenAIBot()
-    meshtastic_bot = MeshtasticBot(database, config, meshtastic_connection, telegram_connection, openAIBot)
+    open_ai = OpenAIBot()
+    meshtastic_bot = MeshtasticBot(database, config, meshtastic_connection, telegram_connection, open_ai)
     # set filter for MQTT
     mqtt_handler.set_filter(meshtastic_filter)
     meshtastic_bot.set_filter(meshtastic_filter)

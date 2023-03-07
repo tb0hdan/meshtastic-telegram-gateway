@@ -28,7 +28,7 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
     """
     Meshtastic bot
     """
-    def __init__(self, database: MeshtasticDB, config: Config, meshtastic_connection: RichConnection,
+    def __init__(self, database: MeshtasticDB, config: Config, meshtastic_connection: RichConnection, # pylint:disable=too-many-arguments
                  telegram_connection: TelegramConnection, bot_handler):
         self.database = database
         self.config = config
@@ -263,7 +263,7 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
                                               text=f"New node: {msg}")
 
     # pylint:disable=too-many-branches
-    def on_receive(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
+    def on_receive(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None: # pylint:disable=too-many-return-statements
         """
         onReceive is called when a packet arrives
 
