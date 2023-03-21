@@ -89,7 +89,7 @@ to wymagane, dla Linuksa przynajmniej)
 6. Uruchom `sudo pip3 install -r wymagania.txt`
 7. Uruchom `gpasswd -a youruser dialout`
 8. Zaloguj się ponownie
-9. Uruchom `make run`.
+9. Uruchom `./start.sh`.
 10. Ciesz się
 
 ## Obsługiwane polecenia bota
