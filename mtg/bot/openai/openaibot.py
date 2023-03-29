@@ -55,8 +55,9 @@ class OpenAIBot:
         messages = [{"role": "system", "content": self.seed},
                     {"role": "user", "content": f"{user}: Hello, who are you?"},
                     {"role": "assistant", "content": "AI: I am an AI created by OpenAI. How can I help you today?"},
+                    {"role": "user", "content": query},
                     ]
-        return self.completion.create(model="gpt-3.5-turbo",
+        return self.completion.create(model="gpt-3.5-turbo", messages=messages,
                                       temperature=0.9, top_p=1, presence_penalty=0.6,
                                       frequency_penalty=0, max_tokens=256, user=user,
                                       stop=[f" {user}:", " AI:"])
@@ -69,6 +70,5 @@ class OpenAIBot:
         response = self.run_query(user, incoming)
         print(user, response)
         # '!\n\n<response>'
-        #text = response.get('choices')[0].get('text').lstrip('!').lstrip('\n')
         text = response.get('choices')[0].get('message').get('content')
         return text
