@@ -5,6 +5,7 @@ import functools
 import logging
 import os
 import pkg_resources
+import re
 import tempfile
 import time
 #
@@ -124,6 +125,11 @@ class TelegramBot:
         if self.filter.banned(str(update.effective_user.id)):
             self.logger.debug(f"User {update.effective_user.id} is in a blacklist...")
             return
+        # Range test module should not spam telegram room
+        if update.message and update.message.text and re.match('^seq\s[0-9]+', update.message.text, re.I) is not None:
+            self.logger.debug(f"User {update.effective_user.id} has sent range test... {update.message.text}")
+            return
+        #
         full_user = update.effective_user.first_name
         if update.effective_user.last_name is not None:
             full_user += ' ' + update.effective_user.last_name

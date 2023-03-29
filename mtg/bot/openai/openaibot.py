@@ -11,7 +11,7 @@ import openai
 # I'm sorry, but I cannot help with that request.
 # I'm sorry, but I do not have access to that kind of content.
 # I'm sorry, I don't understand the request.
-class OpenAIBot:
+class OpenAIDavinci:
     """ OpenAI Bot container """
     def __init__(self):
         api_key = os.getenv("OPENAI_API_KEY", default='')
@@ -38,4 +38,37 @@ class OpenAIBot:
         print(user, response)
         # '!\n\n<response>'
         text = response.get('choices')[0].get('text').lstrip('!').lstrip('\n')
+        return text
+
+class OpenAIBot:
+    """ OpenAI Bot container """
+    def __init__(self):
+        api_key = os.getenv("OPENAI_API_KEY", default='')
+        openai.api_key = api_key
+        self.completion = openai.ChatCompletion() if len(api_key) > 0 else None
+        self.seed = "The following is a conversation with an AI assistant. "
+        self.seed += "The assistant is helpful, creative, clever, and very friendly.\n\n"
+
+
+    def run_query(self, user, query):
+        """ Run OpenAI query with user info """
+        messages = [{"role": "system", "content": self.seed},
+                    {"role": "user", "content": f"{user}: Hello, who are you?"},
+                    {"role": "assistant", "content": "AI: I am an AI created by OpenAI. How can I help you today?"},
+                    ]
+        return self.completion.create(model="gpt-3.5-turbo",
+                                      temperature=0.9, top_p=1, presence_penalty=0.6,
+                                      frequency_penalty=0, max_tokens=256, user=user,
+                                      stop=[f" {user}:", " AI:"])
+
+    def get_response(self, user, incoming):
+        """ Get response from OpenAI API """
+        if self.completion is None:
+            print('OpenAIBot not initialized...')
+            return None
+        response = self.run_query(user, incoming)
+        print(user, response)
+        # '!\n\n<response>'
+        #text = response.get('choices')[0].get('text').lstrip('!').lstrip('\n')
+        text = response.get('choices')[0].get('message').get('content')
         return text
