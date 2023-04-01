@@ -132,7 +132,8 @@ class TelegramBot:
             self.logger.debug(f"User {update.effective_user.id} has sent range test... {update.message.text}")
             return
         # Meshtastic nodes sometimes duplicate messages sent by bot. Filter these.
-        if update.message and update.message.text and update.message.text.startswith(self.meshtastic_connection.interface.getLongName()):
+        long_name = self.meshtastic_connection.interface.getLongName()
+        if update.message and update.message.text and update.message.text.startswith(long_name):
             self.logger.debug(f"Bot duplicate via meshtastic... {update.message.text}")
             return
         #
