@@ -3,6 +3,7 @@
 
 import logging
 import pkg_resources
+import re
 import time
 
 import humanize
@@ -334,5 +335,17 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
         if msg.startswith('/'):
             self.process_meshtastic_command(packet, interface)
             return
+
+        # Range test module should not spam telegram room
+        if re.match(r'^seq\s[0-9]+', msg, re.I) is not None:
+            self.logger.debug(f"User {long_name} has sent range test... {msg}")
+            return
+
+        # Meshtastic nodes sometimes duplicate messages sent by bot. Filter these.
+        self_name = self.meshtastic_connection.interface.getLongName()
+        if msg.startswith(self_name):
+            self.logger.debug(f"Bot duplicate via meshtastic... {msg}")
+            return
+
         self.telegram_connection.send_message(chat_id=self.config.enforce_type(int, self.config.Telegram.Room),
                                               text=f"{long_name}: {msg}")

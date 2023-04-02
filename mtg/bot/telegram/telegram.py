@@ -5,7 +5,6 @@ import functools
 import logging
 import os
 import pkg_resources
-import re
 import tempfile
 import time
 #
@@ -126,15 +125,6 @@ class TelegramBot:
             return
         if self.filter.banned(str(update.effective_user.id)):
             self.logger.debug(f"User {update.effective_user.id} is in a blacklist...")
-            return
-        # Range test module should not spam telegram room
-        if update.message and update.message.text and re.match(r'^seq\s[0-9]+', update.message.text, re.I) is not None:
-            self.logger.debug(f"User {update.effective_user.id} has sent range test... {update.message.text}")
-            return
-        # Meshtastic nodes sometimes duplicate messages sent by bot. Filter these.
-        long_name = self.meshtastic_connection.interface.getLongName()
-        if update.message and update.message.text and update.message.text.startswith(long_name):
-            self.logger.debug(f"Bot duplicate via meshtastic... {update.message.text}")
             return
         #
         full_user = update.effective_user.first_name
