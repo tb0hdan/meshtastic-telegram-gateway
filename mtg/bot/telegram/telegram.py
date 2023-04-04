@@ -5,7 +5,6 @@ import functools
 import logging
 import os
 import pkg_resources
-import re
 import tempfile
 import time
 #
@@ -57,7 +56,7 @@ class TelegramBot:
     Telegram bot
     """
 
-    def __init__(self, config: Config, meshtastic_connection: RichConnection,
+    def __init__(self, config: Config, meshtastic_connection: RichConnection,  # pylint:disable=too-many-locals
                  telegram_connection: TelegramConnection):
         self.config = config
         self.filter = None
@@ -75,6 +74,7 @@ class TelegramBot:
         maplink_handler = CommandHandler('map', self.map_link)
         resetdb_handler = CommandHandler('reset_db', self.reset_db)
         traceroute_handler = CommandHandler('traceroute', self.traceroute)
+        routes_handler = CommandHandler('routes', self.routes)
 
         dispatcher = self.telegram_connection.dispatcher
 
@@ -87,6 +87,7 @@ class TelegramBot:
         dispatcher.add_handler(maplink_handler)
         dispatcher.add_handler(resetdb_handler)
         dispatcher.add_handler(traceroute_handler)
+        dispatcher.add_handler(routes_handler)
 
         echo_handler = MessageHandler(~Filters.command, self.echo)
         dispatcher.add_handler(echo_handler)
@@ -124,10 +125,6 @@ class TelegramBot:
             return
         if self.filter.banned(str(update.effective_user.id)):
             self.logger.debug(f"User {update.effective_user.id} is in a blacklist...")
-            return
-        # Range test module should not spam telegram room
-        if update.message and update.message.text and re.match('^seq\s[0-9]+', update.message.text, re.I) is not None:
-            self.logger.debug(f"User {update.effective_user.id} has sent range test... {update.message.text}")
             return
         #
         full_user = update.effective_user.first_name
@@ -215,7 +212,23 @@ class TelegramBot:
         hop_limit = getattr(lora_config, 'hop_limit')
         dest = update.message.text.lstrip('/traceroute ')
         self.logger.info(f"Sending traceroute request to {dest} (this could take a while)")
-        self.meshtastic_connection.interface.sendTraceRoute(dest, hop_limit)
+        self.bg_route(dest, hop_limit)
+
+    @check_room
+    def routes(self, update: Update, _context: CallbackContext) -> None:
+        """
+        Run traceroute on current node DB
+        """
+        if update.effective_chat.id != self.config.enforce_type(int, self.config.Telegram.Admin):
+            self.logger.info("Routes requested by non-admin: %d", update.effective_chat.id)
+            return
+        lora_config = getattr(self.meshtastic_connection.interface.localNode.localConfig, 'lora')
+        hop_limit = getattr(lora_config, 'hop_limit')
+        for node in self.meshtastic_connection.nodes_with_position:
+            node_id = node.get('user', {}).get('id')
+            if not node_id:
+                continue
+            self.bg_route(node_id, hop_limit)
 
     @check_room
     def qr_code(self, update: Update, context: CallbackContext) -> None:
@@ -296,6 +309,16 @@ class TelegramBot:
                                                            text=msg,
                                                            parse_mode='MarkdownV2')
         )
+
+    def bg_route(self, dest, hop_limit):
+        """
+        bgRoute - background traceroute
+        """
+        if len(dest) == 0:
+            return
+        thread = Thread(target=self.meshtastic_connection.interface.sendTraceRoute,
+                        args=(dest, hop_limit), name=f"Traceroute-{dest}")
+        thread.start()
 
     def run(self):
         """
