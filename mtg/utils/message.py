@@ -2,7 +2,7 @@
 """ message utilities """
 
 
-def split_message(msg, chunk_len, callback, **kwargs):
+def split_message(msg, chunk_len, callback, **kwargs) -> None:
     """
     split_message - split message into smaller parts and invoke callback on each one
 

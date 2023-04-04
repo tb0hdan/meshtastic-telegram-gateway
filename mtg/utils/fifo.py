@@ -6,7 +6,10 @@ import os
 
 def create_fifo(path):
     """
-    create_fifo - create FIFO at specified path
+    Create FIFO
+
+    :param path:
+    :return:
     """
     try:
         os.mkfifo(path)

@@ -9,6 +9,7 @@ from threading import Thread
 import aprslib
 #
 from pubsub import pub
+# pylint:disable=no-name-in-module
 from setproctitle import setthreadtitle
 #
 from mtg.config import Config

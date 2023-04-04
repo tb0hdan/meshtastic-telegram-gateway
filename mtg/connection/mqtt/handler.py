@@ -15,7 +15,11 @@ class MQTTHandler:
 
     def handler(self, topic, payload):
         """
-        handler - process MQTT payload and call assinged node callback
+        handler - MQTT packet handler
+
+        :param topic:
+        :param payload:
+        :return:
         """
         try:
             payload = payload.decode()
@@ -32,12 +36,18 @@ class MQTTHandler:
 
     def set_node_callback(self, callback):
         """
-        set_node_callback - node callback function setter
+        set_node_callback - set up node callback
+
+        :param callback:
+        :return:
         """
         self.node_callback = callback
 
     def set_filter(self, filter_class):
         """
         set_filter - set up filter class
+
+        :param filter_class:
+        :return:
         """
         self.filter = filter_class

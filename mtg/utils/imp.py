@@ -6,6 +6,7 @@ Dynamic module import utility
 import os
 import re
 import sys
+
 sys.path.insert(1, '..')
 
 from importlib import import_module  # pylint:disable=wrong-import-position
@@ -13,8 +14,7 @@ from importlib import import_module  # pylint:disable=wrong-import-position
 from .exc import log_exception  # pylint:disable=wrong-import-position
 
 
-
-def list_commands(logger, package='a.b.commands', base_class='BaseCommand'):  # pylint:disable=too-many-locals
+def list_commands(logger, package='a.b.commands', base_class='BaseCommand') -> list:  # pylint:disable=too-many-locals
     """
     Return list of command classes
 

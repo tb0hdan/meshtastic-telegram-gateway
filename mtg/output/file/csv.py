@@ -13,15 +13,21 @@ class CSVFileWriter:
         self.logger = None
         self.dst = dst
 
-    def set_logger(self, logger):
+    def set_logger(self, logger) -> None:
         """
-        set_logger - logger setter
+        set_logger - set up logger
+
+        :param logger:
+        :return:
         """
         self.logger = logger
 
-    def write(self, packet):
+    def write(self, packet) -> None:
         """
-        write - writes node position to file
+        write - write packet to CSV file
+
+        :param packet:
+        :return:
         """
         decoded = packet.get('decoded', {})
         position = decoded.get('position', {})

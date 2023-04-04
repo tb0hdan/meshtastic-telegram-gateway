@@ -3,7 +3,9 @@
 #
 import time
 from threading import RLock, Thread
-#
+from typing import Any
+
+# pylint:disable=no-name-in-module
 from setproctitle import setthreadtitle
 
 
@@ -17,41 +19,57 @@ class Memcache:
         self.logger = logger
         self.cache = {}
 
-    def get(self, key):
+    def get(self, key) -> Any:
         """
         get - get data by key
+
+        :param key:
+        :return:
         """
         value = self.get_ex(key)
         return value.get('data') if value else None
 
-    def get_ex(self, key):
+    def get_ex(self, key) ->  Any:
         """
-        get_ex - get data by key. With expiration meta
+        get_ex - get data by key with expiration
+
+        :param key:
+        :return:
         """
         with self.lock:
             value = self.cache.get(key)
             return value
 
 
-    def set(self, key, value, expires=0):
+    def set(self, key, value, expires=0) -> None:
         """
-        set - set data by key. With expiration in seconds
+        set - set data by key
+
+        :param key:
+        :param value:
+        :param expires:
+        :return:
         """
         with self.lock:
             if expires > 0:
                 expires = time.time() + expires
             self.cache[key] = {'data': value, 'expires': expires}
 
-    def delete(self, key):
+    def delete(self, key) -> None:
         """
         delete - delete data by key
+
+        :param key:
+        :return:
         """
         with self.lock:
             del self.cache[key]
 
-    def reaper(self):
+    def reaper(self) -> None:
         """
-        reaper - reaper thread for expired keys
+        reaper - reaper thread
+
+        :return:
         """
         setthreadtitle(self.name)
         while True:
@@ -62,9 +80,11 @@ class Memcache:
                     self.logger.warning(f'Removing key {key}...')
                     self.delete(key)
 
-    def run_noblock(self):
+    def run_noblock(self) -> None:
         """
-        run_noblock - non-blocking reaper
+        run_noblock - run reaper thread
+
+        :return:
         """
         locker = Thread(target=self.reaper, daemon=True, name=self.name)
         locker.start()

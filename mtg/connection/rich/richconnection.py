@@ -25,6 +25,27 @@ class RichConnection(MeshtasticConnection):
         random.seed()
         self.rg_fn = rg_fn
 
+    def get_set_last_position(self, node_id):
+        """
+        Get last position from DB or generate random one
+
+        :param node_id:
+        :return:
+        """
+        lat_r = self.config.enforce_type(float,
+                                         self.config.WebApp.Center_Latitude) + random.randrange(1000) / 10000
+        lon_r = self.config.enforce_type(float,
+                                         self.config.WebApp.Center_Longitude) + random.randrange(1000) / 10000
+        lat, lon = 0.0, 0.0
+        try:
+            lat, lon = self.database.get_last_coordinates(node_id)
+        except RuntimeError:
+            # no coordinates in DB
+            self.database.set_coordinates(node_id, lat_r, lon_r)
+        lat = lat if lat else lat_r
+        lon = lon if lon else lon_r
+        return lat, lon
+
     @property
     def nodes_with_position(self) -> List:
         """
@@ -37,20 +58,10 @@ class RichConnection(MeshtasticConnection):
         node_list = []
         for node_info in self.nodes_with_info:
             node_id = node_info.get('user', {}).get('id')
-            lat_r = self.config.enforce_type(float,
-                                             self.config.WebApp.Center_Latitude) + random.randrange(1000) / 10000
-            lon_r = self.config.enforce_type(float,
-                                             self.config.WebApp.Center_Longitude) + random.randrange(1000) / 10000
             position = node_info.get('position', {})
             if not (position.get('latitude') and position.get('longitude')):
                 self.logger.debug(f"Node {node_id} doesn't have position...")
-                lat, lon = 0.0, 0.0
-                try:
-                    lat, lon = self.database.get_last_coordinates(node_id)
-                except RuntimeError:
-                    pass
-                lat = lat if lat else lat_r
-                lon = lon if lon else lon_r
+                lat, lon = self.get_set_last_position(node_id)
                 latitude_i = str(lat).replace('.', '')[:9]
                 longitude_i = str(lon).replace('.', '')[:9]
                 node_info['position'] = {'latitude': lat, 'longitude': lon,

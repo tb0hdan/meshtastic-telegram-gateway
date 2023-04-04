@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """ Logger module """
 
-
 import logging
 
 with open('VERSION', 'r', encoding='utf-8') as fh:
     VERSION = fh.read().rstrip('\n')
 LOGFORMAT = '%(asctime)s - %(name)s/v{} - %(levelname)s file:%(filename)s %(funcName)s line:%(lineno)s %(message)s'
 LOGFORMAT = LOGFORMAT.format(VERSION)
+
 
 def setup_logger(name=__name__, level=logging.INFO) -> logging.Logger:
     """
@@ -35,7 +35,8 @@ def setup_logger(name=__name__, level=logging.INFO) -> logging.Logger:
     logger.addHandler(handler)
     return logger
 
-def conditional_log(message, logger, condition):
+
+def conditional_log(message, logger, condition) -> None:
     """
     conditional_log - log message when condition is true
 

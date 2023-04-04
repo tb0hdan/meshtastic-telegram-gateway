@@ -10,6 +10,7 @@ from typing import Any
 def log_exception(logger, exc: Any, description: str = '') -> None:
     """
     Log exception, including traceback
+
     :param exc:
     :return:
     """

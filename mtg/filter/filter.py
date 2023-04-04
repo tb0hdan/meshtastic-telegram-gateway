@@ -18,7 +18,7 @@ class Filter:
         self.config = config
         self.logger = logger
 
-    def banned(self, identifier):
+    def banned(self, identifier) -> bool:
         """
         banned - returns True if identifier is banned
         """

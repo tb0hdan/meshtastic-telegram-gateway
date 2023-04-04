@@ -17,6 +17,7 @@ import flask
 #
 from flask import Flask, jsonify, make_response, request, render_template, send_file
 from flask.views import View
+# pylint:disable=no-name-in-module
 from setproctitle import setthreadtitle
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.serving import make_server

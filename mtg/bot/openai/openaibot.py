@@ -22,7 +22,13 @@ class OpenAIDavinci:
 
 
     def run_query(self, user, query):
-        """ Run OpenAI query with user info """
+        """
+        Run OpenAI query with user info
+
+        user: user name
+        query: user query
+        :return: response from OpenAI
+        """
         seed = self.seed + f"{user}: Hello, who are you?\nAI: I am an AI created by OpenAI. How can I help you today?\n"
         return self.completion.create(model="text-davinci-003", prompt=seed + f"{user}: {query}\nAI:\n",
                                       temperature=0.9, top_p=1, presence_penalty=0.6,
@@ -30,7 +36,13 @@ class OpenAIDavinci:
                                       stop=[f" {user}:", " AI:"])
 
     def get_response(self, user, incoming):
-        """ Get response from OpenAI API """
+        """
+        Get response from OpenAI API
+
+        :param user:
+        :param incoming:
+        :return:
+        """
         if self.completion is None:
             print('OpenAIBot not initialized...')
             return None
@@ -51,7 +63,13 @@ class OpenAIBot:
 
 
     def run_query(self, user, query):
-        """ Run OpenAI query with user info """
+        """
+        Run OpenAI query with user info
+
+        :param user:
+        :param query:
+        :return:
+        """
         messages = [{"role": "system", "content": self.seed},
                     {"role": "user", "content": f"{user}: Hello, who are you?"},
                     {"role": "assistant", "content": "AI: I am an AI created by OpenAI. How can I help you today?"},
@@ -63,7 +81,13 @@ class OpenAIBot:
                                       stop=[f" {user}:", " AI:"])
 
     def get_response(self, user, incoming):
-        """ Get response from OpenAI API """
+        """
+        Get response from OpenAI API
+
+        :param user:
+        :param incoming:
+        :return:
+        """
         if self.completion is None:
             print('OpenAIBot not initialized...')
             return None

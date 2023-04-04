@@ -1,11 +1,15 @@
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """ Github module for getting firmware info """
 
 from github import Github
 
-def get_firmware_info(token):
+
+def get_firmware_info(token) -> list:
     """
-    get_firmware_info - get list of firmware releases for Meshtastic
+    Get firmware info from Github
+
+    :param token:
+    :return:
     """
     gh_connection = Github(token)
 

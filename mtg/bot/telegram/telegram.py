@@ -12,7 +12,7 @@ from threading import Thread
 #
 import humanize
 import pyqrcode
-#
+# pylint:disable=no-name-in-module
 from setproctitle import setthreadtitle
 from telegram import Update
 from telegram.ext import CallbackContext
@@ -28,7 +28,10 @@ from mtg.utils import split_message
 
 def check_room(func):
     """
-    check_room - decorator that checks for room permissions
+    check_room - decorator to check if bot is in rooms
+
+    :param func:
+    :return:
     """
     @functools.wraps(func)
     def wrapper(*args):
@@ -217,7 +220,11 @@ class TelegramBot:
     @check_room
     def routes(self, update: Update, _context: CallbackContext) -> None:
         """
-        Run traceroute on current node DB
+        Telegram routes command
+
+        :param update:
+        :param _context:
+        :return:
         """
         if update.effective_chat.id != self.config.enforce_type(int, self.config.Telegram.Admin):
             self.logger.info("Routes requested by non-admin: %d", update.effective_chat.id)
@@ -264,7 +271,11 @@ class TelegramBot:
     @check_room
     def uptime(self, update: Update, context: CallbackContext) -> None:
         """
-        uptime - Returns bot uptime
+        uptime - Return bot uptime
+
+        :param update:
+        :param context:
+        :return:
         """
         firmware = 'unknown'
         reboot_count = 'unknown'
@@ -280,7 +291,11 @@ class TelegramBot:
     @check_room
     def map_link(self, update: Update, context: CallbackContext) -> None:
         """
-        map_link - Returns map link (if enabled)
+        Returns map link to user
+
+        :param update:
+        :param context:
+        :return:
         """
         msg = 'Map link not enabled'
         if self.config.enforce_type(bool, self.config.Telegram.MapLinkEnabled):
@@ -312,7 +327,11 @@ class TelegramBot:
 
     def bg_route(self, dest, hop_limit):
         """
-        bgRoute - background traceroute
+        Send a traceroute request in the background
+
+        :param dest:
+        :param hop_limit:
+        :return:
         """
         if len(dest) == 0:
             return

@@ -19,6 +19,7 @@ from meshtastic import (
     tcp_interface as meshtastic_tcp_interface,
     mesh_pb2
 )
+# pylint:disable=no-name-in-module
 from setproctitle import setthreadtitle
 
 from mtg.utils import create_fifo, split_message
@@ -46,7 +47,9 @@ class MeshtasticConnection:
     @property
     def get_startup_ts(self):
         """
-        get_startup_ts - returns Unix timestamp since startup
+        Get startup timestamp
+
+        :return:
         """
         return self.startup_ts
 
@@ -111,15 +114,21 @@ class MeshtasticConnection:
 
     def reset_db(self):
         """
-        reset_db - reset Meshtastic device internal node table
+        Reset Meshtastic device DB
+
+        :return:
         """
         self.logger.info('Reset node DB requested...')
-        self.interface.getNode(MESHTASTIC_LOCAL_ADDR, False).resetNodeDb()
+        self.interface.getNode(MESHTASTIC_LOCAL_ADDR).resetNodeDb()
         self.logger.info('Reset node DB completed...')
 
     def on_mqtt_node(self, node_id, payload):
         """
-        on_mqtt_node - update node info when MQTT payload arrives. Callback method
+        on_mqtt_node - callback for MQTT node status
+
+        :param node_id:
+        :param payload:
+        :return:
         """
         self.logger.debug(f'{node_id} is {payload}')
         self.mqtt_nodes[node_id] = payload
@@ -127,19 +136,27 @@ class MeshtasticConnection:
     @property
     def nodes_mqtt(self) -> List:
         """
-        nodes_mqtt - getter for node list from MQTT
+        Return list of nodes with MQTT status
+
+        :return:
         """
         return list(self.mqtt_nodes)
 
     def node_has_mqtt(self, node_id):
         """
-        node_has_mqtt - return MQTT status for node. Boolean
+        node_has_mqtt - check if node has MQTT status
+
+        :param node_id:
+        :return:
         """
         return node_id in self.mqtt_nodes
 
     def node_mqtt_status(self, node_id):
         """
-        node_mqtt_status - return MQTT status for node. String
+        node_mqtt_status - return MQTT status for a specific node ID
+
+        :param node_id:
+        :return:
         """
         return self.mqtt_nodes.get(node_id, 'N/A')
 

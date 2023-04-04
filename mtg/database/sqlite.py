@@ -1,22 +1,21 @@
 # -*- coding: utf-8 -*-
 """ SQLite database module """
 
-
 import logging
 import time
 #
 from datetime import datetime, timedelta
 from typing import (
-    AnyStr,
+    AnyStr, Any,
 )
 #
 from pony.orm import db_session, desc, Database, Optional, PrimaryKey, Required, Set, set_sql_debug
 #
 from mtg.log import conditional_log
 
-
 # has to be global variable ;-(
 DB = Database()
+
 
 def sql_debug():
     """
@@ -27,7 +26,7 @@ def sql_debug():
 
 class FirmwareReleaseRecord(DB.Entity):  # pylint:disable=too-few-public-methods
     """
-    FirmwareReleaseRecord: firmware release record representation in DB
+    FirmwareReleaseRecord: firmware release representation in DB
     """
     release = PrimaryKey(str)
     created_at = Required(datetime)
@@ -61,8 +60,9 @@ class MeshtasticLocationRecord(DB.Entity):  # pylint:disable=too-few-public-meth
     rxSnr = Required(float)
     node = Optional(MeshtasticNodeRecord)
     # New fields in 1.1.12
-    #channelUtil = Optional(float)
-    #airUtil = Optional(float)
+    # channelUtil = Optional(float)
+    # airUtil = Optional(float)
+
 
 class MeshtasticMessageRecord(DB.Entity):  # pylint:disable=too-few-public-methods
     """
@@ -95,16 +95,23 @@ class MeshtasticDB:
         DB.bind(provider='sqlite', filename=db_file, create_db=True)
         DB.generate_mapping(create_tables=True)
 
-    def set_meshtastic(self, connection):
+    def set_meshtastic(self, connection) -> None:
         """
-        set_meshtastic - set up meshtastic connection
+        set_meshtastic - set meshtastic connection
+
+        :param connection:
+        :return:
         """
         self.connection = connection
 
     @db_session
-    def get_filter(self, connection, identifier):
+    def get_filter(self, connection, identifier) -> tuple[bool, FilterRecord] | tuple[bool, None] | tuple[bool, Any]:
         """
-        get_filter - get blacklist status for connection and identifier
+        get_filter - get filter record from DB
+
+        :param connection:
+        :param identifier:
+        :return:
         """
         record = FilterRecord.select(lambda n: n.connection == connection and n.item == identifier).first()
         if record:
@@ -112,9 +119,10 @@ class MeshtasticDB:
         return False, None
 
     @db_session
-    def get_node_record(self, node_id: AnyStr) -> MeshtasticNodeRecord:
+    def get_node_record(self, node_id: AnyStr) -> tuple[bool, MeshtasticNodeRecord] | tuple[bool, None] | tuple[
+        bool, Any]:
         """
-        Retrieve node record from DB
+        get_node_record - get node record from DB
 
         :param node_id:
         :return:
@@ -139,7 +147,7 @@ class MeshtasticDB:
         conditional_log(f'using found record... {node_record}, {node_info}', self.logger, True)
         # Update lastHeard and return record
         node_name = node_name if node_name else node_record.nodeName
-        node_record.nodeName = node_name  if node_name else node_id # pylint:disable=invalid-name
+        node_record.nodeName = node_name if node_name else node_id  # pylint:disable=invalid-name
         node_record.lastHeard = last_heard  # pylint:disable=invalid-name
         return True, node_record
 
@@ -200,9 +208,12 @@ class MeshtasticDB:
         )
 
     @db_session
-    def get_last_coordinates(self, node_id: str):
+    def get_last_coordinates(self, node_id: str) -> tuple[float, float]:
         """
-        get_last_coordinates - get last known node coordinates
+        get_last_coordinates - get last coordinates for node
+
+        :param node_id:
+        :return:
         """
         node_record = MeshtasticNodeRecord.select(lambda n: n.nodeId == node_id).first()
         if not node_record:
@@ -216,9 +227,13 @@ class MeshtasticDB:
 
     @staticmethod
     @db_session
-    def get_node_track(node_name, tail=3600):
+    def get_node_track(node_name, tail=3600) -> list[dict[str, float]]:
         """
-        get_node_track - return list of waypoints for building node track
+        get_node_track - get node track
+
+        :param node_name:
+        :param tail:
+        :return:
         """
         data = []
         if node_name.startswith('!'):
@@ -234,3 +249,29 @@ class MeshtasticDB:
         for l_r in location_record:
             data.append({"lat": l_r.latitude, "lng": l_r.longitude})
         return data
+
+    @staticmethod
+    @db_session
+    def set_coordinates(node_id, lat_r, lon_r) -> None:
+        """
+        set_coordinates - set node coordinates
+
+        :param self:
+        :param node_id:
+        :param lat_r:
+        :param lon_r:
+        :return:
+        """
+        node_record = MeshtasticNodeRecord.select(lambda n: n.nodeId == node_id).first()
+        if not node_record:
+            return
+        MeshtasticLocationRecord(
+            datetime=datetime.fromtimestamp(time.time()),
+            altitude=0,
+            batteryLevel=100,
+            latitude=lat_r,
+            longitude=lon_r,
+            rxSnr=0,
+            node=node_record,
+        )
+        return

@@ -38,6 +38,12 @@ class Config:
         return value_type(value)
 
     def __getattr__(self, attr):
+        """
+        Get attribute
+
+        :param attr:
+        :return:
+        """
         if self.config is None:
             raise AttributeError('config is empty')
         if len(self.elements) < 2:

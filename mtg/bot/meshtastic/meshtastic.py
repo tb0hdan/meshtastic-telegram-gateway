@@ -27,9 +27,8 @@ from mtg.output.file import CSVFileWriter
 
 class MeshtasticBot: # pylint:disable=too-many-instance-attributes
     """
-    Meshtastic bot
+    Meshtastic bot class
     """
-
     # pylint:disable=too-many-arguments
     def __init__(self, database: MeshtasticDB, config: Config, meshtastic_connection: RichConnection,
                  telegram_connection: TelegramConnection, bot_handler):
@@ -48,7 +47,7 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
 
     def set_logger(self, logger: logging.Logger):
         """
-        Set class logger
+        Set logger
 
         :param logger:
         :return:
@@ -199,7 +198,11 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
 
     def process_uptime(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
         """
-        process_uptime - return bot uptime
+        Process /uptime Meshtastic command
+
+        :param packet:
+        :param interface:
+        :return:
         """
         firmware = 'unknown'
         reboot_count = 'unknown'
@@ -215,6 +218,7 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
 
     def process_pong(self, packet) -> None:
         """
+        Process pong message
 
         :param packet:
         :return:
@@ -267,7 +271,7 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
                                                                                self.config.Telegram.NotificationsRoom),
                                               text=f"New node: {msg}")
 
-    # pylint:disable=too-many-branches, too-many-statements
+    # pylint:disable=too-many-branches, too-many-statements, too-many-return-statements
     def on_receive(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
         """
         onReceive is called when a packet arrives

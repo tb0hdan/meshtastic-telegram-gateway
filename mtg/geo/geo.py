@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """ Geographical utilities module """
 
-
 import haversine
+
 
 def get_lat_lon_distance(latlon1: tuple, latlon2: tuple) -> float:
     """
