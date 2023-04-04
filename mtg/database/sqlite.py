@@ -105,7 +105,7 @@ class MeshtasticDB:
         self.connection = connection
 
     @db_session
-    def get_filter(self, connection, identifier) -> tuple[bool, FilterRecord] | tuple[bool, None] | tuple[bool, Any]:
+    def get_filter(self, connection, identifier) -> tuple[bool, Any]:
         """
         get_filter - get filter record from DB
 
@@ -119,8 +119,7 @@ class MeshtasticDB:
         return False, None
 
     @db_session
-    def get_node_record(self, node_id: AnyStr) -> tuple[bool, MeshtasticNodeRecord] | tuple[bool, None] | tuple[
-        bool, Any]:
+    def get_node_record(self, node_id: AnyStr) -> tuple[bool, Any]:
         """
         get_node_record - get node record from DB
 
