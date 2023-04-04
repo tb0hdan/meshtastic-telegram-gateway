@@ -28,7 +28,9 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
     """
     Meshtastic bot
     """
-    def __init__(self, database: MeshtasticDB, config: Config, meshtastic_connection: RichConnection, # pylint:disable=too-many-arguments
+
+    # pylint:disable=too-many-arguments
+    def __init__(self, database: MeshtasticDB, config: Config, meshtastic_connection: RichConnection,
                  telegram_connection: TelegramConnection, bot_handler):
         self.database = database
         self.config = config
@@ -92,7 +94,8 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
         pub.subscribe(self.on_connection, "meshtastic.connection.established")
         pub.subscribe(self.on_connection, "meshtastic.connection.lost")
 
-    def process_distance_command(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:  # pylint:disable=too-many-locals
+    # pylint:disable=too-many-locals
+    def process_distance_command(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
         """
         Process /distance Meshtastic command
 
@@ -198,6 +201,7 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
         process_uptime - return bot uptime
         """
         firmware = 'unknown'
+        reboot_count = 'unknown'
         if interface.myInfo:
             firmware = interface.myInfo.firmware_version
             reboot_count = interface.myInfo.reboot_count
@@ -262,8 +266,8 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
                                                                                self.config.Telegram.NotificationsRoom),
                                               text=f"New node: {msg}")
 
-    # pylint:disable=too-many-branches
-    def on_receive(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None: # pylint:disable=too-many-return-statements
+    # pylint:disable=too-many-branches, too-many-statements
+    def on_receive(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
         """
         onReceive is called when a packet arrives
 
