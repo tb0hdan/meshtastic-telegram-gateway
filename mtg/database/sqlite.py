@@ -6,7 +6,7 @@ import time
 #
 from datetime import datetime, timedelta
 from typing import (
-    AnyStr, Any,
+    AnyStr
 )
 #
 from pony.orm import db_session, desc, Database, Optional, PrimaryKey, Required, Set, set_sql_debug
@@ -105,7 +105,7 @@ class MeshtasticDB:
         self.connection = connection
 
     @db_session
-    def get_filter(self, connection, identifier) -> tuple[bool, Any]:
+    def get_filter(self, connection, identifier):
         """
         get_filter - get filter record from DB
 
@@ -119,7 +119,7 @@ class MeshtasticDB:
         return False, None
 
     @db_session
-    def get_node_record(self, node_id: AnyStr) -> tuple[bool, Any]:
+    def get_node_record(self, node_id: AnyStr):
         """
         get_node_record - get node record from DB
 
@@ -207,7 +207,7 @@ class MeshtasticDB:
         )
 
     @db_session
-    def get_last_coordinates(self, node_id: str) -> tuple[float, float]:
+    def get_last_coordinates(self, node_id: str):
         """
         get_last_coordinates - get last coordinates for node
 
@@ -226,7 +226,7 @@ class MeshtasticDB:
 
     @staticmethod
     @db_session
-    def get_node_track(node_name, tail=3600) -> list[dict[str, float]]:
+    def get_node_track(node_name, tail=3600):
         """
         get_node_track - get node track
 
