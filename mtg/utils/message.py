@@ -19,6 +19,9 @@ def split_message(msg, chunk_len, callback, **kwargs) -> None:
         else:
             parts.append(part)
             part = [line]
+
+    parts.append(part)
+
     for part in parts:
         if len(part) == 0:
             continue

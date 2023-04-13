@@ -314,7 +314,7 @@ class TelegramBot:
         """
         include_self = self.config.enforce_type(bool, self.config.Telegram.NodeIncludeSelf)
         formatted = self.meshtastic_connection.format_nodes(include_self=include_self)
-        if len(formatted) <= 4096:
+        if len(formatted) < 4096:
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text=formatted,
                                      parse_mode='MarkdownV2')
