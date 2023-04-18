@@ -3,6 +3,8 @@
 # slow startup
 sleep 10
 
+DEVICE=$(cat mesh.ini|egrep -v '^#'|egrep 'Device ='|awk -F' = ' '{print $2}')
+
 # run monitoring
 while :; do
     wget --timeout 3 -t 1 http://localhost:5000 -O /tmp/mtg.html >/dev/null 2>/dev/null
@@ -12,7 +14,7 @@ while :; do
         if [ "${mesh_pid}" != "" ]; then
             kill ${mesh_pid}
         fi
-        acm_pid=$(lsof -n|grep ACM|awk '{print $2}')
+        acm_pid=$(lsof -n|grep ${DEVICE}|awk '{print $2}')
         if [ "${acm_pid}" != "" ]; then
             kill -9 ${acm_pid}
         fi
