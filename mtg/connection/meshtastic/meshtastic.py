@@ -26,6 +26,7 @@ from mtg.utils import create_fifo, split_message
 
 
 FIFO = '/tmp/mtg.fifo'
+FIFO_CMD = '/tmp/mtg.cmd.fifo'
 
 # pylint:disable=too-many-instance-attributes
 class MeshtasticConnection:
@@ -276,6 +277,24 @@ class MeshtasticConnection:
                     line = line.rstrip('\n')
                     self.send_text(line, destinationId=MESHTASTIC_BROADCAST_ADDR)
 
+    def run_cmd_loop(self):
+        """
+        Meshtastic loop runner. Used for commands
+
+        :return:
+        """
+        setthreadtitle("MeshtasticCmd")
+
+        self.logger.debug("Opening FIFO...")
+        create_fifo(FIFO_CMD)
+        while True:
+            with open(FIFO_CMD, encoding='utf-8') as fifo:
+                for line in fifo:
+                    line = line.rstrip('\n')
+                    if line.startswith("reboot"):
+                        self.logger.warning("Reboot requested using CMD...")
+                        self.reboot()
+
     def run(self):
         """
         Meshtastic connection runner
@@ -285,3 +304,5 @@ class MeshtasticConnection:
         if self.config.enforce_type(bool, self.config.Meshtastic.FIFOEnabled):
             thread = Thread(target=self.run_loop, daemon=True, name=self.name)
             thread.start()
+            cmd_thread = Thread(target=self.run_cmd_loop, daemon=True, name="MeshtasticCmd")
+            cmd_thread.start()

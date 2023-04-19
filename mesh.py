@@ -17,7 +17,7 @@ from mtg.bot.openai import OpenAIBot
 from mtg.bot.telegram import TelegramBot
 from mtg.config import Config
 from mtg.connection.aprs import APRSStreamer
-from mtg.connection.meshtastic import FIFO
+from mtg.connection.meshtastic import FIFO, FIFO_CMD
 from mtg.connection.mqtt import MQTT, MQTTHandler
 from mtg.connection.rich import RichConnection
 from mtg.connection.telegram import TelegramConnection
@@ -130,6 +130,19 @@ def post2mesh(args):
     with open(FIFO, 'w', encoding='utf-8') as fifo:
         fifo.write(args.message + '\n')
 
+def post_cmd(args):
+    """
+    post_cmd - send commands to Meshtastic connection
+
+    :param args:
+    :return:
+    """
+    if args.command is None:
+        print('Cannot send empty command...')
+        return
+    create_fifo(FIFO_CMD)
+    with open(FIFO_CMD, 'w', encoding='utf-8') as fifo:
+        fifo.write(args.command + '\n')
 
 def cmd():
     """
@@ -147,7 +160,11 @@ def cmd():
     run = subparser.add_parser("run", help="run")
     run.add_argument("-c", "--config", help="path to config", default="./mesh.ini")
     run.set_defaults(func=main)
-
+    #
+    reboot = subparser.add_parser("Send command", help="Send command")
+    reboot.add_argument("-c", "--command", help="Send command")
+    reboot.set_defaults(func=post_cmd)
+    #
     argv = sys.argv[1:]
     if len(argv) == 0:
         argv = ['run']
