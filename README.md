@@ -136,3 +136,34 @@ Locations: 1234. Messages: 20
 `/reboot` - request Meshtastic device reboot. Requires respective admin privileges.
 
 `/uptime` - returns bot version/uptime
+
+
+### Console only
+
+```angular2html
+$ ./mesh.py --help
+
+usage: mesh.py [-h] {post2mesh,run,command} ...
+
+optional arguments:
+  -h, --help            show this help message and exit
+
+commands:
+  {post2mesh,run,command}
+                        commands
+    post2mesh           site command
+    run                 run
+    command             Send command
+```
+
+Sending messages to Meshtastic device:
+
+```angular2html
+$ ./mesh.py post2mesh -m "test"
+```
+
+Sending commands to Meshtastic device:
+
+```angular2html
+$ ./mesh.py command -c reboot
+```
