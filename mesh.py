@@ -161,7 +161,7 @@ def cmd():
     run.add_argument("-c", "--config", help="path to config", default="./mesh.ini")
     run.set_defaults(func=main)
     #
-    reboot = subparser.add_parser("Send command", help="Send command")
+    reboot = subparser.add_parser("command", help="Send command")
     reboot.add_argument("-c", "--command", help="Send command")
     reboot.set_defaults(func=post_cmd)
     #
