@@ -98,7 +98,7 @@ class RenderTrackView(View):
         self.logger = logger
         self.meshtastic_connection = meshtastic_connection
 
-    def dispatch_request(self) -> flask.Response:  # pylint:disable=too-many-locals
+    def dispatch_request(self) -> flask.Response:    # pylint:disable=too-many-locals
         """
         Process Flask request
 
@@ -113,11 +113,8 @@ class RenderTrackView(View):
                 tail_value = int(tail[0])
             except ValueError:
                 self.logger.error("Wrong tail value: ", tail)
-        #
-        name = ''
         name_qs = query_string.get('name', [])
-        if len(name_qs) > 0:
-            name = name_qs[0]
+        name = name_qs[0] if len(name_qs) > 0 else ''
         if len(name) == 0:
             return jsonify([])
 
@@ -156,7 +153,7 @@ class RenderDataView(View):
             return '<a href="https://meshtastic.discourse.group/t/meshtastic-diy-project/3831/1">DIY</a>'
         return hw_model
 
-    def dispatch_request(self) -> flask.Response:  # pylint:disable=too-many-locals
+    def dispatch_request(self) -> flask.Response:    # pylint:disable=too-many-locals
         """
         Process Flask request
 
@@ -171,11 +168,8 @@ class RenderDataView(View):
                 tail_value = int(tail[0])
             except ValueError:
                 self.logger.error("Wrong tail value: ", tail)
-        #
-        name = ''
         name_qs = query_string.get('name', [])
-        if len(name_qs) > 0:
-            name = name_qs[0]
+        name = name_qs[0] if len(name_qs) > 0 else ''
         nodes = []
         # node default color
         default_color = "red"
@@ -186,7 +180,7 @@ class RenderDataView(View):
             position = node_info.get('position', {})
             latitude = position.get('latitude')
             longitude = position.get('longitude')
-            if not (latitude and longitude):
+            if not latitude or not longitude:
                 try:
                     latitude, longitude = self.database.get_last_coordinates(node_id)
                 except RuntimeError:
@@ -343,24 +337,32 @@ class WebApp:  # pylint:disable=too-few-public-methods
             meshtastic_connection=self.meshtastic_connection, logger=self.logger))
 
         # This should be moved out to separate directory
-        self.app.add_url_rule('/airraid/' + self.config.enforce_type(str, self.config.WebApp.AirRaidPrivate),
-                              view_func=RenderAirRaidView.as_view(
-                              'airraid_page',
-                              database=self.database,
-                              config=self.config,
-                              meshtastic_connection=self.meshtastic_connection,
-                              telegram_connection=self.telegram_connection,
-                              logger=self.logger,
-                              memcache=self.memcache), methods=['POST'])
-        self.app.add_url_rule('/airraid/' + self.config.enforce_type(str, self.config.WebApp.AirRaidPrivate) + '/',
-                              view_func=RenderAirRaidView.as_view(
-                              'airraid_page_with_slash',
-                              database=self.database,
-                              config=self.config,
-                              meshtastic_connection=self.meshtastic_connection,
-                              telegram_connection=self.telegram_connection,
-                              logger=self.logger,
-                              memcache=self.memcache), methods=['POST'])
+        self.app.add_url_rule(
+            f'/airraid/{self.config.enforce_type(str, self.config.WebApp.AirRaidPrivate)}',
+            view_func=RenderAirRaidView.as_view(
+                'airraid_page',
+                database=self.database,
+                config=self.config,
+                meshtastic_connection=self.meshtastic_connection,
+                telegram_connection=self.telegram_connection,
+                logger=self.logger,
+                memcache=self.memcache,
+            ),
+            methods=['POST'],
+        )
+        self.app.add_url_rule(
+            f'/airraid/{self.config.enforce_type(str, self.config.WebApp.AirRaidPrivate)}/',
+            view_func=RenderAirRaidView.as_view(
+                'airraid_page_with_slash',
+                database=self.database,
+                config=self.config,
+                meshtastic_connection=self.meshtastic_connection,
+                telegram_connection=self.telegram_connection,
+                logger=self.logger,
+                memcache=self.memcache,
+            ),
+            methods=['POST'],
+        )
         # Favicon
         self.app.add_url_rule('/favicon.ico', view_func=RenderFavicon.as_view('favicon'))
         # Index pages

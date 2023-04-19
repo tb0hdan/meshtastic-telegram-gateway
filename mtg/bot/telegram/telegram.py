@@ -132,7 +132,7 @@ class TelegramBot:
         #
         full_user = update.effective_user.first_name
         if update.effective_user.last_name is not None:
-            full_user += ' ' + update.effective_user.last_name
+            full_user += f' {update.effective_user.last_name}'
         message = ''
         if update.message and update.message.text:
             message += update.message.text
@@ -232,10 +232,8 @@ class TelegramBot:
         lora_config = getattr(self.meshtastic_connection.interface.localNode.localConfig, 'lora')
         hop_limit = getattr(lora_config, 'hop_limit')
         for node in self.meshtastic_connection.nodes_with_position:
-            node_id = node.get('user', {}).get('id')
-            if not node_id:
-                continue
-            self.bg_route(node_id, hop_limit)
+            if node_id := node.get('user', {}).get('id'):
+                self.bg_route(node_id, hop_limit)
 
     @check_room
     def qr_code(self, update: Update, context: CallbackContext) -> None:

@@ -67,8 +67,12 @@ class RichConnection(MeshtasticConnection):
                 node_info['position'] = {'latitude': lat, 'longitude': lon,
                                          'latitudeI': latitude_i, 'longitudeI': longitude_i,
                                          'altitude': 100}
-            rg_results = self.rg_fn((node_info['position']['latitude'], node_info['position']['longitude']))
-            if rg_results:
+            if rg_results := self.rg_fn(
+                (
+                    node_info['position']['latitude'],
+                    node_info['position']['longitude'],
+                )
+            ):
                 node_info['position']['admin1'] = rg_results[0]['admin1']
             node_list.append(node_info)
         return node_list

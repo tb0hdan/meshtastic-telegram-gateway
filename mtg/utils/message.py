@@ -29,5 +29,5 @@ def split_message(msg, chunk_len, callback, **kwargs) -> None:
         if len(line) < chunk_len:
             callback(line, **kwargs)
         else:
-            for i in range(0, (len(line) // chunk_len) + 1):
+            for i in range((len(line) // chunk_len) + 1):
                 callback(line[i*chunk_len:i*chunk_len + chunk_len], **kwargs)
