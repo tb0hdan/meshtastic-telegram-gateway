@@ -14,7 +14,7 @@ from importlib import import_module  # pylint:disable=wrong-import-position
 from .exc import log_exception  # pylint:disable=wrong-import-position
 
 
-def list_commands(logger, package='a.b.commands', base_class='BaseCommand') -> list:  # pylint:disable=too-many-locals
+def list_commands(logger, package='a.b.commands', base_class='BaseCommand') -> list:    # pylint:disable=too-many-locals
     """
     Return list of command classes
 
@@ -34,7 +34,7 @@ def list_commands(logger, package='a.b.commands', base_class='BaseCommand') -> l
                 continue
             path = os.path.join(top, fname)
             path = path.replace('.py', '').replace(os.path.sep, '.')
-            pkg = re.sub('^.+' + package, package, path)
+            pkg = re.sub(f'^.+{package}', package, path)
             try:
                 module = import_module(pkg)
                 objects = dir(module)

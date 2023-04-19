@@ -31,11 +31,7 @@ class Config:
         :param value:
         :return:
         """
-        if value_type == bool:
-            if value.lower() == 'true':
-                return True
-            return False
-        return value_type(value)
+        return value.lower() == 'true' if value_type == bool else value_type(value)
 
     def __getattr__(self, attr):
         """

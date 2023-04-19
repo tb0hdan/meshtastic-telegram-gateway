@@ -29,7 +29,7 @@ class Memcache:
         value = self.get_ex(key)
         return value.get('data') if value else None
 
-    def get_ex(self, key) ->  Any:
+    def get_ex(self, key) -> Any:
         """
         get_ex - get data by key with expiration
 
@@ -37,8 +37,7 @@ class Memcache:
         :return:
         """
         with self.lock:
-            value = self.cache.get(key)
-            return value
+            return self.cache.get(key)
 
 
     def set(self, key, value, expires=0) -> None:

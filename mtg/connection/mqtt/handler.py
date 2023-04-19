@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 """ MQTT handler module """
 
-
 NODE_PREFIX = "!"
+
 
 class MQTTHandler:
     """
     MQTTHandler - handles MQTT packets and does some specific filtering
     """
+
     def __init__(self, logger):
         self.logger = logger
         self.node_callback = None

@@ -60,10 +60,15 @@ class MeshtasticConnection:
 
         :return:
         """
-        if not self.dev_path.startswith('tcp:'):
-            self.interface = meshtastic_serial_interface.SerialInterface(devPath=self.dev_path, debugOut=sys.stdout)
-        else:
-            self.interface = meshtastic_tcp_interface.TCPInterface(self.dev_path.lstrip('tcp:'), debugOut=sys.stdout)
+        self.interface = (
+            meshtastic_tcp_interface.TCPInterface(
+                self.dev_path.lstrip('tcp:'), debugOut=sys.stdout
+            )
+            if self.dev_path.startswith('tcp:')
+            else meshtastic_serial_interface.SerialInterface(
+                devPath=self.dev_path, debugOut=sys.stdout
+            )
+        )
 
     def send_text(self, msg, **kwargs) -> None:
         """
@@ -168,7 +173,7 @@ class MeshtasticConnection:
 
         :return:
         """
-        return self.interface.nodes if self.interface.nodes else {}
+        return self.interface.nodes or {}
 
     @property
     def nodes_with_info(self) -> List:
@@ -177,10 +182,7 @@ class MeshtasticConnection:
 
         :return:
         """
-        node_list = []
-        for node in self.nodes:
-            node_list.append(self.nodes.get(node))
-        return node_list
+        return [self.nodes.get(node) for node in self.nodes]
 
     @property
     def nodes_with_position(self) -> List:
@@ -189,12 +191,11 @@ class MeshtasticConnection:
 
         :return:
         """
-        node_list = []
-        for node_info in self.nodes_with_info:
-            if not node_info.get('position'):
-                continue
-            node_list.append(node_info)
-        return node_list
+        return [
+            node_info
+            for node_info in self.nodes_with_info
+            if node_info.get('position')
+        ]
 
     @property
     def nodes_with_user(self) -> List:
@@ -203,18 +204,18 @@ class MeshtasticConnection:
 
         :return:
         """
-        node_list = []
-        for node_info in self.nodes_with_position:
-            if not node_info.get('user'):
-                continue
-            node_list.append(node_info)
-        return node_list
+        return [
+            node_info
+            for node_info in self.nodes_with_position
+            if node_info.get('user')
+        ]
 
     # pylint:disable=too-many-branches
     def format_nodes(self, include_self=False):
         """
         Formats node list to be more compact
 
+        :param include_self:
         :param nodes:
         :return:
         """
@@ -236,18 +237,12 @@ class MeshtasticConnection:
             for column in line.split(','):
                 column = column.strip()
                 if i == 0:
-                    if not header:
-                        column = f'**{column}**`'
-                    else:
-                        column = f'**{column}**'.replace('.', r'\.')
-                new_line.append(column + ', ')
+                    column = f'**{column}**'.replace('.', r'\.') if header else f'**{column}**`'
+                new_line.append(f'{column}, ')
                 if not header:
                     i += 1
             reassembled_line = ''.join(new_line).rstrip(', ')
-            if not header:
-                reassembled_line = f'{reassembled_line}`'
-            else:
-                reassembled_line = f'{reassembled_line}'
+            reassembled_line = f'{reassembled_line}' if header else f'{reassembled_line}`'
             header = False
             new_nodes.append(reassembled_line)
         filtered_nodes = []
