@@ -141,12 +141,7 @@ class RenderTrackView(CommonView):
         :return:
         """
         name, tail_value = self.get_tail(self.config, self.logger)
-        if len(name) == 0:
-            return jsonify([])
-
-        data = self.database.get_node_track(name, tail_value)
-
-        return jsonify(data)
+        return jsonify(self.database.get_node_track(name, tail_value)) if len(name) > 0 else jsonify([])
 
 
 class RenderDataView(CommonView):
@@ -169,15 +164,13 @@ class RenderDataView(CommonView):
         :param hw_model:
         :return:
         """
-        if hw_model == 'TBEAM':
-            return '<a href="https://meshtastic.org/docs/hardware/devices/tbeam/">TBEAM</a>'
-        if hw_model.startswith('TLORA'):
-            return '<a href="https://meshtastic.org/docs/hardware/devices/lora/">TLORA</a>'
-        if hw_model.startswith('T_ECHO'):
-            return '<a href="https://meshtastic.org/docs/hardware/devices/techo">T-ECHO</a>'
-        if hw_model.startswith('DIY'):
-            return '<a href="https://meshtastic.discourse.group/t/meshtastic-diy-project/3831/1">DIY</a>'
-        return hw_model
+        hw_map = {
+            'TBEAM': '<a href="https://meshtastic.org/docs/hardware/devices/tbeam/">TBEAM</a>',
+            'TLORA': '<a href="https://meshtastic.org/docs/hardware/devices/lora/">TLORA</a>',
+            'T_ECHO': '<a href="https://meshtastic.org/docs/hardware/devices/techo">T-ECHO</a>',
+            'DIY': '<a href="https://meshtastic.discourse.group/t/meshtastic-diy-project/3831/1">DIY</a>',
+        }
+        return hw_map.get(hw_model, hw_model)
 
     def dispatch_request(self) -> flask.Response:  # pylint:disable=too-many-locals
         """

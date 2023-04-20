@@ -92,9 +92,14 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
 
         :return:
         """
-        pub.subscribe(self.on_receive, "meshtastic.receive")
-        pub.subscribe(self.on_connection, "meshtastic.connection.established")
-        pub.subscribe(self.on_connection, "meshtastic.connection.lost")
+        subscription_map = {
+            "meshtastic.receive": self.on_receive,
+            "meshtastic.connection.established": self.on_connection,
+            "meshtastic.connection.lost": self.on_connection,
+        }
+
+        for topic, callback in subscription_map.items():
+            pub.subscribe(callback, topic)
 
     # pylint:disable=too-many-locals
     def process_distance_command(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:

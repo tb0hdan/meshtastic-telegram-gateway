@@ -45,5 +45,4 @@ def conditional_log(message, logger, condition) -> None:
     :param condition:
     :return:
     """
-    if condition:
-        logger.debug(message)
+    return logger.debug(message) if condition else None
