@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """ APRS connection module """
 
-
 import logging
 #
 from threading import Thread
@@ -15,10 +14,12 @@ from setproctitle import setthreadtitle
 from mtg.config import Config
 from mtg.filter import CallSignFilter
 
+
 class APRSStreamer:
     """
     APRS streamer
     """
+
     def __init__(self, config: Config):
         self.aprs_is = None
         self.filter = None

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """ Web application module """
 
-
 import logging
 import os
 import time
@@ -17,6 +16,7 @@ import flask
 #
 from flask import Flask, jsonify, make_response, request, render_template, send_file
 from flask.views import View
+from flask.typing import ResponseReturnValue
 # pylint:disable=no-name-in-module
 from setproctitle import setthreadtitle
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -28,8 +28,40 @@ from mtg.connection.telegram import TelegramConnection
 from mtg.database import MeshtasticDB
 from mtg.utils import Memcache
 
-#
-class RenderTemplateView(View):
+
+class CommonView(View):
+    """
+    Common view class
+    """
+
+    def get_tail(self, config, logger):
+        """
+        get_tail - get tail value from query string
+
+        :return:
+        """
+        query_string = parse_qs(request.query_string.decode())
+        tail_value = config.enforce_type(int, config.WebApp.LastHeardDefault)
+        #
+        tail = query_string.get('tail', [])
+        if len(tail) > 0:
+            try:
+                tail_value = int(tail[0])
+            except ValueError:
+                logger.error("Wrong tail value: ", tail)
+        name_qs = query_string.get('name', [])
+        name = name_qs[0] if len(name_qs) > 0 else ''
+        return name, tail_value
+
+    def dispatch_request(self) -> ResponseReturnValue:
+        """The actual view function behavior. Subclasses must override
+        this and return a valid response. Any variables from the URL
+        rule are passed as keyword arguments.
+        """
+        raise NotImplementedError()
+
+
+class RenderTemplateView(CommonView):
     """
     Generic HTML template renderer
     """
@@ -44,22 +76,25 @@ class RenderTemplateView(View):
 
         :return:
         """
-        debug=self.config.enforce_type(bool, self.config.DEFAULT.Debug)
-        sentry_enabled=self.config.enforce_type(bool, self.config.DEFAULT.SentryEnabled)
-        sentry_dsn=self.config.DEFAULT.SentryDSN
+        debug = self.config.enforce_type(bool, self.config.DEFAULT.Debug)
+        sentry_enabled = self.config.enforce_type(bool, self.config.DEFAULT.SentryEnabled)
+        sentry_dsn = self.config.DEFAULT.SentryDSN
         return render_template(self.template_name, debug=debug,
                                sentry_enabled=sentry_enabled,
-                               sentry_dsn=sentry_dsn, timestamp=int(time.time()),)
+                               sentry_dsn=sentry_dsn, timestamp=int(time.time()), )
 
-class RenderFavicon(View):
+
+class RenderFavicon(CommonView):
     """
     RenderFavicon - favicon.ico file renderer
     """
+
     def dispatch_request(self) -> flask.Response:
         return send_file(os.path.abspath('web/static/images/favicon.ico'),
                          mimetype='image/x-icon')
 
-class RenderScript(View):
+
+class RenderScript(CommonView):
     """
     Specific script renderer
     """
@@ -86,7 +121,8 @@ class RenderScript(View):
         response.headers['Content-Type'] = 'application/javascript'
         return response
 
-class RenderTrackView(View):
+
+class RenderTrackView(CommonView):
     """
     Specific data renderer
     """
@@ -98,23 +134,13 @@ class RenderTrackView(View):
         self.logger = logger
         self.meshtastic_connection = meshtastic_connection
 
-    def dispatch_request(self) -> flask.Response:    # pylint:disable=too-many-locals
+    def dispatch_request(self) -> flask.Response:  # pylint:disable=too-many-locals
         """
         Process Flask request
 
         :return:
         """
-        query_string = parse_qs(request.query_string.decode())
-        tail_value = self.config.enforce_type(int, self.config.WebApp.LastHeardDefault)
-        #
-        tail = query_string.get('tail', [])
-        if len(tail) > 0:
-            try:
-                tail_value = int(tail[0])
-            except ValueError:
-                self.logger.error("Wrong tail value: ", tail)
-        name_qs = query_string.get('name', [])
-        name = name_qs[0] if len(name_qs) > 0 else ''
+        name, tail_value = self.get_tail(self.config, self.logger)
         if len(name) == 0:
             return jsonify([])
 
@@ -123,7 +149,7 @@ class RenderTrackView(View):
         return jsonify(data)
 
 
-class RenderDataView(View):
+class RenderDataView(CommonView):
     """
     Specific data renderer
     """
@@ -153,23 +179,14 @@ class RenderDataView(View):
             return '<a href="https://meshtastic.discourse.group/t/meshtastic-diy-project/3831/1">DIY</a>'
         return hw_model
 
-    def dispatch_request(self) -> flask.Response:    # pylint:disable=too-many-locals
+    def dispatch_request(self) -> flask.Response:  # pylint:disable=too-many-locals
         """
         Process Flask request
 
         :return:
         """
-        query_string = parse_qs(request.query_string.decode())
-        tail_value = self.config.enforce_type(int, self.config.WebApp.LastHeardDefault)
-        #
-        tail = query_string.get('tail', [])
-        if len(tail) > 0:
-            try:
-                tail_value = int(tail[0])
-            except ValueError:
-                self.logger.error("Wrong tail value: ", tail)
-        name_qs = query_string.get('name', [])
-        name = name_qs[0] if len(name_qs) > 0 else ''
+        # Get tail value
+        name, tail_value = self.get_tail(self.config, self.logger)
         nodes = []
         # node default color
         default_color = "red"
@@ -224,7 +241,7 @@ class RenderDataView(View):
         return jsonify(nodes)
 
 
-class RenderAirRaidView(View): # pylint:disable=too-many-instance-attributes
+class RenderAirRaidView(CommonView):  # pylint:disable=too-many-instance-attributes
     """
     Air Raid Alert renderer
     """
@@ -244,16 +261,16 @@ class RenderAirRaidView(View): # pylint:disable=too-many-instance-attributes
         self.region_table = {3: 'Khmelnystjka', 4: 'Vinnytsjka', 5: 'Rivnenska',
                              8: 'Volynska', 9: 'Dnipro', 10: 'Zhytomyrska',
                              11: 'Zakarpattya', 12: 'Zaporizhzhja', 13: 'Ivano-Fr',
-                             14: 'Kyiv obl', 15: 'Kirovohrad',  16: 'Luhansk',
-                             17: 'Mykolaiv',  18: 'Odesa',  19: 'Poltava',
-                             20: 'Sumy',  21: 'Ternopil',  22: 'Kharkiv',
-                             23: 'Kherson',  24: 'Cherkasy',  25: 'Chernihiv',
+                             14: 'Kyiv obl', 15: 'Kirovohrad', 16: 'Luhansk',
+                             17: 'Mykolaiv', 18: 'Odesa', 19: 'Poltava',
+                             20: 'Sumy', 21: 'Ternopil', 22: 'Kharkiv',
+                             23: 'Kherson', 24: 'Cherkasy', 25: 'Chernihiv',
                              26: 'Chernivtsi', 27: 'Lviv', 28: 'Donetsjk',
                              31: 'Kyiv', 9999: 'Krym'}
         self.translation_table = {'Dnipropetrovsk': 'Dnipro',
                                   'Kiev': 'Kyiv obl', 'Odessa': 'Odesa'}
 
-    def dispatch_request(self) -> AnyStr: # pylint:disable=too-many-locals
+    def dispatch_request(self) -> AnyStr:  # pylint:disable=too-many-locals
         """
         Process Flask request
 
@@ -279,8 +296,8 @@ class RenderAirRaidView(View): # pylint:disable=too-many-instance-attributes
         self.memcache.set(new_msg, True, expires=60)
         # Telegram - Kyiv/obl only
         if region_id in [14, 31]:
-            self.telegram_connection.send_message(chat_id=self.config.enforce_type(int,
-                                                  self.config.Telegram.NotificationsRoom),
+            chat_id = self.config.enforce_type(int, self.config.Telegram.NotificationsRoom)
+            self.telegram_connection.send_message(chat_id=chat_id,
                                                   text=new_msg)
         for node in self.meshtastic_connection.nodes_with_position:
             user = node.get('user', {})
@@ -302,6 +319,7 @@ class WebApp:  # pylint:disable=too-few-public-methods
     """
     WebApp: web application container
     """
+
     # pylint:disable=too-many-arguments
     def __init__(self, database: MeshtasticDB, app: Flask, config: Config,
                  meshtastic_connection: RichConnection,
@@ -378,6 +396,7 @@ class ServerThread(Thread):
     """
     Web application server thread
     """
+
     def __init__(self, app: Flask, config: Config, logger: logging.Logger):
         Thread.__init__(self)
         self.config = config
@@ -408,6 +427,7 @@ class WebServer:  # pylint:disable=too-few-public-methods
     """
     Web server wrapper around Flask app
     """
+
     # pylint:disable=too-many-arguments
     def __init__(self, database: MeshtasticDB, config: Config,
                  meshtastic_connection: RichConnection,

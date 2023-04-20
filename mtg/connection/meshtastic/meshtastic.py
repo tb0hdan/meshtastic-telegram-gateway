@@ -24,17 +24,18 @@ from setproctitle import setthreadtitle
 
 from mtg.utils import create_fifo, split_message
 
-
 FIFO = '/tmp/mtg.fifo'
 FIFO_CMD = '/tmp/mtg.cmd.fifo'
+
 
 # pylint:disable=too-many-instance-attributes
 class MeshtasticConnection:
     """
     Meshtastic device connection
     """
+
     # pylint:disable=too-many-arguments
-    def __init__(self, dev_path: str, logger: logging.Logger, config, filter_class, startup_ts = time.time()):
+    def __init__(self, dev_path: str, logger: logging.Logger, config, filter_class, startup_ts=time.time()):
         self.dev_path = dev_path
         self.interface = None
         self.logger = logger
@@ -289,6 +290,9 @@ class MeshtasticConnection:
                     if line.startswith("reboot"):
                         self.logger.warning("Reboot requested using CMD...")
                         self.reboot()
+                    if line.startswith("reset_db"):
+                        self.logger.warning("Reset DB requested using CMD...")
+                        self.reset_db()
 
     def run(self):
         """

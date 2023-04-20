@@ -25,10 +25,12 @@ from mtg.geo import get_lat_lon_distance
 from mtg.log import VERSION
 from mtg.output.file import CSVFileWriter
 
-class MeshtasticBot: # pylint:disable=too-many-instance-attributes
+
+class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
     """
     Meshtastic bot class
     """
+
     # pylint:disable=too-many-arguments
     def __init__(self, database: MeshtasticDB, config: Config, meshtastic_connection: RichConnection,
                  telegram_connection: TelegramConnection, bot_handler):
@@ -150,9 +152,9 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
         self.ping_container[from_id] = {'timestamp': time.time()}
         payload = str.encode("test string")
         self.meshtastic_connection.send_data(payload,
-                           MESHTASTIC_BROADCAST_ADDR,
-                           portNum=meshtastic_portnums_pb2.PortNum.REPLY_APP,
-                           wantAck=True, wantResponse=True)
+                                             MESHTASTIC_BROADCAST_ADDR,
+                                             portNum=meshtastic_portnums_pb2.PortNum.REPLY_APP,
+                                             wantAck=True, wantResponse=True)
 
     # pylint: disable=unused-argument
     def process_stats_command(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
@@ -166,7 +168,6 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
         from_id = packet.get('fromId')
         msg = self.database.get_stats(from_id)
         self.meshtastic_connection.send_text(msg, destinationId=from_id)
-
 
     def process_meshtastic_command(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
         """
@@ -327,7 +328,7 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
         # Save messages
         try:
             self.database.store_message(packet)
-        except Exception as exc: # pylint:disable=broad-except
+        except Exception as exc:  # pylint:disable=broad-except
             self.logger.error('Could not store message: ', exc, repr(exc))
         # Process commands and forward messages
         node_info = interface.nodes.get(from_id)
@@ -335,7 +336,7 @@ class MeshtasticBot: # pylint:disable=too-many-instance-attributes
         if node_info is not None:
             user_info = node_info.get('user')
             long_name = user_info.get('longName')
-        else: # get from DB
+        else:  # get from DB
             found, record = self.database.get_node_record(from_id)
             if found:
                 long_name = record.nodeName

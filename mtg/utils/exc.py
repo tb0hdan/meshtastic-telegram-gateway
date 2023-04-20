@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """ Exception logger module """
 
-
 import sys
 import traceback
 
 from typing import Any
+
 
 def log_exception(logger, exc: Any, description: str = '') -> None:
     """

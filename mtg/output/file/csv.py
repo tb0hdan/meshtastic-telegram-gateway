@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 """ CSV file writer module """
 
-
 import csv
 import time
+
 
 class CSVFileWriter:
     """
     CSVFileWriter - CSV file writer. Stores node coordinates
     """
+
     def __init__(self, dst='logfile.csv'):
         self.logger = None
         self.dst = dst

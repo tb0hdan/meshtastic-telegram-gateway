@@ -26,6 +26,7 @@ from mtg.filter import TelegramFilter
 from mtg.log import VERSION
 from mtg.utils import split_message
 
+
 def check_room(func):
     """
     check_room - decorator to check if bot is in rooms
@@ -33,6 +34,7 @@ def check_room(func):
     :param func:
     :return:
     """
+
     @functools.wraps(func)
     def wrapper(*args):
         """
@@ -51,6 +53,7 @@ def check_room(func):
             bot.logger.debug(f"User {update.effective_user.id} is in a blacklist...")
             return None
         return func(*args)
+
     return wrapper
 
 
@@ -282,7 +285,7 @@ class TelegramBot:
             reboot_count = self.meshtastic_connection.interface.myInfo.reboot_count
         the_version = pkg_resources.get_distribution("meshtastic").version
         formatted_time = humanize.naturaltime(time.time() - self.meshtastic_connection.get_startup_ts)
-        text= f'Bot v{VERSION}/FW: v{firmware}/Meshlib: v{the_version}/Reboots: {reboot_count}.'
+        text = f'Bot v{VERSION}/FW: v{firmware}/Meshlib: v{the_version}/Reboots: {reboot_count}.'
         text += f'Started {formatted_time}'
         context.bot.send_message(chat_id=update.effective_chat.id, text=text)
 
@@ -321,7 +324,7 @@ class TelegramBot:
                       lambda msg: context.bot.send_message(chat_id=update.effective_chat.id,
                                                            text=msg,
                                                            parse_mode='MarkdownV2')
-        )
+                      )
 
     def bg_route(self, dest, hop_limit):
         """

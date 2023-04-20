@@ -4,6 +4,7 @@
 import errno
 import os
 
+
 def create_fifo(path):
     """
     Create FIFO

@@ -14,6 +14,7 @@ class Memcache:
     Memcache - in-memory cache for storing data
     """
     name = 'Memcache.Reaper'
+
     def __init__(self, logger):
         self.lock = RLock()
         self.logger = logger
@@ -38,7 +39,6 @@ class Memcache:
         """
         with self.lock:
             return self.cache.get(key)
-
 
     def set(self, key, value, expires=0) -> None:
         """

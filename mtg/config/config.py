@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 """ Configuration module """
 
-
 import configparser
+
 
 class Config:
     """
     Config - two level configuration with functionality similar to dotted dict
     """
+
     def __init__(self, config_path="mesh.ini"):
         self.config_path = config_path
         self.config = None

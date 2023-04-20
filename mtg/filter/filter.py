@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """ Filter module """
 
-
 import logging
 
 from mtg.database import MeshtasticDB
@@ -13,6 +12,7 @@ class Filter:
     Filter parent class
     """
     connection_type = ""
+
     def __init__(self, database: MeshtasticDB, config: Config, logger: logging.Logger):
         self.database = database
         self.config = config
@@ -33,6 +33,7 @@ class TelegramFilter(Filter):
     """
     Telegram users filter
     """
+
     def __init__(self, database: MeshtasticDB, config: Config, logger: logging.Logger):
         super().__init__(database, config, logger)
         self.database = database
@@ -45,6 +46,7 @@ class MeshtasticFilter(Filter):
     """
     Meshtastic users filter
     """
+
     def __init__(self, database: MeshtasticDB, config: Config, logger: logging.Logger):
         super().__init__(database, config, logger)
         self.database = database
@@ -57,6 +59,7 @@ class CallSignFilter(Filter):
     """
     APRS callsign filter
     """
+
     def __init__(self, database: MeshtasticDB, config: Config, logger: logging.Logger):
         super().__init__(database, config, logger)
         self.database = database

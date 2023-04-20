@@ -4,6 +4,7 @@
 import os
 import openai
 
+
 # fallback:
 # I'm sorry, I'm not able to help you with that request.
 # I'm sorry, I can't do that.
@@ -13,15 +14,15 @@ import openai
 # I'm sorry, I don't understand the request.
 class OpenAIDavinci:
     """ OpenAI Bot container """
+
     def __init__(self):
         api_key = os.getenv("OPENAI_API_KEY", default='')
         openai.api_key = api_key
         self.completion = openai.Completion() if len(api_key) > 0 else None
         self.seed = (
-            "The following is a conversation with an AI assistant. "
-            + "The assistant is helpful, creative, clever, and very friendly.\n\n"
+                "The following is a conversation with an AI assistant. "
+                + "The assistant is helpful, creative, clever, and very friendly.\n\n"
         )
-
 
     def run_query(self, user, query):
         """
@@ -60,17 +61,18 @@ class OpenAIDavinci:
         print(user, response)
         return response.get('choices')[0].get('text').lstrip('!').lstrip('\n')
 
+
 class OpenAIBot:
     """ OpenAI Bot container """
+
     def __init__(self):
         api_key = os.getenv("OPENAI_API_KEY", default='')
         openai.api_key = api_key
         self.completion = openai.ChatCompletion() if len(api_key) > 0 else None
         self.seed = (
-            "The following is a conversation with an AI assistant. "
-            + "The assistant is helpful, creative, clever, and very friendly.\n\n"
+                "The following is a conversation with an AI assistant. "
+                + "The assistant is helpful, creative, clever, and very friendly.\n\n"
         )
-
 
     def run_query(self, user, query):
         """
