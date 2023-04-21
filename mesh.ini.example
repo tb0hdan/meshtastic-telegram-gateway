@@ -121,8 +121,23 @@ CallSign = N0CALL-1
 Password = QwertyLOL123
 
 [MQTT]
+# en: Enable MQTT functionality. For map. Boolean.
+# pl: Włącz funkcję MQTT. dla mapy. Logiczne.
+# pt: Ative a funcionalidade MQTT. Para mapa. Boleano.
 Enabled = false
+# en: MQTT Host. String.
+# pl: Nazwa hosta MQTT. Strunowy.
+# pt: Nome do host MQTT. Fragmento.
 Host = mqtt.eclipseprojects.io
+# en: MQTT Port. Integer.
+# pl: Port MQTT. Liczba całkowita.
+# pt: Porta MQTT. Inteiro.
 Port = 1883
+# en: MQTT Username. String.
+# pl: Nazwa użytkownika MQTT. Strunowy.
+# pt: Nome de usuário MQTT. Fragmento.
 User = john
+# en: MQTT Password. String.
+# pl: Hasło MQTT. Strunowy.
+# pt: Senha MQTT. Fragmento.
 Password = doe

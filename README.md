@@ -58,7 +58,7 @@ Legend:
 
 ## Supported software
 
-Python 3.7+ is required.
+Python 3.8+ is required.
 
 ## Webapp
 
