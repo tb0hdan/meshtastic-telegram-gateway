@@ -83,7 +83,7 @@ class MeshtasticConnection:
             with self.lock:
                 self.interface.sendText(msg, **kwargs)
                 return
-        split_message(msg, mesh_pb2.Constants.DATA_PAYLOAD_LEN // 2, self.send_text, **kwargs)
+        split_message(msg, mesh_pb2.Constants.DATA_PAYLOAD_LEN // 2, self.interface.sendText, **kwargs)
         return
 
     def send_data(self, *args, **kwargs) -> None:
