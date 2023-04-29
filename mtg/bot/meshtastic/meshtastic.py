@@ -286,7 +286,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         :param interface:
         :return:
         """
-        self.logger.debug(f"Received: {packet}")
+        #self.logger.debug(f"Received: {packet}")
         to_id = packet.get('toId')
         decoded = packet.get('decoded')
         from_id = packet.get('fromId')
@@ -301,6 +301,11 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         # Send notifications if they're enabled
         if from_id is not None and self.config.enforce_type(bool, self.config.Telegram.NotificationsEnabled):
             self.notify_on_new_node(packet, interface)
+        # check hop count
+        hop_limit = packet.get('hopLimit', 0)
+        if hop_limit > self.config.enforce_type(int, self.config.Meshtastic.MaxHopCount):
+            self.logger.debug(f"User {from_id} exceeds {hop_limit}...")
+            return
         #
         if decoded.get('portnum') != 'TEXT_MESSAGE_APP':
             # notifications
