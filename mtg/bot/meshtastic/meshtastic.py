@@ -286,7 +286,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         :param interface:
         :return:
         """
-        #self.logger.debug(f"Received: {packet}")
+        self.logger.debug(f"Received: {packet}")
         to_id = packet.get('toId')
         decoded = packet.get('decoded')
         from_id = packet.get('fromId')
