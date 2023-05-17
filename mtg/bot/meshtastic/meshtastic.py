@@ -124,6 +124,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         if not (my_latitude and my_longitude):
             self.meshtastic_connection.send_text("distance err: no lat/lon", destinationId=from_id)
             return
+        nodes_with_distance = []
         for node in interface.nodes:
             node_info = interface.nodes.get(node)
             position = node_info.get('position', {})
@@ -141,9 +142,14 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
                 continue
             long_name = user.get('longName', '')
             distance = round(get_lat_lon_distance((my_latitude, my_longitude), (latitude, longitude)))
-            distance = humanize.intcomma(distance)
-            msg = f"{long_name}: {distance}m"
+            nodes_with_distance.append({'name': long_name, 'distance': distance})
+
+        for node in sorted(nodes_with_distance, key=lambda x: x.get('distance', 0))[:10]:
+            name = node.get('name')
+            distance = humanize.intcomma(node.get('distance'))
+            msg = f"{name}: {distance}m"
             self.meshtastic_connection.send_text(msg, destinationId=from_id)
+
 
     def process_ping_command(self, packet, _interface: meshtastic_serial_interface.SerialInterface) -> None:
         """
@@ -366,5 +372,6 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
             self.logger.debug(f"Bot duplicate via meshtastic... {msg}")
             return
 
+        self.logger.info(f"MTG-M-BOT: {long_name}: -> {msg}")
         self.telegram_connection.send_message(chat_id=self.config.enforce_type(int, self.config.Telegram.Room),
                                               text=f"{long_name}: {msg}")
