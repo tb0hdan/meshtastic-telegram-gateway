@@ -43,3 +43,6 @@ class TelegramConnection:
         :return:
         """
         return self.updater.dispatcher
+
+    def shutdown(self):
+        self.updater.stop()

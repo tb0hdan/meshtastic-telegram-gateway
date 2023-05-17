@@ -181,8 +181,6 @@ class TelegramBot:
         context.bot.send_message(chat_id=chat_id, text="I'm a bot, please talk to me!")
 
     @check_room
-
-
     def tempo(self, update: Update, context: CallbackContext) -> None:
         """
         Telegram /tempo command handler.
@@ -227,7 +225,6 @@ class TelegramBot:
         context.bot.send_message(chat_id=chat_id, text=type(json_str))
 
     @check_room
-
     def reboot(self, update: Update, context: CallbackContext) -> None:
         """
         Telegram reboot command
@@ -479,6 +476,9 @@ https://github.com/meshtastic/c-sharp/releases
                         args=(dest, hop_limit), name=f"Traceroute-{dest}")
         thread.start()
 
+    def shutdown(self):
+        self.telegram_connection.shutdown()
+
     def run(self):
         """
         Telegram bot runner
@@ -487,6 +487,3 @@ https://github.com/meshtastic/c-sharp/releases
         """
         thread = Thread(target=self.poll, name=self.name)
         thread.start()
-
-
-

@@ -45,6 +45,8 @@ class MeshtasticConnection:
         self.name = 'Meshtastic Connection'
         self.lock = RLock()
         self.filter = filter_class
+        # exit
+        self.exit = False
 
     @property
     def get_startup_ts(self):
@@ -267,7 +269,7 @@ class MeshtasticConnection:
 
         self.logger.debug("Opening FIFO...")
         create_fifo(FIFO)
-        while True:
+        while not self.exit:
             with open(FIFO, encoding='utf-8') as fifo:
                 for line in fifo:
                     line = line.rstrip('\n')
@@ -283,7 +285,7 @@ class MeshtasticConnection:
 
         self.logger.debug("Opening FIFO...")
         create_fifo(FIFO_CMD)
-        while True:
+        while not self.exit:
             with open(FIFO_CMD, encoding='utf-8') as fifo:
                 for line in fifo:
                     line = line.rstrip('\n')
@@ -293,6 +295,9 @@ class MeshtasticConnection:
                     if line.startswith("reset_db"):
                         self.logger.warning("Reset DB requested using CMD...")
                         self.reset_db()
+
+    def shutdown(self):
+        self.exit = True
 
     def run(self):
         """

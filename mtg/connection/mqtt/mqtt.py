@@ -32,6 +32,8 @@ class MQTT:
         self.handler = None
         #
         self.name = 'MQTT Connection'
+        # exit
+        self.exit = False
 
     def set_config(self, config):
         """
@@ -83,7 +85,7 @@ class MQTT:
         :return:
         """
         setthreadtitle(self.name)
-        while True:
+        while not self.exit:
             try:
                 self.client.connect(self.host, self.port, 60)
             except socket.timeout:
@@ -94,6 +96,10 @@ class MQTT:
             except TimeoutError:
                 self.logger.error('Loop timeout...')
                 time.sleep(10)
+
+    def shutdown(self):
+        self.client.disconnect()
+        self.exit = True
 
     def run(self):
         """

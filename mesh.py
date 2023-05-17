@@ -112,7 +112,11 @@ def main(args):
         try:
             time.sleep(1)
         except KeyboardInterrupt:
+            aprs_streamer.shutdown()
             web_server.shutdown()
+            meshtastic_connection.shutdown()
+            mqtt_connection.shutdown()
+            telegram_bot.shutdown()
             logger.info('Exit requested...')
             sys.exit(0)
 

@@ -104,6 +104,9 @@ class APRSStreamer:
             except aprslib.exceptions.LoginError:
                 self.logger.debug("aprs login error")
 
+    def shutdown(self):
+        self.exit = True
+
     def run(self):
         """
         APRS runner
