@@ -368,7 +368,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
 
         # Meshtastic nodes sometimes duplicate messages sent by bot. Filter these.
         self_name = self.meshtastic_connection.interface.getLongName()
-        if msg.startswith(self_name):
+        if msg.startswith(self_name) or self_name == long_name:
             self.logger.debug(f"Bot duplicate via meshtastic... {msg}")
             return
 
