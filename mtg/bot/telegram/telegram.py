@@ -18,6 +18,7 @@ import pyqrcode
 # pylint:disable=no-name-in-module
 from setproctitle import setthreadtitle
 from telegram import Update
+from telegram.constants import MAX_MESSAGE_LENGTH
 from telegram.ext import CallbackContext
 from telegram.ext import CommandHandler
 from telegram.ext import MessageHandler, Filters
@@ -451,12 +452,12 @@ https://github.com/meshtastic/c-sharp/releases
         include_self = self.config.enforce_type(bool, self.config.Telegram.NodeIncludeSelf)
         formatted = self.meshtastic_connection.format_nodes(include_self=include_self)
 
-        if len(formatted) < 4096:
+        if len(formatted) < MAX_MESSAGE_LENGTH:
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text=formatted,
                                      parse_mode='MarkdownV2')
             return
-        split_message(formatted, 4096,
+        split_message(formatted, MAX_MESSAGE_LENGTH,
                       lambda msg: context.bot.send_message(chat_id=update.effective_chat.id,
                                                            text=msg,
                                                            parse_mode='MarkdownV2')
