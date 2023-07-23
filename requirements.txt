@@ -3,6 +3,7 @@ flask~=2.3.2
 haversine~=2.8.0
 humanize~=4.6.0
 meshtastic==2.1.7
+openai==0.27.8
 paho-mqtt==1.6.1
 pypng==0.20220715.0
 python-telegram-bot==13.15
@@ -15,4 +16,3 @@ setuptools>=65.5.1 # not directly required, pinned by Snyk to avoid a vulnerabil
 slack_sdk==3.21.3
 Werkzeug~=2.3.4
 certifi>=2022.12.7 # not directly required, pinned by Snyk to avoid a vulnerability
-tornado>=6.3.2 # not directly required, pinned by Snyk to avoid a vulnerability
