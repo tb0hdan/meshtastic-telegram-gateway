@@ -78,7 +78,7 @@ AirRaidPrivate = aaabbbccc
 # en: Externally accessible web app URL
 ExternalURL = https://example.com/
 # en: Shortener service to use: pls, tly. Long URL by default
-ShortenerService = 'pls'
+ShortenerService = pls
 TLYToken = aaabbb
 PLSST = aaabbbb
 

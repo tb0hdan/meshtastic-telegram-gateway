@@ -161,9 +161,9 @@ class TelegramBot:
             file_path = os.path.basename(urlparse(photo_file.file_path).path)
             photo_file.download(f'./web/static/t/{file_path}')
             long_url = f'{self.config.WebApp.ExternalURL}/static/t/{file_path}'
-            if self.config.WebApp.Shortener == 'pls':
+            if self.config.WebApp.ShortenerService == 'pls':
                 short_url = self.shorten_pls(long_url)
-            elif self.config.WebApp.Shortener == 'tly':
+            elif self.config.WebApp.ShortenerService == 'tly':
                 short_url = self.shorten_tly(long_url)
             else:
                 short_url = long_url
