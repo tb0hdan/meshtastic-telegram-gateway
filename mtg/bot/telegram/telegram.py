@@ -12,9 +12,11 @@ import time
 import subprocess
 #
 from threading import Thread
+from urllib.parse import urlparse
 #
 import humanize
 import pyqrcode
+import requests
 # pylint:disable=no-name-in-module
 from setproctitle import setthreadtitle
 from telegram import Update
@@ -153,11 +155,49 @@ class TelegramBot:
         if update.message and update.message.sticker:
             message += f"sent sticker {update.message.sticker.set_name}: {update.message.sticker.emoji}"
 
+        if update.message and update.message.photo:
+            photo = sorted(update.message.photo, key=lambda x: x.file_size, reverse=True)[0]
+            photo_file = photo.get_file()
+            file_path = os.path.basename(urlparse(photo_file.file_path).path)
+            photo_file.download(f'./web/static/t/{file_path}')
+            long_url = f'{self.config.WebApp.ExternalURL}/static/t/{file_path}'
+            if self.config.WebApp.Shortener == 'pls':
+                short_url = self.shorten_pls(long_url)
+            elif self.config.WebApp.Shortener == 'tly':
+                short_url = self.shorten_tly(long_url)
+            else:
+                short_url = long_url
+            message += f"sent image: {short_url}"
+            self.logger.info(message)
+
         # check if we got our message
         if not message:
             return
         self.logger.debug(f"{update.effective_chat.id} {full_user} {message}")
         self.meshtastic_connection.send_text(f"{full_user}: {message}")
+
+    def shorten_tly(self, long_url):
+        tly_token = self.config.WebApp.TLYToken
+        url = 'https://t.ly/api/v1/link/shorten'
+        headers = {
+              'Authorization': f"Bearer {tly_token}",
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+        }
+        response = requests.request('POST', url, headers=headers, json={'long_url': long_url})
+        return response.json().get('short_url')
+
+    def shorten_pls(self, long_url):
+        token = self.config.WebApp.PLSST
+        url = 'https://pls.st/api/v1/a/links/shorten'
+        headers = {
+              'Authorization': f"Bearer {token}",
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+        }
+        response = requests.request('POST', url, headers=headers, json={'url': long_url})
+        return response.json().get('short_url')
+
 
     def poll(self) -> None:
         """
