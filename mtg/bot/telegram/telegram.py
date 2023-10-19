@@ -374,8 +374,8 @@ class TelegramBot:
         """
         firmware = 'unknown'
         reboot_count = 'unknown'
-        if self.meshtastic_connection.interface.myInfo:
-            firmware = self.meshtastic_connection.interface.myInfo.firmware_version
+        if self.meshtastic_connection.interface.myInfo and self.meshtastic_connection.interface.metadata:
+            firmware = self.meshtastic_connection.interface.metadata.firmware_version
             reboot_count = self.meshtastic_connection.interface.myInfo.reboot_count
         the_version = pkg_resources.get_distribution("meshtastic").version
         formatted_time = humanize.naturaltime(time.time() - self.meshtastic_connection.get_startup_ts)

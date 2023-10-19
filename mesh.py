@@ -76,8 +76,10 @@ def main(args):
     #
     aprs_streamer = APRSStreamer(config)
     call_sign_filter = CallSignFilter(database, config, logger)
+    aprs_streamer.set_db(database)
     aprs_streamer.set_filter(call_sign_filter)
     aprs_streamer.set_logger(logger)
+    aprs_streamer.set_meshtastic(meshtastic_connection)
     #
     telegram_bot = TelegramBot(config, meshtastic_connection, telegram_connection)
     telegram_filter = TelegramFilter(database, config, logger)
@@ -90,6 +92,7 @@ def main(args):
     mqtt_handler.set_filter(meshtastic_filter)
     meshtastic_bot.set_filter(meshtastic_filter)
     meshtastic_bot.set_logger(logger)
+    meshtastic_bot.set_aprs(aprs_streamer)
     meshtastic_bot.subscribe()
     #
     template_folder = os.path.join(basedir, "web", "templates")

@@ -2,6 +2,7 @@
 """ SQLite database module """
 
 import logging
+import re
 import time
 #
 from datetime import datetime, timedelta
@@ -163,6 +164,17 @@ class MeshtasticDB:
         node_record = MeshtasticNodeRecord.select(lambda n: n.nodeId == node_id).first()
         return f"Locations: {len(node_record.locations)}. Messages: {len(node_record.messages)}"
 
+    @staticmethod
+    @db_session
+    def get_normalized_node(node_name: AnyStr):
+        for node_record in MeshtasticNodeRecord.select():
+            normalized = re.sub('[^A-Za-z0-9-]+', '', node_record.nodeName)
+            if len(normalized) == 0:
+                continue
+            if normalized == node_name:
+                return node_record
+        return None
+
     @db_session
     def store_message(self, packet: dict) -> None:
         """
@@ -206,6 +218,13 @@ class MeshtasticDB:
             rxSnr=packet.get('rxSnr', 0),
             node=node_record,
         )
+
+    @db_session
+    def get_node_info(self, node_id: str):
+        node_record = MeshtasticNodeRecord.select(lambda n: n.nodeId == node_id).first()
+        if not node_record:
+            raise RuntimeError(f'node {node_id} not found')
+        return node_record
 
     @db_session
     def get_last_coordinates(self, node_id: str):

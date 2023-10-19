@@ -46,6 +46,11 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         self.writer = CSVFileWriter(dst=self.config.enforce_type(str, self.config.Meshtastic.NodeLogFile))
         # bot
         self.bot_handler = bot_handler
+        # aprs
+        self.aprs = None
+
+    def set_aprs(self, aprs):
+        self.aprs = aprs
 
     def set_logger(self, logger: logging.Logger):
         """
@@ -219,7 +224,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         firmware = 'unknown'
         reboot_count = 'unknown'
         if interface.myInfo:
-            firmware = interface.myInfo.firmware_version
+            firmware = interface.metadata.firmware_version
             reboot_count = interface.myInfo.reboot_count
         the_version = pkg_resources.get_distribution("meshtastic").version
         from_id = packet.get('fromId')
@@ -320,6 +325,9 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
                 if from_id is not None and self.config.enforce_type(bool, self.config.Meshtastic.NodeLogEnabled):
                     self.writer.write(packet)
                 self.database.store_location(packet)
+                # Send Meshtastic node coordinates to APRS for licenced operators
+                if self.aprs is not None and from_id is not None:
+                    self.aprs.send_location(packet)
                 return
             # pong
             if decoded.get('portnum') == 'REPLY_APP':
