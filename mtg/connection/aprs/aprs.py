@@ -148,7 +148,8 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
         letter = 'S' if latitude < 0 else 'N'
         latitude_packet = f'{abs(degrees)}{minutes}.{pad_sec}{letter}'
         degrees, minutes, seconds = self.dec2sexagesimal(longitude)
-        pad_d = f'{abs(degrees)}{minutes}:05d'
+        pad_v = f'{abs(degrees)}{minutes}'
+        pad_d = f'{pad_v:>05}'
         pad_sec = f'{seconds:<02d}'
         letter = 'W' if longitude < 0 else 'E'
         longitude_packet = f'{pad_d}.{pad_sec}{letter}'
@@ -156,7 +157,7 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
         #
         timestamp = datetime.now().strftime("%d%H%M")
         room_link = self.config.Telegram.RoomLink
-        aprs_packet = f"{node_name}>APRS,TCPIP*:@{timestamp}/{coordinates}/A={altitude:06d}-Forwarded for {room_link}"
+        aprs_packet = f"{node_name}>APRS,TCPIP*:@{timestamp}/{coordinates}-/A={altitude:06d}-Forwarded for {room_link}"
         self.aprs_is.sendall(aprs_packet)
         self.logger.error('APRS: %s', aprs_packet)
 
