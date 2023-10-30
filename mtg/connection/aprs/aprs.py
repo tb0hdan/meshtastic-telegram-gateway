@@ -157,7 +157,7 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
         #
         timestamp = datetime.now().strftime("%d%H%M")
         room_link = self.config.Telegram.RoomLink
-        aprs_packet = f"{node_name}>APRS,TCPIP*:@{timestamp}/{coordinates}-/A={altitude:06d}-Forwarded for {room_link}"
+        aprs_packet = f"{node_name}>APRS,TCPIP*:@{timestamp}/{coordinates}-/A={altitude:06d} Forwarded for {room_link}"
         self.aprs_is.sendall(aprs_packet)
         self.logger.error('APRS: %s', aprs_packet)
 
