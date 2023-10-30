@@ -17,6 +17,10 @@ Admin = 1234
 # pl: Identyfikator pokoju, który będzie służył jako brama między użytkownikami Telegrama i Meshtastic. Ujemna liczba całkowita.
 # pt: ID da sala que servirá de gateway entre os usuários do Telegram e do Meshtastic. Inteiro negativo.
 Room = -1234
+# en: Room link
+# pl: Link do pokoju
+# pt: Link da sala
+RoomLink = https://t.me/joinchat/1234
 # en: New node notifications. Will not notify about nodes that are already in local database. Boolean.
 # pl: Powiadomienia o nowych węzłach. Nie będzie powiadamiać o węzłach, które są już w lokalnej bazie danych. Logiczne.
 # pt: Notificações de novos nós. Não notificará sobre nós que já estão no banco de dados local. Boleano.

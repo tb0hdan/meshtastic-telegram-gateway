@@ -18,7 +18,7 @@ from mtg.config import Config
 from mtg.filter import CallSignFilter
 
 
-class APRSStreamer:
+class APRSStreamer:  # pylint:disable=too-many-instance-attributes
     """
     APRS streamer
     """
@@ -30,11 +30,14 @@ class APRSStreamer:
         self.logger = None
         self.exit = False
         self.name = 'APRS Streamer'
-        self.db = None
+        self.database = None
         self.connection = None
 
-    def set_db(self, db):
-        self.db = db
+    def set_db(self, database):
+        """
+        Set database
+        """
+        self.database = database
 
     def set_logger(self, logger: logging.Logger):
         """
@@ -88,7 +91,7 @@ class APRSStreamer:
             return
         msg = packet.get('text').split(f':{self.config.APRS.Callsign} :')[1]
         node = msg.split(':')[0]
-        record = self.db.get_normalized_node(node)
+        record = self.database.get_normalized_node(node)
         if record and self.connection:
             msg = ''.join(msg.split(":")[1:]).strip()
             msg = f'APRS {packet.get("from")}: {msg}'
@@ -107,44 +110,53 @@ class APRSStreamer:
 
     @staticmethod
     def get_imag(value):
+        """
+        Get imaginary part of float
+        """
         return float((Decimal(str(value)) - (Decimal(str(value)) // 1)))
 
     def dec2sexagesimal(self, value):
+        """
+        Convert decimal to sexagesimal
+        """
         by60 = float(Decimal(str(self.get_imag(value))) * 60)
         remainder = int(self.get_imag(by60) * 60)
         return int(value), int(by60), remainder
 
-    def send_location(self, packet):
+    def send_location(self, packet):  # pylint:disable=too-many-locals
+        """
+        Send location to APRS
+        """
         from_id = packet.get("fromId")
         if not from_id:
             return
-        node_record = self.db.get_node_info(from_id)
+        node_record = self.database.get_node_info(from_id)
         position = packet.get('decoded', {}).get('position', {})
-        altitude=position.get('altitude', 0)
+        altitude=int(position.get('altitude', 0) * 3.28084)
         latitude=position.get('latitude', 0)
         longitude=position.get('longitude', 0)
         # get node info
         node_name = re.sub('[^A-Za-z0-9-]+', '', node_record.nodeName)
         if len(node_name) == 0:
             return
-        # FIXME: support other countries
+        # Support other countries
         if not re.match('^U[R-Z][0-9][A-Z]{2,3}(-[0-9]{1,2})?$', node_name, flags=re.I):
-            self.logger.error('APRS: %s not a ham callsign', node_name)
+            self.logger.error('APRS: %s not a ham call-sign', node_name)
             return
-        #r = str(latitude).replace('.', '')
-        #g = str(longitude).replace('.', '')
-        #coordinates = f'{r[:4]}.{r[4:6]}N/0{g[:4]}.{g[4:6]}E'
-        d, m, s = self.dec2sexagesimal(latitude)
-        pad_sec = '{:0<2}'.format(s)
-        lr = f'{d}{m}.{pad_sec}N'
-        d, m, s = self.dec2sexagesimal(longitude)
-        pad_d = '{:0>5}'.format(f'{d}{m}')
-        pad_sec = '{:0<2}'.format(s)
-        lg = f'{pad_d}.{pad_sec}E'
-        coordinates = f'{lr}/{lg}'
+        degrees, minutes, seconds = self.dec2sexagesimal(latitude)
+        pad_sec = f'{seconds:<02d}'
+        letter = 'S' if latitude < 0 else 'N'
+        latitude_packet = f'{abs(degrees)}{minutes}.{pad_sec}{letter}'
+        degrees, minutes, seconds = self.dec2sexagesimal(longitude)
+        pad_d = f'{abs(degrees)}{minutes}:05d'
+        pad_sec = f'{seconds:<02d}'
+        letter = 'W' if longitude < 0 else 'E'
+        longitude_packet = f'{pad_d}.{pad_sec}{letter}'
+        coordinates = f'{latitude_packet}/{longitude_packet}'
         #
-        ts = datetime.now().strftime("%d%H%M")
-        aprs_packet = f"{node_name}>APRS,TCPIP*:@{ts}/{coordinates}-Forwarded for https://t.me/meshtastic_ua"
+        timestamp = datetime.now().strftime("%d%H%M")
+        room_link = self.config.Telegram.RoomLink
+        aprs_packet = f"{node_name}>APRS,TCPIP*:@{timestamp}/{coordinates}/A={altitude:06d}-Forwarded for {room_link}"
         self.aprs_is.sendall(aprs_packet)
         self.logger.error('APRS: %s', aprs_packet)
 
@@ -175,6 +187,9 @@ class APRSStreamer:
                 self.logger.debug("aprs login error")
 
     def shutdown(self):
+        """
+        Shutdown APRS streamer
+        """
         self.exit = True
 
     def run(self):
