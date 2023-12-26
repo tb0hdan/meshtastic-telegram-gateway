@@ -32,6 +32,10 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
         self.name = 'APRS Streamer'
         self.database = None
         self.connection = None
+        self.telegram_connection = None
+
+    def set_telegram_connection(self, tg):
+        self.telegram_connection = tg
 
     def set_db(self, database):
         """
@@ -57,7 +61,6 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
         """
         self.connection = connection
 
-
     def set_filter(self, filter_class: CallSignFilter):
         """
         Set APRS callsign filter class
@@ -78,6 +81,10 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
             return
         self.aprs_is.sendall(packet)
 
+    def send_text(self, to, message):
+        packet = '{0!s}>APDR15,WIDE1-1,WIDE2-2::{1!s} :{2!s}'.format(self.config.APRS.Callsign, to, message)
+        self.send_packet(packet)
+
     def process(self, packet):
         """
         Process APRS packet
@@ -87,16 +94,28 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
         """
         if not self.config.enforce_type(bool, self.config.APRS.ToMeshtastic):
             return
-        if not packet.get('text', '').startswith(f':{self.config.APRS.Callsign}'):
+        if packet.get('format') != 'message' or not packet.get('message_text', ''):
             return
-        msg = packet.get('text').split(f':{self.config.APRS.Callsign} :')[1]
-        node = msg.split(':')[0]
+        self.logger.info(f'Got APRS PACKET: {packet}')
+        msg = packet.get('message_text')
+        node = packet.get('from')
+        self.send_text(node, 'ack' + str(packet.get('msgNo')))
+        # TG
+        self.telegram_connection.send_message(chat_id=self.config.enforce_type(int,
+                                                                               self.config.Telegram.NotificationsRoom),
+                                              text=f"APRS-{node}: {msg}")
+        # Mesh
+        self.connection.send_text(f"APRS-{node}: {msg}")
+
+        return
+        """
         record = self.database.get_normalized_node(node)
         if record and self.connection:
             msg = ''.join(msg.split(":")[1:]).strip()
             msg = f'APRS {packet.get("from")}: {msg}'
             self.logger.info(f'Sending from APRS: {record.nodeId} -> {msg}')
             self.connection.send_text(msg, destinationId=record.nodeId)
+        """
 
     @staticmethod
     def callback(packet):

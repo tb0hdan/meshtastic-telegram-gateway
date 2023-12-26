@@ -80,6 +80,7 @@ def main(args):
     aprs_streamer.set_filter(call_sign_filter)
     aprs_streamer.set_logger(logger)
     aprs_streamer.set_meshtastic(meshtastic_connection)
+    aprs_streamer.set_telegram_connection(telegram_connection)
     #
     telegram_bot = TelegramBot(config, meshtastic_connection, telegram_connection)
     telegram_filter = TelegramFilter(database, config, logger)

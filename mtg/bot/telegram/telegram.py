@@ -7,6 +7,7 @@ import functools
 import logging
 import os
 import pkg_resources
+import re
 import tempfile
 import time
 import subprocess
@@ -128,6 +129,30 @@ class TelegramBot:
         """
         self.filter = filter_class
 
+    def shorten_p(self, long_url) -> str:
+        if self.config.WebApp.ShortenerService == 'pls':
+            short_url = self.shorten_pls(long_url)
+        elif self.config.WebApp.ShortenerService == 'tly':
+            short_url = self.shorten_tly(long_url)
+        else:
+            short_url = long_url
+        return short_url
+
+    def shorten_in_text(self, message) -> str:
+        """
+        Shorten URLs in text messages
+
+        """
+        result = ''
+        splits = message.split(' ')
+        replacements = {}
+        for pos, part in enumerate(splits):
+            if re.match('https?://.+', part):
+                replacements[pos] = self.shorten_p(part)
+        for pos in replacements:
+            splits[pos] = replacements.get(pos)
+        return ' '.join(splits)
+
     def echo(self, update: Update, _) -> None:
         """
         Telegram bot echo handler. Does actual message forwarding
@@ -150,7 +175,7 @@ class TelegramBot:
             full_user += f' {update.effective_user.last_name}'
         message = ''
         if update.message and update.message.text:
-            message += update.message.text
+            message += self.shorten_in_text(update.message.text)
 
         if update.message and update.message.sticker:
             message += f"sent sticker {update.message.sticker.set_name}: {update.message.sticker.emoji}"
@@ -161,12 +186,7 @@ class TelegramBot:
             file_path = os.path.basename(urlparse(photo_file.file_path).path)
             photo_file.download(f'./web/static/t/{file_path}')
             long_url = f'{self.config.WebApp.ExternalURL}/static/t/{file_path}'
-            if self.config.WebApp.ShortenerService == 'pls':
-                short_url = self.shorten_pls(long_url)
-            elif self.config.WebApp.ShortenerService == 'tly':
-                short_url = self.shorten_tly(long_url)
-            else:
-                short_url = long_url
+            short_url = self.shorten_p(long_url)
             message += f"sent image: {short_url}"
             self.logger.info(message)
 
