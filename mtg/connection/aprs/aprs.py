@@ -16,7 +16,7 @@ from setproctitle import setthreadtitle
 #
 from mtg.config import Config
 from mtg.filter import CallSignFilter
-
+from mtg.utils import Memcache
 
 class APRSStreamer:  # pylint:disable=too-many-instance-attributes
     """
@@ -33,6 +33,7 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
         self.database = None
         self.connection = None
         self.telegram_connection = None
+        self.memcache = Memcache(self.logger)
 
     def set_telegram_connection(self, tg):
         self.telegram_connection = tg
@@ -82,7 +83,7 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
         self.aprs_is.sendall(packet)
 
     def send_text(self, to, message):
-        packet = '{0!s}>APDR15,WIDE1-1,WIDE2-2::{1!s} :{2!s}'.format(self.config.APRS.Callsign, to, message)
+        packet = '{0!s}>APDR15,WIDE1-1,WIDE2-2::{1!s}:{2!s}'.format(self.config.APRS.Callsign, to, message)
         self.send_packet(packet)
 
     def process(self, packet):
@@ -96,10 +97,15 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
             return
         if packet.get('format') != 'message' or not packet.get('message_text', ''):
             return
+        if packet.get('addresse') != self.config.APRS.Callsign:
+            return
         self.logger.info(f'Got APRS PACKET: {packet}')
         msg = packet.get('message_text')
         node = packet.get('from')
         self.send_text(node, 'ack' + str(packet.get('msgNo')))
+        if self.memcache.get(node + msg):
+            return
+        self.memcache.set(node + msg, True, expires=300)
         # TG
         self.telegram_connection.send_message(chat_id=self.config.enforce_type(int,
                                                                                self.config.Telegram.NotificationsRoom),
