@@ -83,7 +83,7 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
         self.aprs_is.sendall(packet)
 
     def send_text(self, to, message):
-        packet = '{0!s}>APDR15,WIDE1-1,WIDE2-2::{1!s}:{2!s}'.format(self.config.APRS.Callsign, to, message)
+        packet = '{0!s}>APDR15,WIDE1-1,WIDE2-2::{1!s} :{2!s}'.format(self.config.APRS.Callsign, to, message)
         self.send_packet(packet)
 
     def process(self, packet):

@@ -76,7 +76,9 @@ class TelegramBot:
         self.logger = None
         self.meshtastic_connection = meshtastic_connection
         self.telegram_connection = telegram_connection
+        self.aprs = None
         self.name = 'Telegram Bot'
+
 
         start_handler = CommandHandler('start', self.start)
         node_handler = CommandHandler('nodes', self.nodes)
@@ -110,6 +112,10 @@ class TelegramBot:
 
         echo_handler = MessageHandler(~Filters.command, self.echo)
         dispatcher.add_handler(echo_handler)
+
+
+    def set_aprs(self, aprs):
+        self.aprs = aprs
 
     def set_logger(self, logger: logging.Logger):
         """
@@ -194,6 +200,10 @@ class TelegramBot:
         if not message:
             return
         self.logger.debug(f"{update.effective_chat.id} {full_user} {message}")
+        if message.startswith('APRS-'):
+            to = message.split(' ')[0].lstrip('APRS-').rstrip(':')
+            msg = message.replace(message.split(' ')[0], '').strip()
+            self.aprs.send_text(to, f'{full_user}: {msg}')
         self.meshtastic_connection.send_text(f"{full_user}: {message}")
 
     def shorten_tly(self, long_url):

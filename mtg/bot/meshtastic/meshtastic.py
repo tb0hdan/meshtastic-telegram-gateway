@@ -380,6 +380,14 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
             self.logger.debug(f"Bot duplicate via meshtastic... {msg}")
             return
 
+        long_name = long_name.strip()
+
         self.logger.info(f"MTG-M-BOT: {long_name}: -> {msg}")
+
+        if msg.startswith('APRS-'):
+            to = msg.split(' ')[0].lstrip('APRS-').rstrip(':')
+            new_msg = msg.replace(msg.split(' ')[0], '').strip()
+            self.aprs.send_text(to, f'{long_name}: {new_msg}')
+
         self.telegram_connection.send_message(chat_id=self.config.enforce_type(int, self.config.Telegram.Room),
                                               text=f"{long_name}: {msg}")

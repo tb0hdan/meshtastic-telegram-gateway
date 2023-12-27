@@ -84,6 +84,7 @@ def main(args):
     #
     telegram_bot = TelegramBot(config, meshtastic_connection, telegram_connection)
     telegram_filter = TelegramFilter(database, config, logger)
+    telegram_bot.set_aprs(aprs_streamer)
     telegram_bot.set_filter(telegram_filter)
     telegram_bot.set_logger(logger)
     #
