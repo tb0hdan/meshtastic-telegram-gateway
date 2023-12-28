@@ -35,8 +35,11 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
         self.telegram_connection = None
         self.memcache = Memcache(self.logger)
 
-    def set_telegram_connection(self, tg):
-        self.telegram_connection = tg
+    def set_telegram_connection(self, telegram_connection):
+        """
+        Set telegram connection
+        """
+        self.telegram_connection = telegram_connection
 
     def set_db(self, database):
         """
@@ -82,8 +85,11 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
             return
         self.aprs_is.sendall(packet)
 
-    def send_text(self, to, message):
-        packet = '{0!s}>APDR15,WIDE1-1,WIDE2-2::{1!s:9}:{2!s}'.format(self.config.APRS.Callsign, to, message)
+    def send_text(self, addressee, message):
+        """
+        Send APRS text message
+        """
+        packet = f'{self.config.APRS.Callsign}>APDR15,WIDE1-1,WIDE2-2::{addressee:9}:{message}'
         self.send_packet(packet)
 
     def process(self, packet):
@@ -112,16 +118,7 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
                                               text=f"APRS-{node}: {msg}")
         # Mesh
         self.connection.send_text(f"APRS-{node}: {msg}")
-
         return
-        """
-        record = self.database.get_normalized_node(node)
-        if record and self.connection:
-            msg = ''.join(msg.split(":")[1:]).strip()
-            msg = f'APRS {packet.get("from")}: {msg}'
-            self.logger.info(f'Sending from APRS: {record.nodeId} -> {msg}')
-            self.connection.send_text(msg, destinationId=record.nodeId)
-        """
 
     @staticmethod
     def callback(packet):

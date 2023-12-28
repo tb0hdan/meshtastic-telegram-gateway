@@ -81,10 +81,11 @@ class MeshtasticConnection:
         :param kwargs:
         :return:
         """
-        if len(msg) < mesh_pb2.Constants.DATA_PAYLOAD_LEN // 2:
+        if len(msg) < mesh_pb2.Constants.DATA_PAYLOAD_LEN // 2:  # pylint:disable=no-member
             with self.lock:
                 self.interface.sendText(msg, **kwargs)
                 return
+        # pylint:disable=no-member
         split_message(msg, mesh_pb2.Constants.DATA_PAYLOAD_LEN // 2, self.interface.sendText, **kwargs)
         return
 
@@ -297,6 +298,9 @@ class MeshtasticConnection:
                         self.reset_db()
 
     def shutdown(self):
+        """
+        Stop Meshtastic connection
+        """
         self.exit = True
 
     def run(self):

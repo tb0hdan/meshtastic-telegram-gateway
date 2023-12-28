@@ -167,6 +167,9 @@ class MeshtasticDB:
     @staticmethod
     @db_session
     def get_normalized_node(node_name: AnyStr):
+        """
+        get_normalized_node - get normalized node name
+        """
         for node_record in MeshtasticNodeRecord.select():
             normalized = re.sub('[^A-Za-z0-9-]+', '', node_record.nodeName)
             if len(normalized) == 0:
@@ -221,6 +224,9 @@ class MeshtasticDB:
 
     @db_session
     def get_node_info(self, node_id: str):
+        """
+        get_node_info - get node info
+        """
         node_record = MeshtasticNodeRecord.select(lambda n: n.nodeId == node_id).first()
         if not node_record:
             raise RuntimeError(f'node {node_id} not found')

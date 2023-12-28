@@ -45,4 +45,7 @@ class TelegramConnection:
         return self.updater.dispatcher
 
     def shutdown(self):
+        """
+        Stop Telegram bot
+        """
         self.updater.stop()

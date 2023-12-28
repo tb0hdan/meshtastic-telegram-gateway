@@ -50,6 +50,9 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         self.aprs = None
 
     def set_aprs(self, aprs):
+        """
+        Set APRS connection
+        """
         self.aprs = aprs
 
     def set_logger(self, logger: logging.Logger):
@@ -169,6 +172,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         payload = str.encode("test string")
         self.meshtastic_connection.send_data(payload,
                                              MESHTASTIC_BROADCAST_ADDR,
+                                             # pylint:disable=no-member
                                              portNum=meshtastic_portnums_pb2.PortNum.REPLY_APP,
                                              wantAck=True, wantResponse=True)
 
@@ -385,9 +389,9 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         self.logger.info(f"MTG-M-BOT: {long_name}: -> {msg}")
 
         if msg.startswith('APRS-'):
-            to = msg.split(' ')[0].lstrip('APRS-').rstrip(':')
+            addressee = msg.split(' ')[0].lstrip('APRS-').rstrip(':')
             new_msg = msg.replace(msg.split(' ')[0], '').strip()
-            self.aprs.send_text(to, f'{long_name}: {new_msg}')
+            self.aprs.send_text(addressee, f'{long_name}: {new_msg}')
 
         self.telegram_connection.send_message(chat_id=self.config.enforce_type(int, self.config.Telegram.Room),
                                               text=f"{long_name}: {msg}")

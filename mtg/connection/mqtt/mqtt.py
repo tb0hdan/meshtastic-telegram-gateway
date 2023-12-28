@@ -12,7 +12,7 @@ from setproctitle import setthreadtitle
 #
 
 
-class MQTT:
+class MQTT:  # pylint:disable=too-many-instance-attributes
     """
     MQTT - MQTT connection class
     """
@@ -98,6 +98,9 @@ class MQTT:
                 time.sleep(10)
 
     def shutdown(self):
+        """
+        shutdown - MQTT shutdown method
+        """
         self.client.disconnect()
         self.exit = True
 

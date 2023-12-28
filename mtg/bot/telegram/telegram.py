@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """ Telegram bot module """
-import requests
 
-import json
 import functools
 import logging
 import os
@@ -10,7 +8,6 @@ import pkg_resources
 import re
 import tempfile
 import time
-import subprocess
 #
 from threading import Thread
 from urllib.parse import urlparse
@@ -64,7 +61,7 @@ def check_room(func):
     return wrapper
 
 
-class TelegramBot:
+class TelegramBot:  # pylint:disable=too-many-public-methods
     """
     Telegram bot
     """
@@ -90,9 +87,6 @@ class TelegramBot:
         resetdb_handler = CommandHandler('reset_db', self.reset_db)
         traceroute_handler = CommandHandler('traceroute', self.traceroute)
         routes_handler = CommandHandler('routes', self.routes)
-        tempo_handler =  CommandHandler('tempo', self.tempo)
-        update_handler =  CommandHandler('update', self.update)
-
 
 
         dispatcher = self.telegram_connection.dispatcher
@@ -107,14 +101,16 @@ class TelegramBot:
         dispatcher.add_handler(resetdb_handler)
         dispatcher.add_handler(traceroute_handler)
         dispatcher.add_handler(routes_handler)
-        dispatcher.add_handler(tempo_handler)
-        dispatcher.add_handler(update_handler)
+
 
         echo_handler = MessageHandler(~Filters.command, self.echo)
         dispatcher.add_handler(echo_handler)
 
 
     def set_aprs(self, aprs):
+        """
+        Set APRS connection
+        """
         self.aprs = aprs
 
     def set_logger(self, logger: logging.Logger):
@@ -136,6 +132,9 @@ class TelegramBot:
         self.filter = filter_class
 
     def shorten_p(self, long_url) -> str:
+        """
+        Shorten URL using configured service
+        """
         if self.config.WebApp.ShortenerService == 'pls':
             short_url = self.shorten_pls(long_url)
         elif self.config.WebApp.ShortenerService == 'tly':
@@ -147,9 +146,7 @@ class TelegramBot:
     def shorten_in_text(self, message) -> str:
         """
         Shorten URLs in text messages
-
         """
-        result = ''
         splits = message.split(' ')
         replacements = {}
         for pos, part in enumerate(splits):
@@ -201,12 +198,15 @@ class TelegramBot:
             return
         self.logger.debug(f"{update.effective_chat.id} {full_user} {message}")
         if message.startswith('APRS-'):
-            to = message.split(' ')[0].lstrip('APRS-').rstrip(':')
+            addressee = message.split(' ')[0].lstrip('APRS-').rstrip(':')
             msg = message.replace(message.split(' ')[0], '').strip()
-            self.aprs.send_text(to, f'{full_user}: {msg}')
+            self.aprs.send_text(addressee, f'{full_user}: {msg}')
         self.meshtastic_connection.send_text(f"{full_user}: {message}")
 
     def shorten_tly(self, long_url):
+        """
+        Shorten URL using t.ly
+        """
         tly_token = self.config.WebApp.TLYToken
         url = 'https://t.ly/api/v1/link/shorten'
         headers = {
@@ -214,10 +214,13 @@ class TelegramBot:
               'Content-Type': 'application/json',
               'Accept': 'application/json'
         }
-        response = requests.request('POST', url, headers=headers, json={'long_url': long_url})
+        response = requests.request('POST', url, headers=headers, json={'long_url': long_url}, timeout=10)
         return response.json().get('short_url')
 
     def shorten_pls(self, long_url):
+        """
+        Shorten URL using pls.st
+        """
         token = self.config.WebApp.PLSST
         url = 'https://pls.st/api/v1/a/links/shorten'
         headers = {
@@ -225,7 +228,7 @@ class TelegramBot:
               'Content-Type': 'application/json',
               'Accept': 'application/json'
         }
-        response = requests.request('POST', url, headers=headers, json={'url': long_url})
+        response = requests.request('POST', url, headers=headers, json={'url': long_url}, timeout=10)
         return response.json().get('short_url')
 
 
@@ -250,50 +253,6 @@ class TelegramBot:
         chat_id = update.effective_chat.id
         self.logger.info(f"Got /start from {chat_id}")
         context.bot.send_message(chat_id=chat_id, text="I'm a bot, please talk to me!")
-
-    @check_room
-    def tempo(self, update: Update, context: CallbackContext) -> None:
-        """
-        Telegram /tempo command handler.
-
-        :param update:
-        :param context:
-        :return:
-        """
-        chat_id = update.effective_chat.id
-        os.system('/usr/bin/python3 /home/meshtasticpt/scripts/meteo/all.py > /tmp/tempo.txt')
-        os.system ('/usr/bin/cat /tmp/tempo.txt')
-
-        out2 = subprocess.check_output(["/usr/bin/cat /tmp/tempo.txt"], shell=True)
-        out2 = ou2.decode('utf-8')
-        print(type(out2))
-    #    try:
-    #		encoded = out2.encode('utf-8')
-   # 		print(encoded) # 👉️ b'bobbyhadz.com'
-    #		print(type(encoded))  # 👉️ <class 'bytes'>
-#	except AttributeError:
- #   		pass
-        def json_serializer(obj):
-            if isinstance(obj, bytes):
-               return obj.decode('utf-8')
-
-            return obj
-
-
-        json_str = json.dumps(out2, default=json_serializer)
-
-        print(json_str)  # "hello world"
-        print(type(json_str))  # <class 'str'>
-        print('DOne')
-
-#        proc = subprocess.Popen(['/usr/bin/cat', '/tmp/tempo.txt'],stdout=subprocess.PIPE, shell=True)
-#        (out, err) = proc.communicate()
-#        print("program output:", out)
- 
-
-        self.logger.info(f"Got /tempo from {chat_id}")
-        context.bot.send_message(chat_id=chat_id, text=json_str)
-        context.bot.send_message(chat_id=chat_id, text=type(json_str))
 
     @check_room
     def reboot(self, update: Update, context: CallbackContext) -> None:
@@ -423,94 +382,12 @@ class TelegramBot:
         :return:
         """
         msg = 'Map link not enabled'
-        map = '''Mapa Principal
-http://map.meshtastic.pt
-
-Mapa do Bot
-'''
-        map2 = '''
-
-Mapa Grafana
-http://grafana.meshtastic.pt:3000/
-(Username/Password: meshtastic)'''
-
         if self.config.enforce_type(bool, self.config.Telegram.MapLinkEnabled):
             msg = self.config.enforce_type(str, self.config.Telegram.MapLink)
         context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text=map+msg+map2)
+                                 text=msg)
 
     @check_room
-
-    def update(self, update: Update, context: CallbackContext) -> None:
-            url = 'https://github.com/meshtastic/firmware/releases/latest'
-            r = requests.get(url)
-            version = r.url.split('/')[-1]
-            os.system("""curl --silent https://github.com/meshtastic/firmware/tags | more | grep -A 1 /meshtastic/firmware/releases/tag/v | head -1| grep -o -P '(?<=href="/).*(?=" data-view-component="true" class="Link--primary)' | sed  's/meshtastic\/firmware\/releases\/tag\///g' > /tmp/firmware.vrs""")
-            os.system("""curl --silent https://github.com/meshtastic/Meshtastic-Android/tags | more | grep -A 1 /meshtastic/Meshtastic-Android/releases/tag/ | head -1| grep -o -P '(?<=href="/).*(?=" data-view-component="true" class="Link--primary)' | sed  's/meshtastic\/Meshtastic-Android\/releases\/tag\///g' > /tmp/Meshtastic-Android.vrs""")
-            #sm1 = os.system('cat /tmp/firmware.vrs')
-            p = subprocess.Popen('cat /tmp/firmware.vrs', stdout=subprocess.PIPE, shell=True)
-            (output, err) = p.communicate()
-            p_status = p.wait()
-            sm2 = f'Meshtastic Firmware Beta: ' + version + ''' (Versão Estável)\n'''
-            output = output.decode("utf-8")
-#https://github.com/meshtastic/firmware/releases/latest
-
-
-            sm3 = f'Ultima Versão: ' + str(output) + '''https://github.com/meshtastic/firmware/releases
-
-'''
-            sms = sm2+sm3
-
-            url = 'https://github.com/meshtastic/Meshtastic-Android/releases/latest'
-            r = requests.get(url)
-            version = r.url.split('/')[-1]
-            sms2A = f'Meshtastic App Android Beta: ' + version + ''' (Versão Estável)\n'''
-            p = subprocess.Popen('cat /tmp/Meshtastic-Android.vrs', stdout=subprocess.PIPE, shell=True)
-            (output, err) = p.communicate()
-            p_status = p.wait()
-            output = output.decode("utf-8")
-            sm3 = f'Ultima Versão: ' + str(output) + '''https://github.com/meshtastic/Meshtastic-Android/releases
-
-'''
-            smsA = sms2A+sm3
-
-            print(str(output))
-            print(str(output))
-            print(str(output))
-
-#https://github.com/meshtastic/Meshtastic-Android/releases/latest
-
-
-            url = 'https://github.com/meshtastic/python/releases/latest'
-            r = requests.get(url)
-            version = r.url.split('/')[-1]
-            sms3 = f'Meshtastic Python CLI: ' + version + ''' (Versão Estável)
-https://github.com/meshtastic/python/releases
-
-'''
-
-#https://github.com/meshtastic/python/releases/latest
-
-
-            url = 'https://github.com/meshtastic/c-sharp/releases/latest'
-            r = requests.get(url)
-            version = r.url.split('/')[-1]
-            sms4 = f'Meshtastic CLI Preview: ' + version + ''' (Versão Estável)
-https://github.com/meshtastic/c-sharp/releases
-'''
-
-#https://github.com/meshtastic/c-sharp/releases/latest
-            context.bot.send_message(chat_id=update.effective_chat.id,text=sms+smsA+sms3+sms4)
-
-            self.meshtastic_connection.send_text(sms, destinationId=from_id)
-            self.meshtastic_connection.send_text(smsA, destinationId=from_id)
-            self.meshtastic_connection.send_text(sms3, destinationId=from_id)
-            self.meshtastic_connection.send_text(sms4, destinationId=from_id)
-
-
-    @check_room
-
-
     def nodes(self, update: Update, context: CallbackContext) -> None:
         """
         Returns list of nodes to user
@@ -548,6 +425,9 @@ https://github.com/meshtastic/c-sharp/releases
         thread.start()
 
     def shutdown(self):
+        """
+        Telegram bot shutdown method
+        """
         self.telegram_connection.shutdown()
 
     def run(self):
