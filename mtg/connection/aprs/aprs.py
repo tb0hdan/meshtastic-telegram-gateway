@@ -108,7 +108,9 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
         self.logger.info(f'Got APRS PACKET: {packet}')
         msg = packet.get('message_text')
         node = packet.get('from')
-        self.send_text(node, 'ack' + str(packet.get('msgNo')))
+        msgNo = str(packet.get('msgNo', ''))
+        if msgNo:
+            self.send_text(node, 'ack' + msgNo)
         if self.memcache.get(node + msg):
             return
         self.memcache.set(node + msg, True, expires=300)
