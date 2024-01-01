@@ -15,7 +15,7 @@ class TelegramConnection:
 
     def __init__(self, token: str, logger: logging.Logger):
         self.logger = logger
-        self.updater = Updater(token=token, use_context=True)
+        self.updater = Updater(token=token, )
 
     def send_message(self, *args, **kwargs) -> None:
         """
@@ -33,7 +33,7 @@ class TelegramConnection:
 
         :return:
         """
-        self.updater.start_polling()
+        self.application.run_polling()
 
     @property
     def dispatcher(self) -> telegram.ext.Dispatcher:
