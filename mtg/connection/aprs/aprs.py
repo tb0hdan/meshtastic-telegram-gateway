@@ -113,6 +113,10 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
             self.send_text(node, 'ack' + msg_no)
         if self.memcache.get(node + msg):
             return
+        # bot functionality
+        if msg.lower() in ['ping', 'test']:
+            self.send_text(node, 'passed')
+        #
         self.memcache.set(node + msg, True, expires=300)
         # TG
         self.telegram_connection.send_message(chat_id=self.config.enforce_type(int,
