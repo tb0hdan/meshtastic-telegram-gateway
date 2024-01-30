@@ -169,7 +169,7 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
             return
         # Support other countries
         if not re.match('^U[R-Z][0-9][A-Z]{2,3}(-[0-9]{1,2})?$', node_name, flags=re.I):
-            self.logger.error('APRS: %s not a ham call-sign', node_name)
+            self.logger.warning('APRS: %s not a ham call-sign', node_name)
             return
         degrees, minutes, seconds = self.dec2sexagesimal(latitude)
         pad_sec = f'{seconds:<02d}'
@@ -187,7 +187,7 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
         room_link = self.config.Telegram.RoomLink
         aprs_packet = f"{node_name}>APRS,TCPIP*:@{timestamp}/{coordinates}-/A={altitude:06d} Forwarded for {room_link}"
         self.aprs_is.sendall(aprs_packet)
-        self.logger.error('APRS: %s', aprs_packet)
+        self.logger.warning('APRS: %s', aprs_packet)
 
     def run_loop(self):
         """
