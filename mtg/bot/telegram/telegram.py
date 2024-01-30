@@ -154,7 +154,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
                 replacements[pos] = self.shorten_p(part)
         for pos in replacements:
             splits[pos] = replacements.get(pos)
-        return ' '.join([x for x in r if x])
+        return ' '.join([x for x in splits if x])
 
     def echo(self, update: Update, _) -> None:
         """
