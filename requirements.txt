@@ -6,7 +6,7 @@ meshtastic~=2.2.19
 openai==1.10.0
 paho-mqtt==1.6.1
 pypng==0.20220715.0
-python-telegram-bot==13.15
+python-telegram-bot==20.8
 Pypubsub~=4.0.3
 PyQRCode~=1.2.1
 pony~=0.7.17
