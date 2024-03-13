@@ -3,7 +3,7 @@ flask~=3.0.2
 haversine~=2.8.1
 humanize~=4.9.0
 meshtastic~=2.2.22
-openai==1.10.0
+openai==1.14.0
 paho-mqtt==1.6.1
 pypng==0.20220715.0
 python-telegram-bot==13.15
