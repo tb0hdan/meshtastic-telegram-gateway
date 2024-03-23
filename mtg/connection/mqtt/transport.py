@@ -1,7 +1,6 @@
 #-*- coding: utf-8 -*-
 """ MQTT to Radio emulation transport module """
 
-import socket
 import time
 from threading import Thread
 
@@ -14,6 +13,7 @@ from google.protobuf import json_format
 
 from getmac import get_mac_address as gma
 
+from .common import CommonMQTT
 
 class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attributes
     """
@@ -29,7 +29,7 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         self.cfg = cfg
         self.logger = logger
         self.connection_thread = None
-        self.client = None
+        self.name = "MQTT Interface"
         #
         self.topic = (
             self.cfg.MQTT.Topic
@@ -41,44 +41,35 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         self.my_hw_hex_id = f'!{self.my_hw_node_id}'
         self.my_hw_int_id = int(f'0x{self.my_hw_node_id}', base=16)
         #
+        self.client = mqtt.Client()
+        self.client.on_message = self.on_message
+        self.client.on_connect = self.on_connect
+        self.client.username_pw_set(self.cfg.MQTT.User, self.cfg.MQTT.Password)
+        #
+        self.common = CommonMQTT(self.name)
+        self.common.set_client(self.client)
+        self.common.set_logger(logger)
+        self.common.set_config(cfg)
+        #
         StreamInterface.__init__(
             self, debugOut=debugOut, noProto=noProto, connectNow=connectNow
         )
+        #super().__init__(debugOut=debugOut, noProto=noProto, connectNow=connectNow)
+
 
     def close(self):
         """Close a connection to the device"""
         self.logger.info("Closing MQTT connection")
         StreamInterface.close(self)
         self._wantExit = True
+        self.common.set_exit(True)
 
     def connect(self):
         """Connect to MQTT and emulate device"""
         if not self.cfg.MQTT.Enabled:
             return
-        self.connection_thread = Thread(target=self.run_loop, daemon=True)
+        self.connection_thread = Thread(target=self.common.run_loop, daemon=True)
         self.connection_thread.start()
-
-    def run_loop(self):
-        """
-        run_loop - MQTT loop runner
-
-        :return:
-        """
-        self.client = mqtt.Client()
-        self.client.on_message = self.on_message
-        self.client.on_connect = self.on_connect
-        self.client.username_pw_set(self.cfg.MQTT.User, self.cfg.MQTT.Password)
-        while not self._wantExit:
-            try:
-                self.client.connect(self.cfg.MQTT.Host, int(self.cfg.MQTT.Port), 60)
-            except socket.timeout:
-                self.logger.error('Connect timeout...')
-                time.sleep(10)
-            try:
-                self.client.loop_forever()
-            except TimeoutError:
-                self.logger.error('Loop timeout...')
-                time.sleep(10)
 
     def on_message(self, _client, _userdata, msg):
         """
@@ -93,6 +84,10 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         full = json_format.MessageToDict(mqtt_incoming.packet)
         # drop our messages
         if full['from'] == self.my_hw_int_id:
+            return
+        #
+        if not full.get('decoded', None):
+            self.logger.error("No decoded message in MQTT message")
             return
         #
         new_packet = {
