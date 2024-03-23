@@ -462,4 +462,5 @@ class WebServer:  # pylint:disable=too-few-public-methods
 
         :return:
         """
-        self.server.shutdown()
+        if self.server is not None:
+            self.server.shutdown()

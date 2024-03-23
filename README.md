@@ -167,3 +167,13 @@ Sending commands to Meshtastic device:
 ```angular2html
 $ ./mesh.py command -c reboot
 ```
+
+## Advanced topics
+
+### MQTT-only bot
+
+This bot has experimental support for MQTT-only mode.
+If you want to use the bot without Meshtastic hardware, you need to edit `mqtt.ini` file and
+enable `MQTT` section in `mesh.ini` file.
+
+This requires setting `[Meshtastic]` section `device` to `mqtt`.

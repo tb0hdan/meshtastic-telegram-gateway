@@ -187,11 +187,11 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             photo = sorted(update.message.photo, key=lambda x: x.file_size, reverse=True)[0]
             photo_file = photo.get_file()
             file_path = os.path.basename(urlparse(photo_file.file_path).path)
-            ts = time.strftime('%Y/%m/%d')
-            photo_dir = f'./web/static/t/{ts}'
+            time_stamp = time.strftime('%Y/%m/%d')
+            photo_dir = f'./web/static/t/{time_stamp}'
             os.makedirs(photo_dir, exist_ok=True)
             photo_file.download(f'{photo_dir}/{file_path}')
-            long_url = f'{self.config.WebApp.ExternalURL}/static/t/{ts}/{file_path}'
+            long_url = f'{self.config.WebApp.ExternalURL}/static/t/{time_stamp}/{file_path}'
             short_url = self.shorten_p(long_url)
             message += f"sent image: {short_url}"
             self.logger.info(message)
