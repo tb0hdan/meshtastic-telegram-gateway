@@ -96,7 +96,7 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
             'decoded': full['decoded'],
             'id': full['id'],
             'rxTime': full['rxTime'],
-            'hopLimit': full['hopLimit'],
+            'hopLimit': full.get('hopLimit', 3),
             'viaMqtt': True,
         }
         # Create final message. Convert it to protobuf
