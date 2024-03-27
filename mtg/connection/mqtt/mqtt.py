@@ -1,16 +1,10 @@
 # -*- coding: utf-8 -*-
 """ MQTT connection module """
 
-import socket
-import time
-#
 from threading import Thread
 #
 import paho.mqtt.client as mqtt
-# pylint:disable=no-name-in-module
-from setproctitle import setthreadtitle
-#
-
+from .common import CommonMQTT
 
 class MQTT:  # pylint:disable=too-many-instance-attributes
     """
@@ -35,6 +29,10 @@ class MQTT:  # pylint:disable=too-many-instance-attributes
         self.name = 'MQTT Connection'
         # exit
         self.exit = False
+        #
+        self.common = CommonMQTT(self.name)
+        self.common.set_client(self.client)
+        self.common.set_logger(logger)
 
     def set_config(self, config):
         """
@@ -44,6 +42,7 @@ class MQTT:  # pylint:disable=too-many-instance-attributes
         :return:
         """
         self.config = config
+        self.common.set_config(config)
 
     def on_connect(self, client, _userdata, _flags, result_code):
         """
@@ -79,31 +78,13 @@ class MQTT:  # pylint:disable=too-many-instance-attributes
         """
         self.handler = handler
 
-    def run_loop(self):
-        """
-        run_loop - MQTT loop runner
-
-        :return:
-        """
-        setthreadtitle(self.name)
-        while not self.exit:
-            try:
-                self.client.connect(self.host, self.port, 60)
-            except socket.timeout:
-                self.logger.error('Connect timeout...')
-                time.sleep(10)
-            try:
-                self.client.loop_forever()
-            except TimeoutError:
-                self.logger.error('Loop timeout...')
-                time.sleep(10)
-
     def shutdown(self):
         """
         shutdown - MQTT shutdown method
         """
         self.client.disconnect()
         self.exit = True
+        self.common.set_exit(True)
 
     def run(self):
         """
@@ -113,5 +94,5 @@ class MQTT:  # pylint:disable=too-many-instance-attributes
         """
         if self.config.enforce_type(bool, self.config.MQTT.Enabled):
             self.logger.info('Starting MQTT client...')
-            thread = Thread(target=self.run_loop, daemon=True, name=self.name)
+            thread = Thread(target=self.common.run_loop, daemon=True, name=self.name)
             thread.start()

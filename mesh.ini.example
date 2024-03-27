@@ -107,6 +107,7 @@ NodeLogEnabled = false
 NodeLogFile = /tmp/node_log.csv
 FIFOEnabled = false
 WelcomeMessage = Welcome to our community
+WelcomeMessageEnabled = false
 MaxHopCount = 5
 
 [APRS]

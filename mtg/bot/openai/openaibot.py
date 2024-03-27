@@ -11,7 +11,7 @@ class OpenAIBot:
     def __init__(self):
         api_key = os.getenv("OPENAI_API_KEY", default='')
         openai.api_key = api_key
-        self.client = openai.OpenAI() if len(api_key) > 0 else None
+        self.client = openai.OpenAI() if len(api_key) > 0 else None  # pylint:disable=no-member
         self.seed = (
                 "The following is a conversation with an AI assistant. "
                 + "The assistant is helpful, creative, clever, and very friendly.\n\n"

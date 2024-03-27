@@ -23,6 +23,7 @@ from meshtastic import (
 from setproctitle import setthreadtitle
 
 from mtg.utils import create_fifo, split_message
+from mtg.connection.mqtt import MQTTInterface
 
 FIFO = '/tmp/mtg.fifo'
 FIFO_CMD = '/tmp/mtg.cmd.fifo'
@@ -63,15 +64,14 @@ class MeshtasticConnection:
 
         :return:
         """
-        self.interface = (
-            meshtastic_tcp_interface.TCPInterface(
-                self.dev_path.lstrip('tcp:'), debugOut=sys.stdout
-            )
-            if self.dev_path.startswith('tcp:')
-            else meshtastic_serial_interface.SerialInterface(
-                devPath=self.dev_path, debugOut=sys.stdout
-            )
-        )
+        if self.dev_path.startswith('tcp:'):
+            self.interface = meshtastic_tcp_interface.TCPInterface(self.dev_path.removeprefix('tcp:'),
+                                                                   debugOut=sys.stdout)
+        elif self.dev_path == 'mqtt':
+            self.interface = MQTTInterface(debugOut=sys.stdout, cfg=self.config, logger=self.logger)
+        else:
+            self.interface = meshtastic_serial_interface.SerialInterface(devPath=self.dev_path, debugOut=sys.stdout)
+
 
     def send_text(self, msg, **kwargs) -> None:
         """

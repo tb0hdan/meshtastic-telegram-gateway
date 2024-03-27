@@ -3,3 +3,4 @@
 
 from .handler import MQTTHandler
 from .mqtt import MQTT
+from .transport import MQTTInterface
