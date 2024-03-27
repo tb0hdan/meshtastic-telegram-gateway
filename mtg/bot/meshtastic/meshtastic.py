@@ -24,6 +24,7 @@ from mtg.filter import MeshtasticFilter
 from mtg.geo import get_lat_lon_distance
 from mtg.log import VERSION
 from mtg.output.file import CSVFileWriter
+from mtg.utils import Memcache
 
 
 class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
@@ -48,6 +49,9 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         self.bot_handler = bot_handler
         # aprs
         self.aprs = None
+        # cache
+        self.memcache = Memcache(self.logger)
+        self.memcache.run_noblock()
 
     def set_aprs(self, aprs):
         """
@@ -386,7 +390,13 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
             return
 
         long_name = long_name.strip()
-
+        # Do cache check
+        key = f"{long_name}:{msg}"
+        if self.memcache.get_ex(key):
+            self.logger.debug(f"Cache hit for {key}")
+            return
+        self.memcache.set(key, True, expires=300)
+        #
         self.logger.info(f"MTG-M-BOT: {long_name}: -> {msg}")
 
         if msg.startswith('APRS-'):
