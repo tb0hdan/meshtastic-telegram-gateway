@@ -86,8 +86,8 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
             return
 
         full = json_format.MessageToDict(mqtt_incoming.packet)
-        # drop our messages
-        if full['from'] == self.my_hw_int_id:
+        # drop our messages or messages without from
+        if not full.get('from') or full.get('from', 0) == self.my_hw_int_id:
             return
         # drop encrypted messages
         if full.get('encrypted'):
@@ -102,7 +102,7 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
             'to': full['to'],
             'decoded': full['decoded'],
             'id': full['id'],
-            'rxTime': full['rxTime'],
+            'rxTime': full.get('rxTime', int(time.time())),
             'hopLimit': full.get('hopLimit', 3),
             'viaMqtt': True,
         }

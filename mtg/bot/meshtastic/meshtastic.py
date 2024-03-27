@@ -67,6 +67,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         :return:
         """
         self.logger = logger
+        self.memcache.set_logger(logger)
         self.writer.set_logger(self.logger)
 
     def set_filter(self, filter_class: MeshtasticFilter):
