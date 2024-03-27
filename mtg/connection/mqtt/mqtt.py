@@ -16,7 +16,8 @@ class MQTT:  # pylint:disable=too-many-instance-attributes
     """
     MQTT - MQTT connection class
     """
-    def __init__(self, host, user, password, logger, port=1883):  # pylint:disable=too-many-arguments
+    def __init__(self, topic, host, user, password, logger, port=1883):  # pylint:disable=too-many-arguments
+        self.topic = topic
         self.client = mqtt.Client()
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
@@ -55,7 +56,7 @@ class MQTT:  # pylint:disable=too-many-instance-attributes
         :return:
         """
         self.logger.info(f"Connected with result code {str(result_code)}")
-        client.subscribe('msh/#')
+        client.subscribe(f'{self.topic}/#')
 
     def on_message(self, _client, _userdata, msg):
         """

@@ -136,6 +136,8 @@ Password = QwertyLOL123
 # pl: Włącz funkcję MQTT. dla mapy. Logiczne.
 # pt: Ative a funcionalidade MQTT. Para mapa. Boleano.
 Enabled = false
+# en: MQTT root. String
+Topic = msh
 # en: MQTT Host. String.
 # pl: Nazwa hosta MQTT. Strunowy.
 # pt: Nome do host MQTT. Fragmento.
