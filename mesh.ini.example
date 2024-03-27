@@ -139,6 +139,8 @@ Password = QwertyLOL123
 Enabled = false
 # en: MQTT root. String
 Topic = msh
+# en: Channel. String
+Channel = LongFast
 # en: MQTT Host. String.
 # pl: Nazwa hosta MQTT. Strunowy.
 # pt: Nome do host MQTT. Fragmento.
