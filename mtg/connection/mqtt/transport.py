@@ -75,6 +75,10 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         """
         on_message - MQTT callback for message event
         """
+        # skip node status messages
+        if msg.payload in [b'online', b'offline']:
+            return
+        #
         try:
             mqtt_incoming = mqtt_pb2.ServiceEnvelope().FromString(msg.payload)  # pylint:disable=no-member
         except Exception as exc:  # pylint:disable=broad-except
@@ -82,20 +86,23 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
             return
 
         full = json_format.MessageToDict(mqtt_incoming.packet)
-        # drop our messages
-        if full['from'] == self.my_hw_int_id:
+        # drop our messages or messages without from
+        if not full.get('from') or full.get('from', 0) == self.my_hw_int_id:
             return
-        #
+        # drop encrypted messages
+        if full.get('encrypted'):
+            return
+        # drop messages without decoded
         if not full.get('decoded', None):
-            self.logger.error("No decoded message in MQTT message")
+            self.logger.error("No decoded message in MQTT message: %s", full)
             return
-        #
+        # Reassemble message
         new_packet = {
             'from': full['from'],
             'to': full['to'],
             'decoded': full['decoded'],
             'id': full['id'],
-            'rxTime': full['rxTime'],
+            'rxTime': full.get('rxTime', int(time.time())),
             'hopLimit': full.get('hopLimit', 3),
             'viaMqtt': True,
         }

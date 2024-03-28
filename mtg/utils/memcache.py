@@ -20,6 +20,12 @@ class Memcache:
         self.logger = logger
         self.cache = {}
 
+    def set_logger(self, logger):
+        """
+        set_logger - set logger (for lazy init)
+        """
+        self.logger = logger
+
     def get(self, key) -> Any:
         """
         get - get data by key

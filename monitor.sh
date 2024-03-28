@@ -14,8 +14,9 @@ while :; do
         if [ "${mesh_pid}" != "" ]; then
             kill ${mesh_pid}
         fi
+        #
         acm_pid=$(lsof -n|grep ${DEVICE}|awk '{print $2}')
-        if [ "${acm_pid}" != "" ]; then
+        if [ "${acm_pid}" != "" ] && [ "${DEVICE}" != "mqtt" ]; then
             kill -9 ${acm_pid}
         fi
     fi

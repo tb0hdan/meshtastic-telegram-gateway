@@ -9,7 +9,8 @@ class MQTTHandler:
     MQTTHandler - handles MQTT packets and does some specific filtering
     """
 
-    def __init__(self, logger):
+    def __init__(self, topic, logger):
+        self.topic = topic
         self.logger = logger
         self.node_callback = None
         self.filter = None
@@ -32,7 +33,7 @@ class MQTTHandler:
         if self.filter and self.filter.banned(node):
             self.logger.debug(f"User {node} is in a blacklist...")
             return
-        if self.node_callback is not None and topic.startswith('msh/2/stat/'):
+        if self.node_callback is not None and topic.startswith('{self.topic}/2/stat/'):
             self.node_callback(node, payload)
 
     def set_node_callback(self, callback):

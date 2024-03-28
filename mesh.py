@@ -67,10 +67,10 @@ def main(args):
     database.set_meshtastic(meshtastic_connection)
     meshtastic_connection.connect()
     #
-    mqtt_connection = MQTT(config.MQTT.Host, config.MQTT.User, config.MQTT.Password,
+    mqtt_connection = MQTT(config.MQTT.Topic, config.MQTT.Host, config.MQTT.User, config.MQTT.Password,
                            logger, config.enforce_type(int, config.MQTT.Port))
     mqtt_connection.set_config(config)
-    mqtt_handler = MQTTHandler(logger)
+    mqtt_handler = MQTTHandler(config.MQTT.Topic, logger)
     mqtt_connection.set_handler(mqtt_handler.handler)
     mqtt_handler.set_node_callback(meshtastic_connection.on_mqtt_node)
     #
