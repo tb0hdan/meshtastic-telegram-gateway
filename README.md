@@ -6,7 +6,7 @@
 
 *Read this in other languages: [English](README.md), [Polski](README.pl.md), [Português](README.pt.md)*
 
-telegram bot that forwards messages to and from Meshtastic device
+Telegram bot that forwards messages to and from Meshtastic device
 
 The purpose of this bot is to act as a bridge between local Meshtastic conference and
 Telegram chat room. Nicks (Your Name field for Meshtastic) are passed through in both directions.
