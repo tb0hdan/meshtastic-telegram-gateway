@@ -1,6 +1,7 @@
 #-*- coding: utf-8 -*-
 """ MQTT to Radio emulation transport module """
 
+import json
 import time
 from threading import Thread
 
@@ -54,8 +55,6 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         StreamInterface.__init__(
             self, debugOut=debugOut, noProto=noProto, connectNow=connectNow
         )
-        #super().__init__(debugOut=debugOut, noProto=noProto, connectNow=connectNow)
-
 
     def close(self):
         """Close a connection to the device"""
@@ -77,6 +76,14 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         """
         # skip node status messages
         if msg.payload in [b'online', b'offline']:
+            return
+        # skip json messages for now
+        json_msg = ''
+        try:
+            json_msg = json.loads(msg.payload)
+        except Exception:  # pylint:disable=broad-exception-caught
+            pass
+        if len(json_msg) > 0:
             return
         #
         try:
