@@ -293,6 +293,15 @@ class RenderAirRaidView(CommonView):  # pylint:disable=too-many-instance-attribu
             chat_id = self.config.enforce_type(int, self.config.Telegram.NotificationsRoom)
             self.telegram_connection.send_message(chat_id=chat_id,
                                                   text=new_msg)
+        Thread(target=self.slow_alert, args=(alert_place, new_msg)).start()
+        return 'Ok'
+
+    def slow_alert(self, alert_place, new_msg):
+        """
+        slow_alert - slowly send air raid alerts
+
+        :return:
+        """
         for node in self.meshtastic_connection.nodes_with_position:
             user = node.get('user', {})
             node_id = user.get('id')
@@ -305,8 +314,8 @@ class RenderAirRaidView(CommonView):  # pylint:disable=too-many-instance-attribu
             self.logger.info(f"{node_id},{name},{position} {alert_place}")
             if translated == alert_place:
                 self.logger.info(f"Sending alert to {node_id}....")
+                time.sleep(1)
                 self.meshtastic_connection.send_text(new_msg, destinationId=node_id)
-        return 'Ok'
 
 
 class WebApp:  # pylint:disable=too-few-public-methods
