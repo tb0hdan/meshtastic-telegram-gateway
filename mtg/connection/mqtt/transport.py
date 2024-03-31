@@ -164,8 +164,11 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         mqtt_msg = json_format.ParseDict(full, new_msg)
 
         mqtt_topic = f"{self.cfg.MQTT.Topic}/2/c/{self.cfg.MQTT.Channel}/{self.my_hw_hex_id}"
-        result = self.client.publish(mqtt_topic, mqtt_msg.SerializeToString())
-        self.logger.info(f"MQTT message sent with result: {result}")
+        for _ in range(3):
+            result = self.client.publish(mqtt_topic, mqtt_msg.SerializeToString())
+            self.logger.info(f"MQTT message sent with result: {result}")
+            # Sleep time for LongFast
+            time.sleep(1)
 
     def waitForConfig(self):
         """Wait for configuration"""
