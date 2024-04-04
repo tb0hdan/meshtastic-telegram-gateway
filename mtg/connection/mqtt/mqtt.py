@@ -67,7 +67,10 @@ class MQTT:  # pylint:disable=too-many-instance-attributes
         :return:
         """
         if self.handler is not None:
-            self.handler(msg.topic, msg.payload)
+            try:
+                self.handler(msg.topic, msg.payload)
+            except Exception as exc:  # pylint:disable=broad-exception-caught
+                self.logger.error('An exception occured in self.handler: %s', repr(exc))
 
     def set_handler(self, handler):
         """
