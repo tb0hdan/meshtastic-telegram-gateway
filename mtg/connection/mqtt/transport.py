@@ -70,9 +70,18 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         self.connection_thread = Thread(target=self.common.run_loop, daemon=True)
         self.connection_thread.start()
 
-    def on_message(self, _client, _userdata, msg):
+    def on_message(self, client, userdata, msg):
         """
         on_message - MQTT callback for message event
+        """
+        try:
+            self.on_message_wrapped(client, userdata, msg)
+        except Exception as exc:  # pylint:disable=broad-exception-caught
+            self.logger.error('Exception in on_message_wrapped: %s', repr(exc))
+
+    def on_message_wrapped(self, _client, _userdata, msg):
+        """
+        on_message_wrapped - safe MQTT callback for message event
         """
         # skip node status messages
         if msg.payload in [b'online', b'offline']:
