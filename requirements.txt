@@ -1,5 +1,5 @@
 aprslib==0.7.2
-flask~=3.0.2
+flask~=3.0.3
 getmac==0.9.4
 haversine~=2.8.1
 humanize~=4.9.0
