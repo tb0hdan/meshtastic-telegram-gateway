@@ -14,7 +14,7 @@ from importlib import import_module  # pylint:disable=wrong-import-position
 from .exc import log_exception  # pylint:disable=wrong-import-position
 
 
-def list_commands(logger, package='a.b.commands', base_class='BaseCommand') -> list:    # pylint:disable=too-many-locals
+def list_classes(logger, package='a.b.classes', base_class='BaseClass') -> list:    # pylint:disable=too-many-locals
     """
     Return list of command classes
 
@@ -40,7 +40,7 @@ def list_commands(logger, package='a.b.commands', base_class='BaseCommand') -> l
                 objects = dir(module)
             # pylint:disable=broad-except
             except Exception as exc:
-                log_exception(logger, exc, description='imp.list_commands failed with: ')
+                log_exception(logger, exc, description='imp.list_classes failed with: ')
                 objects = []
             if not objects:
                 continue
