@@ -48,8 +48,8 @@ class ITUPrefix:
         countries = self.get_prefixes()
         if len(countries) == 0:
             return None
-        for name, prefixes in countries.items():
+        for _, prefixes in countries.items():
             for prefix in prefixes:
                 if callsign.upper().startswith(prefix):
-                    return countries[name]
+                    return prefixes
         return None
