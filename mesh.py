@@ -27,7 +27,7 @@ from mtg.log import setup_logger, LOGFORMAT
 from mtg.utils import create_fifo
 from mtg.webapp import WebServer
 #
-
+from mtg.utils.rf.prefixes import ITUPrefix
 
 # pylint:disable=too-many-locals,too-many-statements
 def main(args):
@@ -74,7 +74,9 @@ def main(args):
     mqtt_connection.set_handler(mqtt_handler.handler)
     mqtt_handler.set_node_callback(meshtastic_connection.on_mqtt_node)
     #
-    aprs_streamer = APRSStreamer(config)
+    itu_prefix = ITUPrefix(logger)
+    #
+    aprs_streamer = APRSStreamer(config, itu_prefix)
     call_sign_filter = CallSignFilter(database, config, logger)
     aprs_streamer.set_db(database)
     aprs_streamer.set_filter(call_sign_filter)

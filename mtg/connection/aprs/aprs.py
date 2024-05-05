@@ -17,13 +17,14 @@ from setproctitle import setthreadtitle
 from mtg.config import Config
 from mtg.filter import CallSignFilter
 from mtg.utils import Memcache
+from mtg.utils.rf.prefixes import ITUPrefix
 
 class APRSStreamer:  # pylint:disable=too-many-instance-attributes
     """
     APRS streamer
     """
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, itu_prefix: ITUPrefix):
         self.aprs_is = None
         self.filter = None
         self.config = config
@@ -34,6 +35,9 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
         self.connection = None
         self.telegram_connection = None
         self.memcache = Memcache(self.logger)
+        self.itu_prefix = itu_prefix
+        # preload these on start
+        self.prefixes = []
 
     def set_telegram_connection(self, telegram_connection):
         """
@@ -167,10 +171,18 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
         node_name = re.sub('[^A-Za-z0-9-]+', '', node_record.nodeName)
         if len(node_name) == 0:
             return
-        # Support other countries
-        if not re.match('^U[R-Z][0-9][A-Z]{2,3}(-[0-9]{1,2})?$', node_name, flags=re.I):
+        #
+        found = False
+        for prefix in self.prefixes:
+            full_reg = f'^{prefix}' + '[0-9][A-Z]{2,3}(-[0-9]{1,2})?$'
+            if re.match(full_reg, node_name, flags=re.I):
+                found = True
+                break
+        #
+        if not found:
             self.logger.warning('APRS: %s not a ham call-sign', node_name)
             return
+        #
         degrees, minutes, seconds = self.dec2sexagesimal(latitude)
         pad_sec = f'{seconds:<02d}'
         letter = 'S' if latitude < 0 else 'N'
@@ -196,9 +208,16 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
         :return:
         """
         setthreadtitle(self.name)
+        country = self.itu_prefix.get_country_by_callsign(self.config.APRS.Callsign)
+        if not country:
+            raise RuntimeError(f'Could not get country for callsign {self.config.APRS.Callsign}')
+        # preload prefixes
+        self.prefixes = self.itu_prefix.get_prefixes_by_callsign(self.config.APRS.Callsign)
+        #
+        self.logger.info(f'Starting APRS for country {country}...')
         self.aprs_is = aprslib.IS(self.config.APRS.Callsign,
                                   self.config.APRS.Password,
-                                  host='euro.aprs2.net',
+                                  host='rotate.aprs2.net',
                                   port=14580)
         f_filter = f"r/{self.config.enforce_type(float, self.config.WebApp.Center_Latitude)}/"
         f_filter += f"{self.config.enforce_type(float, self.config.WebApp.Center_Longitude)}/50"
