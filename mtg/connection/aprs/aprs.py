@@ -175,6 +175,7 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
         found = False
         for prefix in self.prefixes:
             full_reg = f'^{prefix}' + '[0-9][A-Z]{2,3}(-[0-9]{1,2})?$'
+            print(full_reg, node_name)
             if re.match(full_reg, node_name, flags=re.I):
                 found = True
                 break

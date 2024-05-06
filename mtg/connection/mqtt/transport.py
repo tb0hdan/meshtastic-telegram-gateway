@@ -77,7 +77,7 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         try:
             self.on_message_wrapped(client, userdata, msg)
         except Exception as exc:  # pylint:disable=broad-exception-caught
-            self.logger.error('Exception in on_message_wrapped: %s', repr(exc))
+            self.logger.error('Exception in on_message_wrapped: %s -> %s', repr(exc), msg.payload)
 
     def on_message_wrapped(self, _client, _userdata, msg):
         """
@@ -117,7 +117,7 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
             'from': full['from'],
             'to': full['to'],
             'decoded': full['decoded'],
-            'id': full['id'],
+            'id': full.get('id', 0),
             'rxTime': full.get('rxTime', int(time.time())),
             'hopLimit': full.get('hopLimit', 3),
             'viaMqtt': True,
