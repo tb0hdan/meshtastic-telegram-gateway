@@ -184,13 +184,13 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
             return
         #
         degrees, minutes, seconds = self.dec2sexagesimal(latitude)
-        pad_sec = f'{seconds:<02d}'
+        pad_sec = f'{abs(seconds):<02d}'
         letter = 'S' if latitude < 0 else 'N'
-        latitude_packet = f'{abs(degrees)}{minutes}.{pad_sec}{letter}'
+        latitude_packet = f'{abs(degrees)}{abs(minutes)}.{pad_sec}{letter}'
         degrees, minutes, seconds = self.dec2sexagesimal(longitude)
-        pad_v = f'{abs(degrees)}{minutes}'
+        pad_v = f'{abs(degrees)}{abs(minutes)}'
         pad_d = f'{pad_v:>05}'
-        pad_sec = f'{seconds:<02d}'
+        pad_sec = f'{abs(seconds):<02d}'
         letter = 'W' if longitude < 0 else 'E'
         longitude_packet = f'{pad_d}.{pad_sec}{letter}'
         coordinates = f'{latitude_packet}/{longitude_packet}'
