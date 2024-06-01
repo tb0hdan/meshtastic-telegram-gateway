@@ -287,7 +287,6 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         if self.config.enforce_type(bool, self.config.Telegram.MapLinkEnabled):
             map_link = self.config.Telegram.MapLink
             node_int = int(from_id.lstrip('!'), base=16)
-            long_name = long_name.replace(' ', '%20')
             if ('%d' or '%s') in map_link:
                 if '%d' in map_link:
                     map_link = map_link.replace('%d', str(node_int))
@@ -297,6 +296,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
             else:
                 # This is for built-in, though now obsolete map.
                 # Please use https://meshmap.net/ or similar
+                long_name = long_name.replace(' ', '%20')
                 if '?tail=' in map_link:
                     long_name = f'{map_link}&name={long_name}'
                 else:
