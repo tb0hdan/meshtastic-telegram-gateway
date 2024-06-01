@@ -146,7 +146,8 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         Send Meshtastic data message
         """
         packet_to = (
-            int(f"0x{destinationId.removeprefix('!')}", base=16) if destinationId != BROADCAST_ADDR else BROADCAST_NUM
+            # pylint:disable=line-too-long
+            int(f"0x{str(destinationId).removeprefix('!')}", base=16) if destinationId != BROADCAST_ADDR else BROADCAST_NUM
         )
         self.logger.info(f"Sending data to {destinationId} with portNum {portNum} and message {msg}")
         # Create first message without from

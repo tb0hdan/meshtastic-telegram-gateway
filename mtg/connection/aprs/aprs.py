@@ -162,7 +162,11 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
         from_id = packet.get("fromId")
         if not from_id:
             return
-        node_record = self.database.get_node_info(from_id)
+        try:
+            node_record = self.database.get_node_info(from_id)
+        except RuntimeError:
+            self.logger.warning('Node %s not in node DB', from_id)
+            return
         position = packet.get('decoded', {}).get('position', {})
         altitude=int(position.get('altitude', 0) * 3.28084)
         latitude=position.get('latitude', 0)
