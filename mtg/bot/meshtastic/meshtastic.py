@@ -286,11 +286,21 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         # use map URL
         if self.config.enforce_type(bool, self.config.Telegram.MapLinkEnabled):
             map_link = self.config.Telegram.MapLink
+            node_int = int(from_id.lstrip('!'), base=16)
             long_name = long_name.replace(' ', '%20')
-            if '?tail=' in map_link:
-                long_name = f'{map_link}&name={long_name}'
+            if ('%d' or '%s') in map_link:
+                if '%d' in map_link:
+                    map_link = map_link.replace('%d', node_int)
+                if '%s' in map_link:
+                    map_link = map_link.replace('%s', from_id)
+                long_name = f"{long_name} {map_link}"
             else:
-                long_name = f'{map_link}?name={long_name}'
+                # This is for built-in, though now obsolete map.
+                # Please use https://meshmap.net/ or similar
+                if '?tail=' in map_link:
+                    long_name = f'{map_link}&name={long_name}'
+                else:
+                    long_name = f'{map_link}?name={long_name}'
         msg = f"{from_id} -> {long_name}"
         if self.config.enforce_type(bool, self.config.Meshtastic.WelcomeMessageEnabled):
             self.meshtastic_connection.send_text(self.config.Meshtastic.WelcomeMessage, destinationId=from_id)
