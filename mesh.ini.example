@@ -40,7 +40,9 @@ MapLinkEnabled = false
 # en: Respond with following link to `/map` command. Typically your own website with proxy to bot's webapp. String.
 # pl: Odpowiedz za pomocą następującego łącza do polecenia `/map`. Zazwyczaj własna strona internetowa z serwerem proxy do aplikacji internetowej bota. Strunowy.
 # pt: Responda com o seguinte link para o comando `/map`. Normalmente, seu próprio site com proxy para o webapp do bot. Fragmento.
-MapLink = https://yourwebsite.com
+# %%d - int node id
+# %%s - hex node id
+MapLink = https://meshmap.net/#%%d
 NodeIncludeSelf = false
 BotInRooms = true
 

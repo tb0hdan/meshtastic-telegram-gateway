@@ -290,7 +290,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
             long_name = long_name.replace(' ', '%20')
             if ('%d' or '%s') in map_link:
                 if '%d' in map_link:
-                    map_link = map_link.replace('%d', node_int)
+                    map_link = map_link.replace('%d', str(node_int))
                 if '%s' in map_link:
                     map_link = map_link.replace('%s', from_id)
                 long_name = f"{long_name} {map_link}"
