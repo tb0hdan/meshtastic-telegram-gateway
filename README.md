@@ -176,3 +176,11 @@ If you want to use the bot without Meshtastic hardware, you need to edit `mqtt.i
 enable `MQTT` section in `mesh.ini` file.
 
 This requires setting `[Meshtastic]` section `device` to `mqtt`.
+
+### APRS
+
+This bot provides bi-directional text messaging with APRS nodes using APRS-IS. Meshtastic nodes with valid amateur call signs will be announced to 
+APRS network. See 
+
+`[APRS]` configuration section.
+
