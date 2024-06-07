@@ -39,7 +39,9 @@ def main(args):
     config = Config(config_path=args.config)
     config.read()
     level = logging.INFO
+    debug = False
     if config.enforce_type(bool, config.DEFAULT.Debug):
+        debug = True
         level = logging.DEBUG
         sql_debug()
 
@@ -50,7 +52,7 @@ def main(args):
                         integrations=[FlaskIntegration()]
         )
     # warm up reverse cache
-    rg.search((50.5, 30.5))
+    rg.search((50.5, 30.5), verbose=debug)
     # our logger
     logger = setup_logger('mesh', level)
     # meshtastic logger
@@ -90,7 +92,7 @@ def main(args):
     telegram_bot.set_filter(telegram_filter)
     telegram_bot.set_logger(logger)
     #
-    open_ai = OpenAIBot()
+    open_ai = OpenAIBot(logger)
     meshtastic_bot = MeshtasticBot(database, config, meshtastic_connection, telegram_connection, open_ai)
     # set filter for MQTT
     mqtt_handler.set_filter(meshtastic_filter)
@@ -135,7 +137,7 @@ def post2mesh(args):
     :return:
     """
     if args.message is None:
-        print('Cannot send empty message...')
+        logging.error('Cannot send empty message...')
         return
     create_fifo(FIFO)
     with open(FIFO, 'w', encoding='utf-8') as fifo:
@@ -149,7 +151,7 @@ def post_cmd(args):
     :return:
     """
     if args.command is None:
-        print('Cannot send empty command...')
+        logging.error('Cannot send empty command...')
         return
     create_fifo(FIFO_CMD)
     with open(FIFO_CMD, 'w', encoding='utf-8') as fifo:
@@ -180,7 +182,7 @@ def cmd():
     if len(argv) == 0:
         argv = ['run']
     args = parser.parse_args(argv)
-    print(args.func(args))
+    logging.info(args.func(args))
 
 
 if __name__ == '__main__':

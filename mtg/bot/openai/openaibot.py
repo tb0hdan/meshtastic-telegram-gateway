@@ -8,9 +8,10 @@ import openai
 class OpenAIBot:
     """ OpenAI Bot container """
 
-    def __init__(self):
+    def __init__(self, logger):
         api_key = os.getenv("OPENAI_API_KEY", default='')
         openai.api_key = api_key
+        self.logger = logger
         self.client = openai.OpenAI() if len(api_key) > 0 else None  # pylint:disable=no-member
         self.seed = (
                 "The following is a conversation with an AI assistant. "
@@ -44,8 +45,8 @@ class OpenAIBot:
         :return:
         """
         if self.client is None:
-            print('OpenAIBot not initialized...')
+            self.logger.error('OpenAIBot not initialized...')
             return None
         response = self.run_query(user, incoming)
-        print(user, response)
+        self.logger.info(user, response)
         return response.get('choices')[0].get('message').get('content')
