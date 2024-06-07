@@ -68,7 +68,7 @@ class CommonMQTT: # pylint:disable=too-many-instance-attributes
         :return:
         """
         setthreadtitle(self.name)
-        print(f'Connecting to {self.host}:{self.port}...')
+        self.logger.info(f'Connecting to {self.host}:{self.port}...')
         while not self.exit:
             try:
                 self.client.connect(self.host, self.port, 60)

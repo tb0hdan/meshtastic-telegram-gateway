@@ -365,7 +365,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
 
             text = self.bot_handler.get_response(from_id, msg)
             if text:
-                print(f"{from_id}: {msg} -> {text}")
+                self.logger.info(f"{from_id}: {msg} -> {text}")
                 self.meshtastic_connection.send_text(text, destinationId=from_id)
 
             return
