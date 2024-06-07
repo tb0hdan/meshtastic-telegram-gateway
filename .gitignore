@@ -134,6 +134,9 @@ mesh.ini
 meshtastic.sqlite
 meshtastic.sqlite.bkp
 
+# PyCharm
+.idea/
+
 # Pipfile is awesome for local development, but the bot still uses requirements.txt
 Pipfile
 Pipfile.*
