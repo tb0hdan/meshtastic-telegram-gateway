@@ -145,6 +145,8 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         """
         Send Meshtastic data message
         """
+        if str(destinationId) == "-1":
+            return
         packet_to = (
             # pylint:disable=line-too-long
             int(f"0x{str(destinationId).removeprefix('!')}", base=16) if destinationId != BROADCAST_ADDR else BROADCAST_NUM
