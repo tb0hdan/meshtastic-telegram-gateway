@@ -20,6 +20,7 @@ def setup_logger(name=__name__, level=logging.INFO) -> logging.Logger:
     """
     logger = logging.getLogger(name)
     logger.setLevel(level)
+    logger.propagate = False
 
     # create console handler and set level to debug
     handler = logging.StreamHandler()
