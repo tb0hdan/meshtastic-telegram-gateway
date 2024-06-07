@@ -167,6 +167,12 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
         except RuntimeError:
             self.logger.warning('Node %s not in node DB', from_id)
             return
+        # cache node position for 60 seconds
+        key = f"{from_id}-location"
+        if self.memcache.get(key):
+            return
+        self.memcache.set(key, True, expires=60)
+        #
         position = packet.get('decoded', {}).get('position', {})
         altitude=int(position.get('altitude', 0) * 3.28084)
         latitude=position.get('latitude', 0)
@@ -184,7 +190,7 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
                 break
         #
         if not found:
-            self.logger.warning('APRS: %s not a ham call-sign', node_name)
+            self.logger.warning('APRS: %s not a ham call sign', node_name)
             return
         #
         degrees, minutes, seconds = self.dec2sexagesimal(latitude)
