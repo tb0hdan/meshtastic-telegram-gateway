@@ -4,7 +4,7 @@ getmac==0.9.4
 haversine~=2.8.1
 humanize~=4.9.0
 meshtastic~=2.3.8
-openai==1.23.2
+openai==1.34.0
 paho-mqtt==1.6.1
 pypng==0.20220715.0
 python-telegram-bot==13.15
