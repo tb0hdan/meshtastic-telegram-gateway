@@ -17,6 +17,7 @@ import flask
 from flask import Flask, jsonify, make_response, request, render_template, send_file
 from flask.views import View
 from flask.typing import ResponseReturnValue
+from pytz import timezone
 # pylint:disable=no-name-in-module
 from setproctitle import setthreadtitle
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -276,9 +277,7 @@ class RenderAirRaidView(CommonView):  # pylint:disable=too-many-instance-attribu
         alert_place = self.region_table.get(region_id)
         alert_status = msg.get('status').lower().capitalize()
         alert_tz = msg.get('createdAt')
-        dt_f = datetime.strptime(alert_tz, '%Y-%m-%dT%H:%M:%SZ')
-        tzinfo = datetime.now().astimezone().tzinfo
-        dt_f = dt_f + tzinfo.utcoffset(None)
+        dt_f = datetime.strptime(alert_tz + '+0000', '%Y-%m-%dT%H:%M:%SZ%z').astimezone(tz=timezone('Europe/Kiev'))
         alert_time = dt_f.strftime("%H:%M:%S")
         self.logger.info(f"{msg}: {alert_place}")
         new_msg = f'Alert: {alert_type}, {alert_place}, {alert_status} since {alert_time}'
