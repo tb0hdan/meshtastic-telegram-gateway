@@ -5,9 +5,9 @@
 
 *Read this in other languages: [English](README.md), [Polski](README.pl.md), [Português](README.pt.md)*
 
-Telegram bot that forwards messages to and from Meshtastic device
+A Telegram bot that forwards messages to and from Meshtastic device
 
-The purpose of this bot is to act as a bridge between local Meshtastic conference and
+The purpose of this bot is to act as a bridge between the local Meshtastic conference and the
 Telegram chat room. Nicks (Your Name field for Meshtastic) are passed through in both directions.
 
 ## Supported Hardware
@@ -61,7 +61,7 @@ Python 3.8+ is required.
 
 ## Webapp
 
-When enabled, this bot listens on specified port and renders device map.
+When enabled, this bot listens on the specified port and renders a device map.
 
 1. Cluster markerer
 
@@ -85,8 +85,8 @@ Default value is 3600 seconds. Can be changed using `?tail=xxx` query string, e.
 ## Setup
 
 1. Run `cat mesh.ini.example|egrep -v '^#' > mesh.ini`
-2. Create new Telegram bot using [@BotFather](https://t.me/BotFather) contact. Copy token to clipboard.
-3. Put token from previous step into `mesh.ini`
+2. Create new a Telegram bot using [@BotFather](https://t.me/BotFather) contact. Copy the token to the clipboard.
+3. Put token from a previous step into `mesh.ini`
 4. Put admin id and room id into `mesh.ini`
 5. Edit `mesh.ini` Meshtastic section to reflect your device configuration (usually not required, for Linux at least)
 6. Run `sudo pip3 install -r requirements.txt`
