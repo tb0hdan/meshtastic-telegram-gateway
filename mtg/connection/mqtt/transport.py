@@ -174,7 +174,12 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         # Create forth and final message. Convert it to protobuf
         new_msg = mqtt_pb2.ServiceEnvelope()  # pylint:disable=no-member
         mqtt_msg = json_format.ParseDict(full, new_msg)
+        Thread(target=self.send_mqtt_message, args=(mqtt_msg,), daemon=True).start()
 
+    def send_mqtt_message(self, mqtt_msg):
+        """
+        sendMQTTMessage - deliver message over MQTT. With retries.
+        """
         for subtopic in ['c', 'e']:
             mqtt_topic = f"{self.cfg.MQTT.Topic}/2/{subtopic}/{self.cfg.MQTT.Channel}/{self.my_hw_hex_id}"
             for _ in range(3):
