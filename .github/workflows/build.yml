@@ -23,6 +23,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install --upgrade pylint
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Test
+        run: |
+          pytest --cov mtg
       - name: Lint with pylint
         run: |
           make lint
