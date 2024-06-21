@@ -20,3 +20,6 @@ run:
 tag:
 	@git tag -a v$(VERSION) -m v$(VERSION)
 	@git push --tags
+
+test:
+	@pytest --cov mtg
