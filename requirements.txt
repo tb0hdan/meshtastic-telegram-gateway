@@ -1,5 +1,4 @@
 aprslib==0.7.2
-bleak==0.21.1
 flask~=3.0.3
 getmac==0.9.4
 haversine~=2.8.1
