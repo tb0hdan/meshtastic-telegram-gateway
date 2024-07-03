@@ -30,6 +30,9 @@ from mtg.webapp import WebServer
 from mtg.utils.rf.prefixes import ITUPrefix
 
 def before_send(event, hint):
+    """
+    Check Sentry event before sending it. Does nothing atm.
+    """
     print(event, hint)
     return event
 
