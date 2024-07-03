@@ -7,6 +7,7 @@ import re
 import time
 
 import humanize
+import requests
 
 from meshtastic import (
     BROADCAST_ADDR as MESHTASTIC_BROADCAST_ADDR,
@@ -21,7 +22,7 @@ from mtg.connection.rich import RichConnection
 from mtg.connection.telegram import TelegramConnection
 from mtg.database import MeshtasticDB
 from mtg.filter import MeshtasticFilter
-from mtg.geo import get_lat_lon_distance
+from mtg.geo import get_lat_lon_distance, deg_to_cardinal
 from mtg.log import VERSION
 from mtg.output.file import CSVFileWriter
 from mtg.utils import Memcache
@@ -205,6 +206,9 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         decoded = packet.get('decoded')
         from_id = packet.get('fromId')
         msg = decoded.get('text', '')
+        if msg.startswith("/w"):
+            self.process_weather_command(packet, interface)
+            return
         if msg.startswith('/distance'):
             self.process_distance_command(packet, interface)
             return
@@ -221,6 +225,45 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
             self.meshtastic_connection.reset_db()
             return
         self.meshtastic_connection.send_text("unknown command", destinationId=from_id)
+
+
+    @staticmethod
+    def get_cur_temp(lat, lon, key):
+        """
+        get_cur_temp - get current weather using OpenWeatherMap
+        """
+        url = f"https://api.openweathermap.org/data/2.5/weather?appid={key}&units=metric&lat={lat}&lon={lon}"
+        data = requests.get(url, timeout=10)
+        dataj = data.json()
+        short = f"T:{int(dataj.get('main').get('temp'))}C, P:{int(dataj.get('main').get('pressure'))}mb"
+        short = f"{short}, H:{dataj.get('main').get('humidity')}%"
+        short = f"{short}, W:{int(dataj.get('wind').get('speed'))}m/s"
+        short = f"{short}, WD:{deg_to_cardinal(dataj.get('wind').get('deg'))}"
+        short = f"{short}, C:{dataj.get('weather')[0].get('main')}"
+        return short
+
+    def process_weather_command(self, packet, interface):
+        """
+        Process /w (Weather) Meshtastic command)
+        """
+        from_id = packet.get('fromId')
+        found, _ = self.database.get_node_record(from_id)
+        # not a new node
+        if not found:
+            self.meshtastic_connection.send_text("no information about your node available yet", destinationId=from_id)
+            return
+        lat, lon = self.meshtastic_connection.get_set_last_position(from_id)
+        key = self.config.DEFAULT.OpenWeatherKey
+        if len(key) == 0:
+            self.meshtastic_connection.send_text("weather command disabled by configuration", destinationId=from_id)
+            return
+        try:
+            text = self.get_cur_temp(lat, lon, key)
+        except Exception as exc:  # pylint:disable=broad-exception-caught
+            self.logger.error(repr(exc))
+            text = "could not get weather, see bot logs"
+        self.meshtastic_connection.send_text(text, destinationId=from_id)
+
 
     def process_uptime(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
         """
