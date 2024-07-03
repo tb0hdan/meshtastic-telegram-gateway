@@ -29,6 +29,10 @@ from mtg.webapp import WebServer
 #
 from mtg.utils.rf.prefixes import ITUPrefix
 
+def before_send(event, hint):
+    print(event, hint)
+    return event
+
 # pylint:disable=too-many-locals,too-many-statements
 def main(args):
     """
@@ -48,7 +52,9 @@ def main(args):
     # setup APM
     if config.enforce_type(bool, config.DEFAULT.SentryEnabled):
         sentry_sdk.init(dsn=config.DEFAULT.SentryDSN,
+                        debug=debug,
                         traces_sample_rate=1.0,
+                        before_send=before_send,
                         integrations=[FlaskIntegration()]
         )
     # warm up reverse cache
