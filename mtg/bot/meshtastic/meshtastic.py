@@ -396,8 +396,8 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
 
         # Telemetry
         node_part = from_id[5:]
-        if re.match(f'^(\-?[0-9]+,)+{node_part}$', msg) is not None:
-            self.logger.debug('Banned telemetry: ', node_hex, msg)
+        if re.match(r'^(\-?[0-9]+,)+' + f'{node_part}$', msg) is not None:
+            self.logger.debug('Banned telemetry: ', from_id, msg)
             return
 
         # Meshtastic nodes sometimes duplicate messages sent by bot. Filter these.
