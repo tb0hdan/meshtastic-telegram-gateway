@@ -6,7 +6,9 @@ Debug = false
 # Sentry.io APM
 SentryDSN = https://123.ingest.sentry.io/456
 SentryEnabled = false
-
+# OpenWeather current weather API Key. https://openweathermap.org/current
+# Keeping this empty disables weather command
+OpenWeatherKey = ""
 
 [Telegram]
 # en: Telegram user id that will have admin privileges. Positive integer.
