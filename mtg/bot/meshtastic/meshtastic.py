@@ -394,6 +394,12 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
             self.logger.debug(f"User {long_name} has sent range test... {msg}")
             return
 
+        # Telemetry
+        node_part = from_id[5:]
+        if re.match(r'^(\-?[0-9]+,)+' + f'{node_part}$', msg) is not None:
+            self.logger.debug('Banned telemetry: ', from_id, msg)
+            return
+
         # Meshtastic nodes sometimes duplicate messages sent by bot. Filter these.
         self_name = self.meshtastic_connection.interface.getLongName()
         if msg.startswith(self_name) or self_name == long_name:
