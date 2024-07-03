@@ -102,11 +102,14 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
             return
 
         full = json_format.MessageToDict(mqtt_incoming.packet)
+        full['channel_id'] = mqtt_incoming.channel_id
+        full['gateway_id'] = mqtt_incoming.gateway_id
         # drop our messages or messages without from
         if not full.get('from') or full.get('from', 0) == self.my_hw_int_id:
             return
         # drop encrypted messages
         if full.get('encrypted'):
+            self.logger.debug("Encrypted message: %s", full)
             return
         # drop messages without decoded
         if not full.get('decoded', None):
