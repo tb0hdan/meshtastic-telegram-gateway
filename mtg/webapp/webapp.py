@@ -1,3 +1,4 @@
+# pylint: disable=duplicate-code
 # -*- coding: utf-8 -*-
 """ Web application module """
 

@@ -142,4 +142,4 @@ Pipfile
 Pipfile.*
 
 # Private user plugins, not distributed as part of the bot source code
-external/
+external/plugins
