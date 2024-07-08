@@ -24,7 +24,7 @@ from mtg.connection.telegram import TelegramConnection
 from mtg.database import sql_debug, MeshtasticDB
 from mtg.filter import CallSignFilter, MeshtasticFilter, TelegramFilter
 from mtg.log import setup_logger, LOGFORMAT
-from mtg.utils import create_fifo
+from mtg.utils import create_fifo, ExternalPlugins
 from mtg.webapp import WebServer
 #
 from mtg.utils.rf.prefixes import ITUPrefix
@@ -118,6 +118,9 @@ def main(args):
                            logger,
                            static_folder=static_folder,
                            template_folder=template_folder)
+    # external plugins
+    external_plugins = ExternalPlugins(database, config, meshtastic_connection, telegram_connection, logger)
+
     # non-blocking
     aprs_streamer.run()
     # FIFO watcher
@@ -125,6 +128,7 @@ def main(args):
     web_server.run()
     telegram_bot.run()
     mqtt_connection.run()
+    external_plugins.run()
     # blocking
     while True:
         try:

@@ -140,3 +140,6 @@ meshtastic.sqlite.bkp
 # Pipfile is awesome for local development, but the bot still uses requirements.txt
 Pipfile
 Pipfile.*
+
+# Private user plugins, not distributed as part of the bot source code
+external/plugins
