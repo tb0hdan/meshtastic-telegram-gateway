@@ -1,9 +1,16 @@
 #-*- coding: utf-8 -*-
 """ MQTT to Radio emulation transport module """
 
+import base64
 import json
+import struct
 import time
 from threading import Thread
+
+from cryptography.hazmat.primitives.ciphers import (
+    Cipher, algorithms, modes
+)
+
 
 from meshtastic.stream_interface import StreamInterface
 from meshtastic import mqtt_pb2, mesh_pb2, BROADCAST_NUM, BROADCAST_ADDR
@@ -15,6 +22,50 @@ from google.protobuf import json_format
 from getmac import get_mac_address as gma
 
 from .common import CommonMQTT
+
+class MQTTCrypto:
+    """ MQTT Crypto module """
+    KEY = 'd4f1bb3a20290759f0bcffabcf4e6901'
+    def __init__(self, key=None):
+        self.key = bytes.fromhex(key) if key else bytes.fromhex(self.KEY)
+
+    @staticmethod
+    def init_nonce(from_node, packet_id):
+        """
+        init_nonce - Initialize nonce. Ported from meshtastic/firmware
+        """
+        nonce = bytearray(16)
+        nonce[:8] = struct.pack('<Q', packet_id)
+        nonce[8:12] = struct.pack('<I', from_node)
+        return nonce
+
+    @staticmethod
+    def decrypt(key, nonce, ciphertext):
+        """
+        decrypt - decrypt data using nonce and ciphertext
+        """
+        decryptor = Cipher(
+            algorithms.AES(key),
+            modes.CTR(nonce),
+        ).decryptor()
+
+        return decryptor.update(ciphertext) + decryptor.finalize()
+
+    def decrypt_packet(self, packet):
+        """
+        decrypt_packet - decrypt MQTT packet
+        """
+        data = base64.b64decode(packet.get('encrypted'))
+        nonce = self.init_nonce(packet.get('from'), packet.get('id'))
+        r = self.decrypt(self.key, nonce, data)
+        return mesh_pb2.Data().FromString(r)  # pylint:disable=no-member
+
+    def encrypt_packet(self):
+        """
+        encrypt_packet - Not implemented yet
+        """
+        return
+
 
 class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attributes
     """
@@ -51,6 +102,8 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         self.common.set_client(self.client)
         self.common.set_logger(logger)
         self.common.set_config(cfg)
+        # Crypto class
+        self.crypto = MQTTCrypto()
         #
         StreamInterface.__init__(
             self, debugOut=debugOut, noProto=noProto, connectNow=connectNow
@@ -107,10 +160,9 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         # drop our messages or messages without from
         if not full.get('from') or full.get('from', 0) == self.my_hw_int_id:
             return
-        # drop encrypted messages
+        # process encrypted messages
         if full.get('encrypted'):
-            self.logger.debug("Encrypted message: %s", full)
-            return
+            full['decoded'] = json_format.MessageToDict(self.crypto.decrypt_packet(full))
         # drop messages without decoded
         if not full.get('decoded', None):
             self.logger.error("No decoded message in MQTT message: %s", full)
@@ -125,6 +177,7 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
             'hopLimit': full.get('hopLimit', 3),
             'viaMqtt': True,
         }
+
         # Create final message. Convert it to protobuf
         new_msg = mesh_pb2.MeshPacket()  # pylint:disable=no-member
         radio_msg = json_format.ParseDict(new_packet, new_msg)
