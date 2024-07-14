@@ -24,19 +24,26 @@ from getmac import get_mac_address as gma
 from .common import CommonMQTT
 
 class MQTTCrypto:
+    """ MQTT Crypto module """
     KEY = 'd4f1bb3a20290759f0bcffabcf4e6901'
     def __init__(self, key=None):
         self.key = bytes.fromhex(key) if key else bytes.fromhex(self.KEY)
 
     @staticmethod
-    def init_nonce(fromNode, packetId):
+    def init_nonce(from_node, packet_id):
+        """
+        init_nonce - Initialize nonce. Ported from meshtastic/firmware
+        """
         nonce = bytearray(16)
-        nonce[:8] = struct.pack('<Q', packetId)
-        nonce[8:12] = struct.pack('<I', fromNode)
+        nonce[:8] = struct.pack('<Q', packet_id)
+        nonce[8:12] = struct.pack('<I', from_node)
         return nonce
 
     @staticmethod
     def decrypt(key, nonce, ciphertext):
+        """
+        decrypt - decrypt data using nonce and ciphertext
+        """
         decryptor = Cipher(
             algorithms.AES(key),
             modes.CTR(nonce),
@@ -45,13 +52,20 @@ class MQTTCrypto:
         return decryptor.update(ciphertext) + decryptor.finalize()
 
     def decrypt_packet(self, packet):
+        """
+        decrypt_packet - decrypt MQTT packet
+        """
         data = base64.b64decode(packet.get('encrypted'))
         nonce = self.init_nonce(packet.get('from'), packet.get('id'))
         r = self.decrypt(self.key, nonce, data)
-        return mesh_pb2.Data().FromString(r)
+        return mesh_pb2.Data().FromString(r)  # pylint:disable=no-member
 
     def encrypt_packet(self):
-        pass
+        """
+        encrypt_packet - Not implemented yet
+        """
+        return
+
 
 class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attributes
     """
@@ -147,7 +161,8 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         if not full.get('from') or full.get('from', 0) == self.my_hw_int_id:
             return
         # process encrypted messages
-        full['decoded'] = json_format.MessageToDict(self.crypto.decrypt_packet(full)) if full.get('encrypted') else full.get('decoded')
+        if full.get('encrypted'):
+            full['decoded'] = json_format.MessageToDict(self.crypto.decrypt_packet(full))
         # drop messages without decoded
         if not full.get('decoded', None):
             self.logger.error("No decoded message in MQTT message: %s", full)
