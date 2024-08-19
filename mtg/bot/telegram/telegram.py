@@ -172,6 +172,12 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         if self.filter.banned(str(update.effective_user.id)):
             self.logger.debug(f"User {update.effective_user.id} is in a blacklist...")
             return
+        # topic support
+        if update.message.is_topic_message:
+            topic = update.message.reply_to_message.forum_topic_created.name
+            if topic != 'General':
+                self.logger.debug(f'Topic {topic} != General')
+                return
         #
         full_user = update.effective_user.first_name
         if update.effective_user.last_name is not None:

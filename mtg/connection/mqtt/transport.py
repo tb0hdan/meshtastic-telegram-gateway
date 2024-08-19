@@ -136,6 +136,7 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         """
         on_message_wrapped - safe MQTT callback for message event
         """
+        self.logger.info(msg.topic)
         # skip node status messages
         if msg.payload in [b'online', b'offline']:
             return
