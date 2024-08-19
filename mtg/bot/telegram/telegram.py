@@ -173,7 +173,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             self.logger.debug(f"User {update.effective_user.id} is in a blacklist...")
             return
         # topic support
-        if update.message.is_topic_message:
+        if update.message and update.message.is_topic_message and update.message.reply_to_message.forum_topic_created:
             topic = update.message.reply_to_message.forum_topic_created.name
             if topic != 'General':
                 self.logger.debug(f'Topic {topic} != General')
