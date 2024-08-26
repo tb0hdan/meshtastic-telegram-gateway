@@ -178,6 +178,11 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             if topic != 'General':
                 self.logger.debug(f'Topic {topic} != General')
                 return
+        # replies
+        if update.message and update.message.reply_to_message and update.message.reply_to_message.is_topic_message:
+            # Reply not in general
+            self.logger.debug('Reply not in General')
+            return
         #
         full_user = update.effective_user.first_name
         if update.effective_user.last_name is not None:
