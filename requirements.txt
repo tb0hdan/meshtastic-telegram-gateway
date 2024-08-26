@@ -13,7 +13,7 @@ pytest==8.2.2
 pytest-cov==5.0.0
 Pypubsub~=4.0.3
 PyQRCode~=1.2.1
-pony~=0.7.17
+pony~=0.7.18
 reverse-geocoder==1.5.1
 requests~=2.32.3
 sentry-sdk==2.13.0
