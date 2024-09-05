@@ -4,7 +4,7 @@ flask~=3.0.3
 getmac==0.9.5
 haversine~=2.8.1
 humanize~=4.10.0
-meshtastic~=2.3.14
+meshtastic~=2.4.1
 openai==1.42.0
 paho-mqtt==2.1.0
 pypng==0.20220715.0
