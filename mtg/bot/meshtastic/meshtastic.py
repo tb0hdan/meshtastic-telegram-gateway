@@ -366,7 +366,9 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         from_id = packet.get('fromId')
         # from fix
         if from_id is None:
-            from_id = hex(packet.get('from')).replace('0x', '!')
+            from_id = hex(packet.get('from')).replace('0x', '')
+            # pad nodes without a zero and prepend exclamation point
+            from_id = f"!{from_id:>08}"
             packet['fromId'] = from_id
         # check for blacklist
         if self.filter.banned(from_id):
