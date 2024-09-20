@@ -201,6 +201,13 @@ class Handler:
     self.telegram_connection = telegram_connection
     self.logger = logger
 
+  async def main(self):
+    self.logger.info('Server started...')
+    while True:
+      try:
+        await asyncio.sleep(1)
+      except Exception as exc:
+        pass
 
 class FooBar(ExternalBase):
     def __init__(self, database, config, meshtastic_connection, telegram_connection, logger):
