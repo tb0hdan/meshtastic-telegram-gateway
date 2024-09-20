@@ -184,3 +184,30 @@ Meshtastic nodes with valid amateur call signs will be announced to APRS network
 
 `[APRS]` configuration section.
 
+### Custom plugins
+
+1. Store your plugin in external/plugins, along with an empty `__init__.py`
+2. Note that `ExternalBase` parent class is for dynamic plugin loading. No `Handler` methods will be called, but you will have access to bot connections.
+3. Sample
+
+```python
+import asyncio
+
+class Hanlder:
+  def __init__(self, database, config, meshtastic_connection, telegram_connection, logger):
+    self.database = database
+    self.config = config
+    self.meshtastic_connection = meshtastic_connection
+    self.telegram_connection = telegram_connection
+    self.logger = logger
+
+
+class FooBar(ExternalBase):
+    def __init__(self, database, config, meshtastic_connection, telegram_connection, logger):
+        # Init handler
+        self.handler = Handler(database, config, meshtastic_connection, telegram_connection, logger)
+
+    def run(self):
+        asyncio.run(self.handler.main())
+```
+
