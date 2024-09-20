@@ -193,7 +193,7 @@ Meshtastic nodes with valid amateur call signs will be announced to APRS network
 ```python
 import asyncio
 
-class Hanlder:
+class Handler:
   def __init__(self, database, config, meshtastic_connection, telegram_connection, logger):
     self.database = database
     self.config = config
