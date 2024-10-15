@@ -15,7 +15,7 @@ class RichConnection(MeshtasticConnection):
     RichConnection - enriched Meshtastic connection
     """
 
-    # pylint:disable=too-many-arguments
+    # pylint:disable=too-many-arguments,too-many-positional-arguments
     def __init__(self, dev_path: str, logger: logging.Logger, config, filter_class,
                  database: MeshtasticDB, startup_ts=time.time(), rg_fn=None):
         super().__init__(dev_path, logger, config, filter_class, startup_ts)

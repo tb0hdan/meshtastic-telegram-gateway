@@ -241,7 +241,7 @@ class RenderAirRaidView(CommonView):  # pylint:disable=too-many-instance-attribu
     Air Raid Alert renderer
     """
 
-    # pylint:disable=too-many-arguments
+    # pylint:disable=too-many-arguments,too-many-positional-arguments
     def __init__(self, database: MeshtasticDB, config: Config,
                  meshtastic_connection: RichConnection,
                  telegram_connection: TelegramConnection,
@@ -323,7 +323,7 @@ class WebApp:  # pylint:disable=too-few-public-methods
     WebApp: web application container
     """
 
-    # pylint:disable=too-many-arguments
+    # pylint:disable=too-many-arguments,too-many-positional-arguments
     def __init__(self, database: MeshtasticDB, app: Flask, config: Config,
                  meshtastic_connection: RichConnection,
                  telegram_connection: TelegramConnection,
@@ -431,7 +431,7 @@ class WebServer:  # pylint:disable=too-few-public-methods
     Web server wrapper around Flask app
     """
 
-    # pylint:disable=too-many-arguments
+    # pylint:disable=too-many-arguments,too-many-positional-arguments
     def __init__(self, database: MeshtasticDB, config: Config,
                  meshtastic_connection: RichConnection,
                  telegram_connection: TelegramConnection,

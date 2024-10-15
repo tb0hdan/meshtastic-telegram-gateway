@@ -212,8 +212,8 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             return
         self.logger.debug(f"{update.effective_chat.id} {full_user} {message}")
         if message.startswith('APRS-'):
-            addressee = message.split(' ')[0].lstrip('APRS-').rstrip(':')
-            msg = message.replace(message.split(' ')[0], '').strip()
+            addressee = message.split(' ', maxsplit=1)[0].lstrip('APRS-').rstrip(':')
+            msg = message.replace(message.split(' ', maxsplit=1)[0], '').strip()
             self.aprs.send_text(addressee, f'{full_user}: {msg}')
         self.meshtastic_connection.send_text(f"{full_user}: {message}")
 

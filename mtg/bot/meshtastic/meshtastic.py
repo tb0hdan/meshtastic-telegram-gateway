@@ -33,7 +33,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
     Meshtastic bot class
     """
 
-    # pylint:disable=too-many-arguments
+    # pylint:disable=too-many-arguments,too-many-positional-arguments
     def __init__(self, database: MeshtasticDB, config: Config, meshtastic_connection: RichConnection,
                  telegram_connection: TelegramConnection, bot_handler):
         self.database = database
@@ -124,7 +124,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         :param interface:
         :return:
         """
-        from_id = packet.get('fromId')
+        from_id = str(packet.get('fromId', ''))
         mynode_info = interface.nodes.get(from_id)
         if not mynode_info:
             self.meshtastic_connection.send_text("distance err: no node info", destinationId=from_id)
@@ -173,7 +173,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         :param interface:
         :return:
         """
-        from_id = packet.get('fromId')
+        from_id = str(packet.get('fromId', ''))
         self.ping_container[from_id] = {'timestamp': time.time()}
         payload = str.encode("test string")
         self.meshtastic_connection.send_data(payload,
@@ -191,7 +191,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         :param _:
         :return:
         """
-        from_id = packet.get('fromId')
+        from_id = str(packet.get('fromId', ''))
         msg = self.database.get_stats(from_id)
         self.meshtastic_connection.send_text(msg, destinationId=from_id)
 
@@ -204,7 +204,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         :return:
         """
         decoded = packet.get('decoded')
-        from_id = packet.get('fromId')
+        from_id = str(packet.get('fromId', ''))
         msg = decoded.get('text', '')
         if msg.startswith("/w"):
             self.process_weather_command(packet, interface)
@@ -246,7 +246,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         """
         Process /w (Weather) Meshtastic command)
         """
-        from_id = packet.get('fromId')
+        from_id = str(packet.get('fromId', ''))
         found, _ = self.database.get_node_record(from_id)
         # not a new node
         if not found:
@@ -279,7 +279,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
             firmware = interface.metadata.firmware_version
             reboot_count = interface.myInfo.reboot_count
         the_version = pkg_resources.get_distribution("meshtastic").version
-        from_id = packet.get('fromId')
+        from_id = str(packet.get('fromId', ''))
         formatted_time = humanize.naturaltime(time.time() - self.meshtastic_connection.get_startup_ts)
         text = f'Bot v{VERSION}/FW: v{firmware}/Meshlib: v{the_version}/Reboots: {reboot_count}.'
         text += f'Started {formatted_time}'
@@ -292,7 +292,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         :param packet:
         :return:
         """
-        from_id = packet.get('fromId')
+        from_id = str(packet.get('fromId', ''))
         to_id = packet.get('toId')
         rx_time = packet.get('rxTime', 0)
         rx_snr = packet.get('rxSnr', 0)
@@ -316,7 +316,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         :param interface:
         :return:
         """
-        from_id = packet.get('fromId')
+        from_id = str(packet.get('fromId', ''))
         found, _ = self.database.get_node_record(from_id)
         # not a new node
         if found:
@@ -363,7 +363,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         self.logger.debug(f"Received: {packet}")
         to_id = packet.get('toId')
         decoded = packet.get('decoded')
-        from_id = packet.get('fromId')
+        from_id = str(packet.get('fromId', ''))
         # from fix
         if from_id is None:
             from_id = hex(packet.get('from')).replace('0x', '')
