@@ -35,7 +35,7 @@ class MeshtasticConnection:
     Meshtastic device connection
     """
 
-    # pylint:disable=too-many-arguments
+    # pylint:disable=too-many-arguments,too-many-positional-arguments
     def __init__(self, dev_path: str, logger: logging.Logger, config, filter_class, startup_ts=time.time()):
         self.dev_path = dev_path
         self.interface = None
@@ -69,6 +69,8 @@ class MeshtasticConnection:
                                                                    debugOut=sys.stdout)
         elif self.dev_path == 'mqtt':
             self.interface = MQTTInterface(debugOut=sys.stdout, cfg=self.config, logger=self.logger)
+            # start node info thread. BUGGY
+            # Thread(target=self.interface.node_publisher).start()
         else:
             self.interface = meshtastic_serial_interface.SerialInterface(devPath=self.dev_path, debugOut=sys.stdout)
 

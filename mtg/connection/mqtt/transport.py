@@ -71,7 +71,7 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
     """
     MQTTInterface - MQTT to Radio emulation transport class
     """
-    def __init__(self, debugOut=None,  # pylint:disable=too-many-arguments
+    def __init__(self, debugOut=None,  # pylint:disable=too-many-arguments,too-many-positional-arguments
                  noProto=False,
                  connectNow=True,
                  cfg=None,
@@ -188,6 +188,26 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         except Exception as exc:  # pylint:disable=broad-except
             self.logger.error(exc)
 
+    def nodeinfo(self):
+        """
+        nodeinfo - prepare node info
+        """
+        new_node = mesh_pb2.User()  # pylint:disable=no-member
+        new_node.id = self.my_hw_hex_id
+        new_node.long_name = self.getLongName()
+        new_node.short_name = 'WMTG'
+        new_node.hw_model = 'RAK4631'
+        return new_node.SerializeToString()
+
+    def node_publisher(self):
+        """
+        node_publisher - send node info regularly
+        """
+        time.sleep(10)
+        while True:
+            self.sendData(self.nodeinfo(), portNum=PortNum.NODEINFO_APP)  # pylint:disable=no-member
+            time.sleep(1800)
+
     def on_connect(self, client, _userdata, _flags, result_code):
         """
         on_connect - MQTT callback for connect event
@@ -219,6 +239,8 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         original_mqtt_message.packet.rx_time = int(time.time())
         original_mqtt_message.packet.decoded.portnum = portNum
         original_mqtt_message.packet.decoded.payload = msg
+        #original_mqtt_message.packet.decoded.payload = msg.encode() if isinstance(msg, str) else msg
+
 
         # Create second message from first one and add from
         as_dict = json_format.MessageToDict(original_mqtt_message.packet)

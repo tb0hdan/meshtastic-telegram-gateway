@@ -132,7 +132,7 @@ class MeshtasticDB:
         node_info = self.connection.node_info(node_id)
         last_heard = datetime.fromtimestamp(node_info.get('lastHeard', 0))
         node_name = node_info.get('user', {}).get('longName', '')
-        hw_model = node_info.get('user', {}).get('hwModel', '')
+        hw_model = str(node_info.get('user', {}).get('hwModel', ''))
         if not node_record:
             if node_name and hw_model:
                 conditional_log(f'creating new record... {node_info}', self.logger, True)

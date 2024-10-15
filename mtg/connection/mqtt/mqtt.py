@@ -10,7 +10,8 @@ class MQTT:  # pylint:disable=too-many-instance-attributes
     """
     MQTT - MQTT connection class
     """
-    def __init__(self, topic, host, user, password, logger, port=1883):  # pylint:disable=too-many-arguments
+    # pylint:disable=too-many-arguments,too-many-positional-arguments
+    def __init__(self, topic, host, user, password, logger, port=1883):
         self.topic = topic
         self.client = mqtt.Client()
         self.client.on_connect = self.on_connect
