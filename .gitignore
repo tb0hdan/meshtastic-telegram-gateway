@@ -133,6 +133,7 @@ logfile*
 mesh.ini
 meshtastic.sqlite
 meshtastic.sqlite.bkp
+meshtastic.sqlite-journal
 
 # PyCharm
 .idea/
