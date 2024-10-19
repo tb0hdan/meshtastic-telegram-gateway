@@ -1,5 +1,5 @@
 aprslib==0.7.2
-cryptography==43.0.1
+cryptography==43.0.3
 flask~=3.0.3
 getmac==0.9.5
 haversine~=2.8.1
