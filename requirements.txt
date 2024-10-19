@@ -4,7 +4,7 @@ flask~=3.0.3
 getmac==0.9.5
 haversine~=2.8.1
 humanize~=4.11.0
-meshtastic~=2.3.11
+meshtastic~=2.5.3
 openai==1.52.0
 paho-mqtt==2.1.0
 pylint==3.3.1
