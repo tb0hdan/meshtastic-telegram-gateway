@@ -1,11 +1,11 @@
 aprslib==0.7.2
-cryptography==43.0.1
+cryptography==43.0.3
 flask~=3.0.3
 getmac==0.9.5
 haversine~=2.8.1
 humanize~=4.11.0
 meshtastic~=2.5.3
-openai==1.51.2
+openai==1.52.0
 paho-mqtt==2.1.0
 pylint==3.3.1
 pypng==0.20220715.0
@@ -17,7 +17,7 @@ PyQRCode~=1.2.1
 pony~=0.7.19
 reverse-geocoder==1.5.1
 requests~=2.32.3
-sentry-sdk==2.14.0
+sentry-sdk==2.17.0
 setproctitle~=1.3.3
 slack_sdk==3.33.1
 Werkzeug~=3.0.4
