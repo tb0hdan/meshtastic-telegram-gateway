@@ -2,7 +2,7 @@ aprslib==0.7.2
 cryptography==44.0.0
 flask~=3.1.0
 getmac==0.9.5
-haversine~=2.8.1
+haversine~=2.9.0
 humanize~=4.11.0
 meshtastic~=2.5.6
 openai==1.57.2
