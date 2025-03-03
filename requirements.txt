@@ -9,7 +9,7 @@ openai==1.57.2
 paho-mqtt==2.1.0
 pylint==3.3.2
 pypng==0.20220715.0
-python-telegram-bot==13.15
+python-telegram-bot==21.11.1
 pytest==8.3.4
 pytest-cov==6.0.0
 Pypubsub~=4.0.3
