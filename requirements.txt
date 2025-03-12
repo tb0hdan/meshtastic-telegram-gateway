@@ -5,7 +5,7 @@ getmac==0.9.5
 haversine~=2.9.0
 humanize~=4.11.0
 meshtastic~=2.5.6
-openai==1.57.2
+openai==1.66.3
 paho-mqtt==2.1.0
 pylint==3.3.2
 pypng==0.20220715.0
