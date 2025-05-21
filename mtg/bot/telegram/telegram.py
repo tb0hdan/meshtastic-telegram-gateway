@@ -141,6 +141,8 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             short_url = self.shorten_tly(long_url)
         else:
             short_url = long_url
+        if not short_url:
+            short_url = long_url
         return short_url
 
     def shorten_in_text(self, message) -> str:
@@ -190,6 +192,10 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         message = ''
         if update.message and update.message.text:
             message += self.shorten_in_text(update.message.text)
+        if update.message and update.message.caption:
+            if message:
+                message += ' '
+            message += self.shorten_in_text(update.message.caption)
 
         if update.message and update.message.sticker:
             message += f"sent sticker {update.message.sticker.set_name}: {update.message.sticker.emoji}"
@@ -204,6 +210,8 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             photo_file.download(f'{photo_dir}/{file_path}')
             long_url = f'{self.config.WebApp.ExternalURL}/static/t/{time_stamp}/{file_path}'
             short_url = self.shorten_p(long_url)
+            if message:
+                message += ' '
             message += f"sent image: {short_url}"
             self.logger.info(message)
 
