@@ -228,11 +228,18 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             photo_dir = f'./web/static/t/{time_stamp}'
             os.makedirs(photo_dir, exist_ok=True)
             photo_file.download(f'{photo_dir}/{file_path}')
-            long_url = f'{self.config.WebApp.ExternalURL}/static/t/{time_stamp}/{file_path}'
-            short_url = self.shorten_p(long_url)
-            if message:
-                message += ' '
-            message += f"sent image: {short_url}"
+            external_url = getattr(self.config.WebApp, 'ExternalURL', '')
+            # Skip generating URL if configuration still uses placeholder domain
+            if external_url and 'example.com' not in external_url:
+                long_url = f"{external_url.rstrip('/')}/static/t/{time_stamp}/{file_path}"
+                short_url = self.shorten_p(long_url)
+                if message:
+                    message += ' '
+                message += f"sent image: {short_url}"
+            else:
+                if message:
+                    message += ' '
+                message += 'sent image'
             self.logger.info(message)
 
         # check if we got our message
