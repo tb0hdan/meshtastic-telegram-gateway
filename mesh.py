@@ -63,7 +63,7 @@ def main(args):
     # warm up reverse cache
     rg.search((50.5, 30.5), verbose=debug)
     # our logger
-    logger = setup_logger('mesh', level)
+    logger = setup_logger('mesh', level, json_logs=True)
     # meshtastic logger
     logging.basicConfig(level=level,
                         format=LOGFORMAT)

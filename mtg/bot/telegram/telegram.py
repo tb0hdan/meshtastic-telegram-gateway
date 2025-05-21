@@ -3,6 +3,7 @@
 
 import functools
 import logging
+import json
 import os
 import pkg_resources
 import re
@@ -103,6 +104,9 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         dispatcher.add_handler(routes_handler)
 
 
+        log_handler = MessageHandler(Filters.all, self.log_update)
+        dispatcher.add_handler(log_handler, group=0)
+
         echo_handler = MessageHandler(~Filters.command, self.echo)
         dispatcher.add_handler(echo_handler)
 
@@ -131,6 +135,17 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         """
         self.filter = filter_class
 
+    def log_update(self, update: Update, _context: CallbackContext) -> None:
+        """Log every incoming Telegram update"""
+        msg = update.effective_message
+        data = {
+            "event": "telegram_update",
+            "chat_id": update.effective_chat.id if update.effective_chat else None,
+            "user_id": update.effective_user.id if update.effective_user else None,
+            "message_id": msg.message_id if msg else None,
+        }
+        self.logger.info(json.dumps(data))
+
     def shorten_p(self, long_url) -> str:
         """
         Shorten URL using configured service
@@ -158,7 +173,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             splits[pos] = replacements.get(pos)
         return ' '.join([x for x in splits if x])
 
-    def echo(self, update: Update, _) -> None:
+    def echo(self, update: Update, _) -> None:  # pylint:disable=too-many-branches
         """
         Telegram bot echo handler. Does actual message forwarding
 
@@ -223,7 +238,13 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             addressee = message.split(' ', maxsplit=1)[0].lstrip('APRS-').rstrip(':')
             msg = message.replace(message.split(' ', maxsplit=1)[0], '').strip()
             self.aprs.send_text(addressee, f'{full_user}: {msg}')
-        self.logger.info("Forwarding to mesh: %s", f"{full_user}: {message}")
+        log_data = {
+            "event": "telegram_to_mesh",
+            "user": full_user,
+            "message": message,
+            "message_id": update.message.message_id if update.message else None,
+        }
+        self.logger.info(json.dumps(log_data))
         self.meshtastic_connection.send_text(f"{full_user}: {message}")
 
     def shorten_tly(self, long_url):

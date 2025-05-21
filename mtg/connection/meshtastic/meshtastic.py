@@ -5,6 +5,7 @@ import logging
 import re
 import sys
 import time
+import json
 #
 from threading import RLock, Thread
 from typing import (
@@ -58,21 +59,33 @@ class MeshtasticConnection:
         """
         return self.startup_ts
 
-    def connect(self):
-        """
-        Connect to Meshtastic device. Interface can be later updated during reboot procedure
-
-        :return:
-        """
+    def _connect_once(self):
         if self.dev_path.startswith('tcp:'):
-            self.interface = meshtastic_tcp_interface.TCPInterface(self.dev_path.removeprefix('tcp:'),
-                                                                   debugOut=sys.stdout)
+            self.interface = meshtastic_tcp_interface.TCPInterface(
+                self.dev_path.removeprefix('tcp:'), debugOut=sys.stdout
+            )
         elif self.dev_path == 'mqtt':
             self.interface = MQTTInterface(debugOut=sys.stdout, cfg=self.config, logger=self.logger)
-            # start node info thread. BUGGY
-            # Thread(target=self.interface.node_publisher).start()
         else:
-            self.interface = meshtastic_serial_interface.SerialInterface(devPath=self.dev_path, debugOut=sys.stdout)
+            self.interface = meshtastic_serial_interface.SerialInterface(
+                devPath=self.dev_path, debugOut=sys.stdout
+            )
+
+    def connect(self):
+        """Connect to Meshtastic device with retries"""
+        retries = 0
+        last_exc = None
+        while retries < 3:
+            try:
+                self._connect_once()
+                return
+            except Exception as exc:  # pylint:disable=broad-except
+                last_exc = exc
+                self.logger.error("Meshtastic connect error: %s", repr(exc))
+                retries += 1
+                time.sleep(5)
+        if last_exc:
+            raise last_exc
 
 
     def send_text(self, msg, **kwargs) -> None:
@@ -83,7 +96,12 @@ class MeshtasticConnection:
         :param kwargs:
         :return:
         """
-        self.logger.debug("Sending to mesh: %s %s", msg, kwargs)
+        log_data = {
+            "event": "send_mesh",
+            "message": msg,
+            "kwargs": kwargs,
+        }
+        self.logger.info(json.dumps(log_data))
         if len(msg) < mesh_pb2.Constants.DATA_PAYLOAD_LEN // 2:  # pylint:disable=no-member
             with self.lock:
                 self.interface.sendText(msg, **kwargs)

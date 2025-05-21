@@ -2,6 +2,7 @@
 """ Logger module """
 
 import logging
+import json
 
 with open('VERSION', 'r', encoding='utf-8') as fh:
     VERSION = fh.read().rstrip('\n')
@@ -9,7 +10,22 @@ LOGFORMAT = '%(asctime)s - %(name)s/v{} - %(levelname)s file:%(filename)s %(func
 LOGFORMAT = LOGFORMAT.format(VERSION)
 
 
-def setup_logger(name=__name__, level=logging.INFO) -> logging.Logger:
+class JsonFormatter(logging.Formatter):
+    """Simple JSON log formatter"""
+
+    def format(self, record: logging.LogRecord) -> str:  # type: ignore[override]
+        base = {
+            "time": self.formatTime(record, self.datefmt),
+            "name": f"{record.name}/v{VERSION}",
+            "level": record.levelname,
+            "message": record.getMessage(),
+        }
+        if record.exc_info:
+            base["exc_info"] = self.formatException(record.exc_info)
+        return json.dumps(base)
+
+
+def setup_logger(name: str = __name__, level: int = logging.INFO, *, json_logs: bool = False) -> logging.Logger:
     """
     Set up logger and return usable instance
 
@@ -27,7 +43,10 @@ def setup_logger(name=__name__, level=logging.INFO) -> logging.Logger:
     handler.setLevel(level)
 
     # create formatter
-    formatter = logging.Formatter(LOGFORMAT)
+    if json_logs:
+        formatter = JsonFormatter()
+    else:
+        formatter = logging.Formatter(LOGFORMAT)
 
     # add formatter to ch
     handler.setFormatter(formatter)
