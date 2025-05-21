@@ -181,10 +181,13 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         :param _:
         :return:
         """
-        if update.effective_chat.id != self.config.enforce_type(int, self.config.Telegram.Room):
-            self.logger.debug("%d %s",
-                              update.effective_chat.id,
-                              self.config.enforce_type(int, self.config.Telegram.Room))
+        room_id = self.config.enforce_type(int, self.config.Telegram.Room)
+        if update.effective_chat.id != room_id:
+            self.logger.warning(
+                "Ignoring message from chat %d; configured chat is %d", 
+                update.effective_chat.id,
+                room_id,
+            )
             return
         if self.filter.banned(str(update.effective_user.id)):
             self.logger.debug(f"User {update.effective_user.id} is in a blacklist...")
