@@ -3,9 +3,13 @@
 
 
 import logging
+import time
 
 import telegram
+from telegram.error import NetworkError, TelegramError
 from telegram.ext import Updater
+# pylint:disable=no-name-in-module
+from setproctitle import setthreadtitle
 
 
 class TelegramConnection:
@@ -15,7 +19,14 @@ class TelegramConnection:
 
     def __init__(self, token: str, logger: logging.Logger):
         self.logger = logger
+        self.token = token
         self.updater = Updater(token=token, use_context=True)
+        self.exit = False
+        self.name = 'Telegram Connection'
+
+    def _init_updater(self):
+        """(Re)initialize telegram updater"""
+        self.updater = Updater(token=self.token, use_context=True)
 
     def send_message(self, *args, **kwargs) -> None:
         """
@@ -25,7 +36,18 @@ class TelegramConnection:
         :param kwargs:
         :return:
         """
-        self.updater.bot.send_message(*args, **kwargs)
+        retries = 0
+        while retries < 5 and not self.exit:
+            try:
+                self.updater.bot.send_message(*args, **kwargs)
+                return
+            except NetworkError as exc:
+                self.logger.error('Telegram network error: %s', repr(exc))
+            except TelegramError as exc:  # pylint:disable=broad-except
+                self.logger.error('Telegram error: %s', repr(exc))
+            retries += 1
+            time.sleep(5)
+        self.logger.error('Failed to send Telegram message after retries')
 
     def poll(self) -> None:
         """
@@ -33,7 +55,20 @@ class TelegramConnection:
 
         :return:
         """
-        self.updater.start_polling()
+        setthreadtitle(self.name)
+        while not self.exit:
+            try:
+                self._init_updater()
+                self.updater.start_polling()
+                self.updater.idle()
+            except (NetworkError, TelegramError) as exc:
+                self.logger.error('Telegram polling error: %s', repr(exc))
+            finally:
+                try:
+                    self.updater.stop()
+                except Exception:  # pylint:disable=broad-except
+                    pass
+            time.sleep(10)
 
     @property
     def dispatcher(self) -> telegram.ext.Dispatcher:
@@ -48,4 +83,5 @@ class TelegramConnection:
         """
         Stop Telegram bot
         """
+        self.exit = True
         self.updater.stop()
