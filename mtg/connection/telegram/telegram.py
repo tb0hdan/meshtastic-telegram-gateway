@@ -25,8 +25,18 @@ class TelegramConnection:
         self.name = 'Telegram Connection'
 
     def _init_updater(self):
-        """(Re)initialize telegram updater"""
-        self.updater = Updater(token=self.token, use_context=True)
+        """(Re)initialize telegram updater preserving handlers"""
+        self.logger.debug("Reinitializing Telegram updater")
+        old_updater = getattr(self, "updater", None)
+        new_updater = Updater(token=self.token, use_context=True)
+        if old_updater:
+            try:
+                for group, handlers in old_updater.dispatcher.handlers.items():
+                    for handler in handlers:
+                        new_updater.dispatcher.add_handler(handler, group)
+            except Exception as exc:  # pylint:disable=broad-except
+                self.logger.error("Failed to copy handlers: %s", repr(exc))
+        self.updater = new_updater
 
     def send_message(self, *args, **kwargs) -> None:
         """
@@ -59,18 +69,19 @@ class TelegramConnection:
         while not self.exit:
             try:
                 self.logger.debug("Starting Telegram polling loop")
-                self._init_updater()
                 self.updater.start_polling()
 
                 while not self.exit:
                     time.sleep(1)
             except (NetworkError, TelegramError) as exc:
                 self.logger.error('Telegram polling error: %s', repr(exc))
+                # recreate updater on errors to ensure handlers are registered
+                self._init_updater()
             finally:
                 try:
                     self.updater.stop()
                 except Exception:  # pylint:disable=broad-except
-                    pass
+                    self.logger.exception("Failed to stop updater")
                 self.logger.debug("Telegram polling loop stopped")
             time.sleep(10)
 
