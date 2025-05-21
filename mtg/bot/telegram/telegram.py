@@ -161,9 +161,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         return short_url
 
     def shorten_in_text(self, message) -> str:
-        """
-        Shorten URLs in text messages
-        """
+        """Shorten URLs in text messages"""
         splits = message.split(' ')
         replacements = {}
         for pos, part in enumerate(splits):
@@ -172,6 +170,30 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         for pos in replacements:
             splits[pos] = replacements.get(pos)
         return ' '.join([x for x in splits if x])
+
+    def _handle_photo(self, message: str, update: Update) -> str:
+        """Save photo attachment and return updated message"""
+        photo = sorted(update.message.photo, key=lambda x: x.file_size, reverse=True)[0]
+        photo_file = photo.get_file()
+        file_path = os.path.basename(urlparse(photo_file.file_path).path)
+        time_stamp = time.strftime('%Y/%m/%d')
+        photo_dir = f'./web/static/t/{time_stamp}'
+        os.makedirs(photo_dir, exist_ok=True)
+        photo_file.download(f'{photo_dir}/{file_path}')
+        external_url = getattr(self.config.WebApp, 'ExternalURL', '')
+        # Skip generating URL if configuration still uses placeholder domain
+        if external_url and 'example.com' not in external_url:
+            long_url = f"{external_url.rstrip('/')}/static/t/{time_stamp}/{file_path}"
+            short_url = self.shorten_p(long_url)
+            if message:
+                message += ' '
+            message += f"sent image: {short_url}"
+        else:
+            if message:
+                message += ' '
+            message += 'sent image'
+        self.logger.info(message)
+        return message
 
     def echo(self, update: Update, _) -> None:  # pylint:disable=too-many-branches
         """
@@ -221,26 +243,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             message += f"sent sticker {update.message.sticker.set_name}: {update.message.sticker.emoji}"
 
         if update.message and update.message.photo:
-            photo = sorted(update.message.photo, key=lambda x: x.file_size, reverse=True)[0]
-            photo_file = photo.get_file()
-            file_path = os.path.basename(urlparse(photo_file.file_path).path)
-            time_stamp = time.strftime('%Y/%m/%d')
-            photo_dir = f'./web/static/t/{time_stamp}'
-            os.makedirs(photo_dir, exist_ok=True)
-            photo_file.download(f'{photo_dir}/{file_path}')
-            external_url = getattr(self.config.WebApp, 'ExternalURL', '')
-            # Skip generating URL if configuration still uses placeholder domain
-            if external_url and 'example.com' not in external_url:
-                long_url = f"{external_url.rstrip('/')}/static/t/{time_stamp}/{file_path}"
-                short_url = self.shorten_p(long_url)
-                if message:
-                    message += ' '
-                message += f"sent image: {short_url}"
-            else:
-                if message:
-                    message += ' '
-                message += 'sent image'
-            self.logger.info(message)
+            message = self._handle_photo(message, update)
 
         # check if we got our message
         if not message:
