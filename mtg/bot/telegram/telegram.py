@@ -108,7 +108,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         dispatcher.add_handler(log_handler, group=0)
 
         echo_handler = MessageHandler(~Filters.command, self.echo)
-        dispatcher.add_handler(echo_handler)
+        dispatcher.add_handler(echo_handler, group=1)
 
 
     def set_aprs(self, aprs):
