@@ -5,6 +5,7 @@ import logging
 import pkg_resources
 import re
 import time
+import json
 
 import humanize
 import requests
@@ -459,7 +460,13 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
             return
         self.memcache.set(key, True, expires=300)
         #
-        self.logger.info(f"MTG-M-BOT: {long_name}: -> {msg}")
+        log_data = {
+            "event": "mesh_to_telegram",
+            "user": long_name,
+            "message": msg,
+            "packet_id": packet.get('id'),
+        }
+        self.logger.info(json.dumps(log_data))
 
         if msg.startswith('APRS-'):
             addressee = msg.split(' ')[0].lstrip('APRS-').rstrip(':')
