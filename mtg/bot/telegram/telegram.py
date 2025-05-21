@@ -257,7 +257,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             "message_id": update.message.message_id if update.message else None,
         }
         self.logger.info(json.dumps(log_data))
-        self.meshtastic_connection.send_text(f"{full_user}: {message}")
+        self.meshtastic_connection.send_user_text(full_user, message)
 
     def shorten_tly(self, long_url):
         """
