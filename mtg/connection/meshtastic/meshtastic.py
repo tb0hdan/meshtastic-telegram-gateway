@@ -82,6 +82,12 @@ class MeshtasticConnection:
             except Exception as exc:  # pylint:disable=broad-except
                 last_exc = exc
                 self.logger.error("Meshtastic connect error: %s", repr(exc))
+                if self.interface:
+                    try:
+                        self.interface.close()
+                    except Exception as close_exc:  # pylint:disable=broad-except
+                        self.logger.warning("Failed to close interface: %s", repr(close_exc))
+                    self.interface = None
                 retries += 1
                 time.sleep(5)
         if last_exc:
