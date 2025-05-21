@@ -58,9 +58,12 @@ class TelegramConnection:
         setthreadtitle(self.name)
         while not self.exit:
             try:
+                self.logger.debug("Starting Telegram polling loop")
                 self._init_updater()
                 self.updater.start_polling()
-                self.updater.idle()
+
+                while not self.exit:
+                    time.sleep(1)
             except (NetworkError, TelegramError) as exc:
                 self.logger.error('Telegram polling error: %s', repr(exc))
             finally:
@@ -68,6 +71,7 @@ class TelegramConnection:
                     self.updater.stop()
                 except Exception:  # pylint:disable=broad-except
                     pass
+                self.logger.debug("Telegram polling loop stopped")
             time.sleep(10)
 
     @property
