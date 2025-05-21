@@ -6,6 +6,7 @@ import logging
 import time
 
 import telegram
+from pkg_resources import parse_version
 from telegram.error import NetworkError, TelegramError
 from telegram.ext import Updater
 # pylint:disable=no-name-in-module
@@ -20,6 +21,11 @@ class TelegramConnection:
     def __init__(self, token: str, logger: logging.Logger):
         self.logger = logger
         self.token = token
+        if parse_version(telegram.__version__) < parse_version("13.15"):
+            raise RuntimeError(
+                f"Unsupported python-telegram-bot version {telegram.__version__}; "
+                "please install 13.15"
+            )
         self.updater = Updater(token=token, use_context=True)
         self.exit = False
         self.name = 'Telegram Connection'
