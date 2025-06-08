@@ -352,6 +352,27 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
                                                                                self.config.Telegram.NotificationsRoom),
                                               text=f"New node: {msg}")
 
+    def notify_low_battery(self, node_id: str, battery: int, interface: meshtastic_serial_interface.SerialInterface) -> None:
+        """Send a Telegram message if battery level is below configured threshold."""
+        if not self.config.enforce_type(bool, self.config.Meshtastic.LowBatteryAlertEnabled):
+            return
+        threshold = self.config.enforce_type(int, self.config.Meshtastic.LowBatteryThreshold)
+        if battery is None or battery >= threshold:
+            return
+        node_name = node_id
+        node_info = interface.nodes.get(node_id)
+        if node_info is not None:
+            user_info = node_info.get('user')
+            node_name = user_info.get('longName', node_id)
+        else:
+            found, record = self.database.get_node_record(node_id)
+            if found:
+                node_name = record.nodeName
+        self.telegram_connection.send_message(
+            chat_id=self.config.enforce_type(int, self.config.Telegram.Room),
+            text=f"{node_name}: battery at {battery}%, needs charging",
+        )
+
     # pylint:disable=too-many-branches, too-many-statements, too-many-return-statements
     def on_receive(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
         """
@@ -391,6 +412,9 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
                 if from_id is not None and self.config.enforce_type(bool, self.config.Meshtastic.NodeLogEnabled):
                     self.writer.write(packet)
                 self.database.store_location(packet)
+                # Low battery alert from position updates
+                battery = decoded.get('position', {}).get('batteryLevel')
+                self.notify_low_battery(from_id, battery, interface)
                 # Send Meshtastic node coordinates to APRS for licenced operators
                 if self.aprs is not None and from_id is not None:
                     self.aprs.send_location(packet)
@@ -398,6 +422,10 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
             # pong
             if decoded.get('portnum') == 'REPLY_APP':
                 self.process_pong(packet)
+                return
+            if decoded.get('portnum') == 'TELEMETRY_APP':
+                battery = decoded.get('telemetry', {}).get('deviceMetrics', {}).get('batteryLevel')
+                self.notify_low_battery(from_id, battery, interface)
                 return
             return
         # get msg
