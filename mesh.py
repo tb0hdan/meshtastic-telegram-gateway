@@ -77,6 +77,7 @@ def main(args):
                                            database, rg_fn=rg.search)
     database.set_meshtastic(meshtastic_connection)
     meshtastic_connection.connect()
+    meshtastic_connection.reset_params()
     #
     mqtt_connection = MQTT(config.MQTT.Topic, config.MQTT.Host, config.MQTT.User, config.MQTT.Password,
                            logger, config.enforce_type(int, config.MQTT.Port))
