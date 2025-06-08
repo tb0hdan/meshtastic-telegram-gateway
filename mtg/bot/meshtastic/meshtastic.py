@@ -412,9 +412,11 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
                 if from_id is not None and self.config.enforce_type(bool, self.config.Meshtastic.NodeLogEnabled):
                     self.writer.write(packet)
                 self.database.store_location(packet)
+
                 # Low battery alert from position updates
                 battery = decoded.get('position', {}).get('batteryLevel')
                 self.notify_low_battery(from_id, battery, interface)
+
                 # Send Meshtastic node coordinates to APRS for licenced operators
                 if self.aprs is not None and from_id is not None:
                     self.aprs.send_location(packet)
