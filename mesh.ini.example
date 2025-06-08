@@ -114,6 +114,27 @@ WelcomeMessage = Welcome to our community
 WelcomeMessageEnabled = false
 MaxHopCount = 5
 
+[MeshtasticReset]
+# Automatically enforce selected device parameters on startup. Boolean.
+# Enabling this may reboot the device while settings are applied.
+Enabled = false
+# Use Telegram room link as long name if true.
+LongNameFromRoomLink = true
+# Optional long name override when not using the room link. String.
+LongName =
+# Short name for the device (4 bytes max). String.
+ShortName = 🔗
+# Hop count for LoRa config. Integer.
+HopLimit = 5
+# Region code for LoRa config. String (US, EU_433, EU_868, etc.).
+Region = EU_868
+# Override LoRa duty cycle restrictions. Boolean.
+DutyCycle = true
+# Device role. String (ROUTER_LATE, CLIENT, etc.).
+Role = ROUTER_LATE
+# Allow sharing location over MQTT public maps. Boolean.
+MapReporting = true
+
 [APRS]
 # en: APRS functionality. Not actually used. Boolean.
 # pl: Funkcjonalność APRS. Właściwie nie używany. Logiczne.
