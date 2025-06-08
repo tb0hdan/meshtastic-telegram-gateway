@@ -109,6 +109,8 @@ DatabaseFile = meshtastic.sqlite
 # pt: Registrar informações do nó no arquivo
 NodeLogEnabled = false
 NodeLogFile = /tmp/node_log.csv
+LowBatteryAlertEnabled = false
+LowBatteryThreshold = 10
 FIFOEnabled = false
 WelcomeMessage = Welcome to our community
 WelcomeMessageEnabled = false
