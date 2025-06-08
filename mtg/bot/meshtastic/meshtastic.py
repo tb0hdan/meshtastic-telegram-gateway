@@ -391,6 +391,22 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
                 if from_id is not None and self.config.enforce_type(bool, self.config.Meshtastic.NodeLogEnabled):
                     self.writer.write(packet)
                 self.database.store_location(packet)
+                # Low battery alert
+                battery = decoded.get('position', {}).get('batteryLevel')
+                if battery is not None and battery < 10:
+                    node_name = from_id
+                    node_info = interface.nodes.get(from_id)
+                    if node_info is not None:
+                        user_info = node_info.get('user')
+                        node_name = user_info.get('longName', from_id)
+                    else:
+                        found, record = self.database.get_node_record(from_id)
+                        if found:
+                            node_name = record.nodeName
+                    self.telegram_connection.send_message(
+                        chat_id=self.config.enforce_type(int, self.config.Telegram.Room),
+                        text=f"{node_name}: battery at {battery}%, needs charging"
+                    )
                 # Send Meshtastic node coordinates to APRS for licenced operators
                 if self.aprs is not None and from_id is not None:
                     self.aprs.send_location(packet)
