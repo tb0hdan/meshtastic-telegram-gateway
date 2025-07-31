@@ -5,6 +5,7 @@ import logging
 import re
 import sys
 import time
+import json
 #
 from threading import RLock, Thread
 from typing import (
@@ -20,16 +21,18 @@ from meshtastic import (
     mesh_pb2
 )
 # pylint:disable=no-name-in-module
+from meshtastic.protobuf import config_pb2
+# pylint:disable=no-name-in-module,no-member
 from setproctitle import setthreadtitle
 
-from mtg.utils import create_fifo, split_message
+from mtg.utils import create_fifo, split_message, split_user_message
 from mtg.connection.mqtt import MQTTInterface
 
 FIFO = '/tmp/mtg.fifo'
 FIFO_CMD = '/tmp/mtg.cmd.fifo'
 
 
-# pylint:disable=too-many-instance-attributes
+# pylint:disable=too-many-instance-attributes,too-many-public-methods
 class MeshtasticConnection:
     """
     Meshtastic device connection
@@ -58,21 +61,39 @@ class MeshtasticConnection:
         """
         return self.startup_ts
 
-    def connect(self):
-        """
-        Connect to Meshtastic device. Interface can be later updated during reboot procedure
-
-        :return:
-        """
+    def _connect_once(self):
         if self.dev_path.startswith('tcp:'):
-            self.interface = meshtastic_tcp_interface.TCPInterface(self.dev_path.removeprefix('tcp:'),
-                                                                   debugOut=sys.stdout)
+            self.interface = meshtastic_tcp_interface.TCPInterface(
+                self.dev_path.removeprefix('tcp:'), debugOut=sys.stdout
+            )
         elif self.dev_path == 'mqtt':
             self.interface = MQTTInterface(debugOut=sys.stdout, cfg=self.config, logger=self.logger)
-            # start node info thread. BUGGY
-            # Thread(target=self.interface.node_publisher).start()
         else:
-            self.interface = meshtastic_serial_interface.SerialInterface(devPath=self.dev_path, debugOut=sys.stdout)
+            self.interface = meshtastic_serial_interface.SerialInterface(
+                devPath=self.dev_path, debugOut=sys.stdout
+            )
+
+    def connect(self):
+        """Connect to Meshtastic device with retries"""
+        retries = 0
+        last_exc = None
+        while retries < 3:
+            try:
+                self._connect_once()
+                return
+            except Exception as exc:  # pylint:disable=broad-except
+                last_exc = exc
+                self.logger.error("Meshtastic connect error: %s", repr(exc))
+                if self.interface:
+                    try:
+                        self.interface.close()
+                    except Exception as close_exc:  # pylint:disable=broad-except
+                        self.logger.warning("Failed to close interface: %s", repr(close_exc))
+                    self.interface = None
+                retries += 1
+                time.sleep(5)
+        if last_exc:
+            raise last_exc
 
 
     def send_text(self, msg, **kwargs) -> None:
@@ -83,6 +104,12 @@ class MeshtasticConnection:
         :param kwargs:
         :return:
         """
+        log_data = {
+            "event": "send_mesh",
+            "message": msg,
+            "kwargs": kwargs,
+        }
+        self.logger.info(json.dumps(log_data))
         if len(msg) < mesh_pb2.Constants.DATA_PAYLOAD_LEN // 2:  # pylint:disable=no-member
             with self.lock:
                 self.interface.sendText(msg, **kwargs)
@@ -90,6 +117,18 @@ class MeshtasticConnection:
         # pylint:disable=no-member
         split_message(msg, mesh_pb2.Constants.DATA_PAYLOAD_LEN // 2, self.interface.sendText, **kwargs)
         return
+
+    def send_user_text(self, sender: str, message: str, **kwargs) -> None:
+        """Send text message from a specific sender with automatic splitting"""
+
+        chunk_len = mesh_pb2.Constants.DATA_PAYLOAD_LEN // 2  # pylint:disable=no-member
+        full = f"{sender}: {message}"
+        if len(full) <= chunk_len:
+            self.send_text(full, **kwargs)
+            return
+        parts = split_user_message(sender, message, chunk_len)
+        for part in parts:
+            self.send_text(part, **kwargs)
 
     def send_data(self, *args, **kwargs) -> None:
         """
@@ -133,6 +172,112 @@ class MeshtasticConnection:
         self.logger.info('Reset node DB requested...')
         self.interface.getNode(MESHTASTIC_LOCAL_ADDR).resetNodeDb()
         self.logger.info('Reset node DB completed...')
+
+    # pylint:disable=too-many-locals,too-many-branches,too-many-statements
+    def reset_params(self):
+        """Reset device parameters to configured values.
+
+        The device reboots after configuration is applied, which is expected.
+        """
+        if not self.config.enforce_type(
+            bool, getattr(self.config.MeshtasticReset, 'Enabled', 'false')
+        ):
+            return
+        try:
+            self.interface.waitForConfig()
+        except Exception as exc:  # pylint:disable=broad-except
+            self.logger.error('Could not fetch device config: %s', repr(exc))
+            return
+
+        node = self.interface.getNode(MESHTASTIC_LOCAL_ADDR)
+        diffs = []
+
+        use_room = self.config.enforce_type(
+            bool,
+            getattr(self.config.MeshtasticReset, 'LongNameFromRoomLink', 'true'),
+        )
+        desired_long = (
+            self.config.Telegram.RoomLink
+            if use_room
+            else getattr(self.config.MeshtasticReset, 'LongName', None)
+        )
+        desired_short = getattr(self.config.MeshtasticReset, 'ShortName', '🔗')
+        current_long = self.interface.getLongName() or ''
+        current_short = self.interface.getShortName() or ''
+        if (desired_long and desired_long != current_long) or (
+            desired_short and desired_short != current_short
+        ):
+            diffs.append(
+                f'name {current_long}/{current_short} -> {desired_long}/{desired_short}'
+            )
+            node.setOwner(long_name=desired_long, short_name=desired_short)
+
+        lora = node.localConfig.lora
+        lora_changed = False
+        if hasattr(self.config.MeshtasticReset, 'HopLimit'):
+            hop_limit = self.config.enforce_type(
+                int, self.config.MeshtasticReset.HopLimit
+            )
+            if lora.hop_limit != hop_limit:
+                diffs.append(f'hop_limit {lora.hop_limit}->{hop_limit}')
+                lora.hop_limit = hop_limit
+                lora_changed = True
+        if hasattr(self.config.MeshtasticReset, 'Region'):
+            try:
+                region_enum = config_pb2.Config.LoRaConfig.RegionCode.Value(
+                    self.config.MeshtasticReset.Region
+                )
+                if lora.region != region_enum:
+                    diffs.append(
+                        f'region {lora.region}->{self.config.MeshtasticReset.Region}'
+                    )
+                    lora.region = region_enum
+                    lora_changed = True
+            except Exception as exc:  # pylint:disable=broad-except
+                self.logger.error('Invalid region %s: %s', self.config.MeshtasticReset.Region, repr(exc))
+        if hasattr(self.config.MeshtasticReset, 'DutyCycle'):
+            duty = self.config.enforce_type(
+                bool, self.config.MeshtasticReset.DutyCycle
+            )
+            if lora.override_duty_cycle != duty:
+                diffs.append(f'duty_cycle {lora.override_duty_cycle}->{duty}')
+                lora.override_duty_cycle = duty
+                lora_changed = True
+        if lora_changed:
+            node.writeConfig('lora')
+
+        if hasattr(self.config.MeshtasticReset, 'Role'):
+            try:
+                role_enum = config_pb2.Config.DeviceConfig.Role.Value(
+                    self.config.MeshtasticReset.Role
+                )
+                device_cfg = node.localConfig.device
+                if device_cfg.role != role_enum:
+                    diffs.append(
+                        f'role {device_cfg.role}->{self.config.MeshtasticReset.Role}'
+                    )
+                    device_cfg.role = role_enum
+                    node.writeConfig('device')
+            except Exception as exc:  # pylint:disable=broad-except
+                self.logger.error('Invalid role %s: %s', self.config.MeshtasticReset.Role, repr(exc))
+
+        if hasattr(self.config.MeshtasticReset, 'MapReporting'):
+            try:
+                map_report = self.config.enforce_type(
+                    bool, self.config.MeshtasticReset.MapReporting
+                )
+                module_cfg = node.moduleConfig
+                if module_cfg.mqtt.map_reporting_enabled != map_report:
+                    diffs.append(
+                        f'map_reporting {module_cfg.mqtt.map_reporting_enabled}->{map_report}'
+                    )
+                    module_cfg.mqtt.map_reporting_enabled = map_report
+                    node.writeConfig('mqtt')
+            except Exception as exc:  # pylint:disable=broad-except
+                self.logger.error('Failed to set map reporting: %s', repr(exc))
+
+        for diff in diffs:
+            self.logger.info('Reset parameter: %s', diff)
 
     def on_mqtt_node(self, node_id, payload):
         """

@@ -3,6 +3,7 @@
 
 import functools
 import logging
+import json
 import os
 import pkg_resources
 import re
@@ -103,8 +104,11 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         dispatcher.add_handler(routes_handler)
 
 
+        log_handler = MessageHandler(Filters.all, self.log_update)
+        dispatcher.add_handler(log_handler, group=0)
+
         echo_handler = MessageHandler(~Filters.command, self.echo)
-        dispatcher.add_handler(echo_handler)
+        dispatcher.add_handler(echo_handler, group=1)
 
 
     def set_aprs(self, aprs):
@@ -131,6 +135,17 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         """
         self.filter = filter_class
 
+    def log_update(self, update: Update, _context: CallbackContext) -> None:
+        """Log every incoming Telegram update"""
+        msg = update.effective_message
+        data = {
+            "event": "telegram_update",
+            "chat_id": update.effective_chat.id if update.effective_chat else None,
+            "user_id": update.effective_user.id if update.effective_user else None,
+            "message_id": msg.message_id if msg else None,
+        }
+        self.logger.info(json.dumps(data))
+
     def shorten_p(self, long_url) -> str:
         """
         Shorten URL using configured service
@@ -141,12 +156,12 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             short_url = self.shorten_tly(long_url)
         else:
             short_url = long_url
+        if not short_url:
+            short_url = long_url
         return short_url
 
     def shorten_in_text(self, message) -> str:
-        """
-        Shorten URLs in text messages
-        """
+        """Shorten URLs in text messages"""
         splits = message.split(' ')
         replacements = {}
         for pos, part in enumerate(splits):
@@ -156,7 +171,31 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             splits[pos] = replacements.get(pos)
         return ' '.join([x for x in splits if x])
 
-    def echo(self, update: Update, _) -> None:
+    def _handle_photo(self, message: str, update: Update) -> str:
+        """Save photo attachment and return updated message"""
+        photo = sorted(update.message.photo, key=lambda x: x.file_size, reverse=True)[0]
+        photo_file = photo.get_file()
+        file_path = os.path.basename(urlparse(photo_file.file_path).path)
+        time_stamp = time.strftime('%Y/%m/%d')
+        photo_dir = f'./web/static/t/{time_stamp}'
+        os.makedirs(photo_dir, exist_ok=True)
+        photo_file.download(f'{photo_dir}/{file_path}')
+        external_url = getattr(self.config.WebApp, 'ExternalURL', '')
+        # Skip generating URL if configuration still uses placeholder domain
+        if external_url and 'example.com' not in external_url:
+            long_url = f"{external_url.rstrip('/')}/static/t/{time_stamp}/{file_path}"
+            short_url = self.shorten_p(long_url)
+            if message:
+                message += ' '
+            message += f"sent image: {short_url}"
+        else:
+            if message:
+                message += ' '
+            message += 'sent image'
+        self.logger.info(message)
+        return message
+
+    def echo(self, update: Update, _) -> None:  # pylint:disable=too-many-branches
         """
         Telegram bot echo handler. Does actual message forwarding
 
@@ -164,19 +203,24 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         :param _:
         :return:
         """
-        if update.effective_chat.id != self.config.enforce_type(int, self.config.Telegram.Room):
-            self.logger.debug("%d %s",
-                              update.effective_chat.id,
-                              self.config.enforce_type(int, self.config.Telegram.Room))
+        room_id = self.config.enforce_type(int, self.config.Telegram.Room)
+        if update.effective_chat.id != room_id:
+            self.logger.warning(
+                "Ignoring message from chat %d; configured chat is %d", 
+                update.effective_chat.id,
+                room_id,
+            )
             return
         if self.filter.banned(str(update.effective_user.id)):
             self.logger.debug(f"User {update.effective_user.id} is in a blacklist...")
             return
         # topic support
-        if update.message and update.message.is_topic_message and update.message.reply_to_message.forum_topic_created:
-            topic = update.message.reply_to_message.forum_topic_created.name
-            if topic != 'General':
-                self.logger.debug(f'Topic {topic} != General')
+        if update.message and update.message.is_topic_message:
+            forum_topic = None
+            if update.message.reply_to_message:
+                forum_topic = getattr(update.message.reply_to_message, 'forum_topic_created', None)
+            if forum_topic and forum_topic.name != 'General':
+                self.logger.debug(f'Topic {forum_topic.name} != General')
                 return
         # replies
         if update.message and update.message.reply_to_message and update.message.reply_to_message.is_topic_message:
@@ -190,22 +234,16 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         message = ''
         if update.message and update.message.text:
             message += self.shorten_in_text(update.message.text)
+        if update.message and update.message.caption:
+            if message:
+                message += ' '
+            message += self.shorten_in_text(update.message.caption)
 
         if update.message and update.message.sticker:
             message += f"sent sticker {update.message.sticker.set_name}: {update.message.sticker.emoji}"
 
         if update.message and update.message.photo:
-            photo = sorted(update.message.photo, key=lambda x: x.file_size, reverse=True)[0]
-            photo_file = photo.get_file()
-            file_path = os.path.basename(urlparse(photo_file.file_path).path)
-            time_stamp = time.strftime('%Y/%m/%d')
-            photo_dir = f'./web/static/t/{time_stamp}'
-            os.makedirs(photo_dir, exist_ok=True)
-            photo_file.download(f'{photo_dir}/{file_path}')
-            long_url = f'{self.config.WebApp.ExternalURL}/static/t/{time_stamp}/{file_path}'
-            short_url = self.shorten_p(long_url)
-            message += f"sent image: {short_url}"
-            self.logger.info(message)
+            message = self._handle_photo(message, update)
 
         # check if we got our message
         if not message:
@@ -215,7 +253,14 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             addressee = message.split(' ', maxsplit=1)[0].lstrip('APRS-').rstrip(':')
             msg = message.replace(message.split(' ', maxsplit=1)[0], '').strip()
             self.aprs.send_text(addressee, f'{full_user}: {msg}')
-        self.meshtastic_connection.send_text(f"{full_user}: {message}")
+        log_data = {
+            "event": "telegram_to_mesh",
+            "user": full_user,
+            "message": message,
+            "message_id": update.message.message_id if update.message else None,
+        }
+        self.logger.info(json.dumps(log_data))
+        self.meshtastic_connection.send_user_text(full_user, message)
 
     def shorten_tly(self, long_url):
         """

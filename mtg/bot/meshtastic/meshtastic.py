@@ -5,6 +5,7 @@ import logging
 import pkg_resources
 import re
 import time
+import json
 
 import humanize
 import requests
@@ -53,6 +54,8 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         # cache
         self.memcache = Memcache(self.logger)
         self.memcache.run_noblock()
+        # cache of last battery readings per node to avoid duplicates
+        self.battery_cache = {}
 
     def set_aprs(self, aprs):
         """
@@ -351,6 +354,53 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
                                                                                self.config.Telegram.NotificationsRoom),
                                               text=f"New node: {msg}")
 
+    def _battery_emoji(self, level: int) -> str:
+        """Return an emoji representing battery state."""
+        if level is None:
+            return "❓"
+        if level >= 80:
+            return "🟢"
+        if level >= 50:
+            return "🟡"
+        if level >= 20:
+            return "🟠"
+        return "🔴"
+
+    def notify_low_battery(
+        self,
+        node_id: str,
+        battery: int,
+        interface: meshtastic_serial_interface.SerialInterface,
+        rx_time: float,
+    ) -> None:
+        """Send a Telegram message if battery level is below configured threshold."""
+        if not self.config.enforce_type(bool, self.config.Meshtastic.LowBatteryAlertEnabled):
+            return
+        threshold = self.config.enforce_type(int, self.config.Meshtastic.LowBatteryThreshold)
+        if battery is None:
+            return
+        # ignore outdated packets
+        if rx_time < self.meshtastic_connection.get_startup_ts:
+            return
+        last_level = self.battery_cache.get(node_id)
+        self.battery_cache[node_id] = battery
+        if battery >= threshold or (last_level is not None and battery >= last_level):
+            return
+        node_name = node_id
+        node_info = interface.nodes.get(node_id)
+        if node_info is not None:
+            user_info = node_info.get('user')
+            node_name = user_info.get('longName', node_id)
+        else:
+            found, record = self.database.get_node_record(node_id)
+            if found:
+                node_name = record.nodeName
+        emoji = self._battery_emoji(battery)
+        self.telegram_connection.send_message(
+            chat_id=self.config.enforce_type(int, self.config.Telegram.Room),
+            text=f"Battery {emoji} {battery}% for {node_name}",
+        )
+
     # pylint:disable=too-many-branches, too-many-statements, too-many-return-statements
     def on_receive(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
         """
@@ -390,6 +440,11 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
                 if from_id is not None and self.config.enforce_type(bool, self.config.Meshtastic.NodeLogEnabled):
                     self.writer.write(packet)
                 self.database.store_location(packet)
+
+                # Low battery alert from position updates
+                battery = decoded.get('position', {}).get('batteryLevel')
+                self.notify_low_battery(from_id, battery, interface, packet.get('rxTime', 0))
+
                 # Send Meshtastic node coordinates to APRS for licenced operators
                 if self.aprs is not None and from_id is not None:
                     self.aprs.send_location(packet)
@@ -397,6 +452,10 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
             # pong
             if decoded.get('portnum') == 'REPLY_APP':
                 self.process_pong(packet)
+                return
+            if decoded.get('portnum') == 'TELEMETRY_APP':
+                battery = decoded.get('telemetry', {}).get('deviceMetrics', {}).get('batteryLevel')
+                self.notify_low_battery(from_id, battery, interface, packet.get('rxTime', 0))
                 return
             return
         # get msg
@@ -459,7 +518,13 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
             return
         self.memcache.set(key, True, expires=300)
         #
-        self.logger.info(f"MTG-M-BOT: {long_name}: -> {msg}")
+        log_data = {
+            "event": "mesh_to_telegram",
+            "user": long_name,
+            "message": msg,
+            "packet_id": packet.get('id'),
+        }
+        self.logger.info(json.dumps(log_data))
 
         if msg.startswith('APRS-'):
             addressee = msg.split(' ')[0].lstrip('APRS-').rstrip(':')
