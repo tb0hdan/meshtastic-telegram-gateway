@@ -1,0 +1,11 @@
+services:
+  meshtastic-bot:
+    build:
+      context: .
+    environment:
+      - BOT_CONFIG_PATH:./data/mesh.ini
+    volumes:
+      - ./data:/app/data
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"
+    restart: unless-stopped

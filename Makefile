@@ -1,4 +1,7 @@
-VERSION = $(shell cat ./VERSION)
+VERSION=$(shell cat ./VERSION)
+ifndef BOT_CONFIG_PATH
+    BOT_CONFIG_PATH=./mesh.ini
+endif
 
 all: check
 
@@ -15,7 +18,7 @@ reboot:
 	@meshtastic --port $(shell cat mesh.ini|grep Device|awk -F' = ' '{print $$2}') --reboot
 
 run:
-	@while :; do ./mesh.py; sleep 3; done
+	@while :; do ./mesh.py run -c $(BOT_CONFIG_PATH); sleep 3; done
 
 tag:
 	@git tag -a v$(VERSION) -m v$(VERSION)
