@@ -26,3 +26,18 @@ tag:
 
 test:
 	@pytest --cov mtg
+
+docker-up:
+	@docker compose up --build -d --remove-orphans
+
+docker-down:
+	@docker compose down
+
+docker-restart:
+	@docker compose restart meshtastic-telegram-gateway
+
+docker-stop:
+	@docker compose stop meshtastic-telegram-gateway
+
+docker-start:
+	@docker compose start meshtastic-telegram-gateway

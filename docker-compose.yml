@@ -1,5 +1,6 @@
 services:
-  meshtastic-bot:
+  meshtastic-telegram-gateway:
+    container_name: meshtastic-telegram-gateway
     build:
       context: .
     environment:
