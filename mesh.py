@@ -126,21 +126,19 @@ def main(args):
     # FIFO watcher
     meshtastic_connection.run()
     web_server.run()
-    telegram_bot.run()
     mqtt_connection.run()
     external_plugins.run()
     # blocking
-    while True:
-        try:
-            time.sleep(1)
-        except KeyboardInterrupt:
-            aprs_streamer.shutdown()
-            web_server.shutdown()
-            meshtastic_connection.shutdown()
-            mqtt_connection.shutdown()
-            telegram_bot.shutdown()
-            logger.info('Exit requested...')
-            sys.exit(0)
+    try:
+        telegram_bot.run()
+    except KeyboardInterrupt:
+        aprs_streamer.shutdown()
+        web_server.shutdown()
+        meshtastic_connection.shutdown()
+        mqtt_connection.shutdown()
+        telegram_bot.shutdown()
+        logger.info('Exit requested...')
+        sys.exit(0)
 
 
 def post2mesh(args):
