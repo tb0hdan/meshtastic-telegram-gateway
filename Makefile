@@ -22,4 +22,4 @@ tag:
 	@git push --tags
 
 test:
-	@pytest --cov mtg
+	@pytest mtg
