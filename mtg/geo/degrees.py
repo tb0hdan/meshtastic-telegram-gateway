@@ -2,7 +2,7 @@
 #-*- coding: utf-8 -*-
 """ Geo utils """
 
-def deg_to_cardinal(deg):
+def deg_to_cardinal(deg: float) -> str:
     """
     deg_to_cardinal - convert degrees to cardinal directions
     """

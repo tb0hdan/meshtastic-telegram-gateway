@@ -2,7 +2,7 @@ VERSION = $(shell cat ./VERSION)
 
 all: check
 
-check: lint mypy
+check: lint mypy test
 
 lint:
 	@pylint -r y -j 0 mesh.py mtg/
@@ -12,7 +12,13 @@ mypy:
 
 
 reboot:
-	@meshtastic --port $(shell cat mesh.ini|grep Device|awk -F' = ' '{print $$2}') --reboot
+	@DEVICE=$$(grep '^Device' mesh.ini | cut -d'=' -f2 | tr -d ' '); \
+	if [ -n "$$DEVICE" ]; then \
+		meshtastic --port "$$DEVICE" --reboot; \
+	else \
+		echo "Error: Device not found in mesh.ini"; \
+		exit 1; \
+	fi
 
 run:
 	@while :; do ./mesh.py; sleep 3; done

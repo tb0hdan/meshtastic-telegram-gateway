@@ -9,7 +9,7 @@ import time
 from datetime import datetime, timedelta
 from threading import Thread
 from typing import (
-    AnyStr,
+    Optional, Tuple,
 )
 from urllib.parse import parse_qs
 #
@@ -36,7 +36,7 @@ class CommonView(View):
     Common view class
     """
 
-    def get_tail(self, config, logger):
+    def get_tail(self, config: Config, logger: logging.Logger) -> Tuple[str, int]:
         """
         get_tail - get tail value from query string
 
@@ -49,11 +49,17 @@ class CommonView(View):
         if len(tail) > 0:
             try:
                 tail_value = int(tail[0])
+                # Input validation: limit tail value to reasonable bounds
+                if tail_value < 0:
+                    tail_value = 0
+                elif tail_value > 86400:  # Max 1 day
+                    tail_value = 86400
+                    logger.warning("Tail value clamped to maximum: 86400")
             except ValueError:
-                logger.error("Wrong tail value: ", tail)
+                logger.error("Wrong tail value: %s", tail)
         name_qs = query_string.get('name', [])
         name = name_qs[0] if len(name_qs) > 0 else ''
-        return name, tail_value
+        return name, int(tail_value)
 
     def dispatch_request(self) -> ResponseReturnValue:
         """The actual view function behavior. Subclasses must override
@@ -68,11 +74,11 @@ class RenderTemplateView(CommonView):
     Generic HTML template renderer
     """
 
-    def __init__(self, template_name, config):
+    def __init__(self, template_name: str, config: Config) -> None:
         self.template_name = template_name
         self.config = config
 
-    def dispatch_request(self) -> AnyStr:
+    def dispatch_request(self) -> ResponseReturnValue:
         """
         Process Flask request
 
@@ -159,7 +165,7 @@ class RenderDataView(CommonView):
         self.meshtastic_connection = meshtastic_connection
 
     @staticmethod
-    def format_hw(hw_model: AnyStr) -> AnyStr:
+    def format_hw(hw_model: str) -> str:
         """
         Format hardware model
 
@@ -266,7 +272,7 @@ class RenderAirRaidView(CommonView):  # pylint:disable=too-many-instance-attribu
                                   'Kiev': 'Kyiv obl', 'Kyiv City': 'Kyiv',
                                   'Odessa': 'Odesa'}
 
-    def dispatch_request(self) -> AnyStr:  # pylint:disable=too-many-locals
+    def dispatch_request(self) -> ResponseReturnValue:  # pylint:disable=too-many-locals
         """
         Process Flask request
 
@@ -296,7 +302,7 @@ class RenderAirRaidView(CommonView):  # pylint:disable=too-many-instance-attribu
         Thread(target=self.slow_alert, args=(alert_place, new_msg)).start()
         return 'Ok'
 
-    def slow_alert(self, alert_place, new_msg):
+    def slow_alert(self, alert_place: str, new_msg: str) -> None:
         """
         slow_alert - slowly send air raid alerts
 
@@ -404,7 +410,8 @@ class ServerThread(Thread):
         Thread.__init__(self)
         self.config = config
         self.logger = logger
-        self.server = make_server('', self.config.enforce_type(int, self.config.WebApp.Port), app)
+        port = self.config.enforce_type(int, self.config.WebApp.Port)
+        self.server = make_server('', int(port), app)
         self.ctx = app.app_context()
         self.ctx.push()
         self.name = 'WebApp Server'
@@ -430,7 +437,6 @@ class WebServer:  # pylint:disable=too-few-public-methods
     """
     Web server wrapper around Flask app
     """
-
     # pylint:disable=too-many-arguments,too-many-positional-arguments
     def __init__(self, database: MeshtasticDB, config: Config,
                  meshtastic_connection: RichConnection,
@@ -444,8 +450,10 @@ class WebServer:  # pylint:disable=too-few-public-methods
         self.config = config
         self.logger = logger
         self.app = Flask(__name__, static_folder=static_folder, template_folder=template_folder)
-        self.app.wsgi_app = ProxyFix(self.app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
-        self.server = None
+        self.app.wsgi_app = ProxyFix(  # type: ignore[method-assign]
+            self.app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
+        )
+        self.server: Optional[ServerThread] = None
 
     def run(self) -> None:
         """

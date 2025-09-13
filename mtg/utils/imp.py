@@ -6,15 +6,15 @@ Dynamic module import utility
 import os
 import re
 import sys
+from importlib import import_module
+from typing import Any, List, Type
 
 sys.path.insert(1, '..')
-
-from importlib import import_module  # pylint:disable=wrong-import-position
 
 from .exc import log_exception  # pylint:disable=wrong-import-position
 
 
-def list_classes(logger, package='a.b.classes', base_class='BaseClass') -> list:    # pylint:disable=too-many-locals
+def list_classes(logger: Any, package: str = 'a.b.classes', base_class: str = 'BaseClass') -> List[Type[Any]]:    # pylint:disable=too-many-locals
     """
     Return list of command classes
 
@@ -22,10 +22,18 @@ def list_classes(logger, package='a.b.classes', base_class='BaseClass') -> list:
     :param base_class:
     :return:
     """
-    classes = []
-    base = os.path.dirname(os.path.abspath(import_module(package).__file__))
+    classes: List[Type[Any]] = []
+    imported_module = import_module(package)
+    module_file = imported_module.__file__
+    if module_file is None:
+        return classes
+    base = os.path.dirname(os.path.abspath(module_file))
     mod = import_module(package, base_class)
     base_cls = getattr(mod, base_class)
+
+    # Whitelist of allowed packages for security
+    allowed_packages = ['mtg.bot', 'mtg.connection', 'mtg.filter', 'mtg.webapp']
+
     for top, _, files in os.walk(base):
         for fname in files:
             if fname == '__init__.py':
@@ -35,6 +43,12 @@ def list_classes(logger, package='a.b.classes', base_class='BaseClass') -> list:
             path = os.path.join(top, fname)
             path = path.replace('.py', '').replace(os.path.sep, '.')
             pkg = re.sub(f'^.+{package}', package, path)
+
+            # Security check: only allow whitelisted packages
+            if not any(pkg.startswith(allowed_pkg) for allowed_pkg in allowed_packages):
+                logger.warning(f"Skipping non-whitelisted package: {pkg}")
+                continue
+
             try:
                 module = import_module(pkg)
                 objects = dir(module)

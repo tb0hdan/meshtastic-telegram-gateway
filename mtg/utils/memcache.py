@@ -3,7 +3,7 @@
 #
 import time
 from threading import RLock, Thread
-from typing import Any
+from typing import Any, Dict, Optional
 
 # pylint:disable=no-name-in-module
 from setproctitle import setthreadtitle
@@ -15,18 +15,18 @@ class Memcache:
     """
     name = 'Memcache.Reaper'
 
-    def __init__(self, logger):
+    def __init__(self, logger: Any) -> None:
         self.lock = RLock()
         self.logger = logger
-        self.cache = {}
+        self.cache: Dict[Any, Dict[str, Any]] = {}
 
-    def set_logger(self, logger):
+    def set_logger(self, logger: Any) -> None:
         """
         set_logger - set logger (for lazy init)
         """
         self.logger = logger
 
-    def get(self, key) -> Any:
+    def get(self, key: Any) -> Any:
         """
         get - get data by key
 
@@ -36,7 +36,7 @@ class Memcache:
         value = self.get_ex(key)
         return value.get('data') if value else None
 
-    def get_ex(self, key) -> Any:
+    def get_ex(self, key: Any) -> Optional[Dict[str, Any]]:
         """
         get_ex - get data by key with expiration
 
@@ -46,7 +46,7 @@ class Memcache:
         with self.lock:
             return self.cache.get(key)
 
-    def set(self, key, value, expires=0) -> None:
+    def set(self, key: Any, value: Any, expires: float = 0) -> None:
         """
         set - set data by key
 
@@ -60,7 +60,7 @@ class Memcache:
                 expires = time.time() + expires
             self.cache[key] = {'data': value, 'expires': expires}
 
-    def delete(self, key) -> None:
+    def delete(self, key: Any) -> None:
         """
         delete - delete data by key
 
@@ -80,10 +80,12 @@ class Memcache:
         while True:
             time.sleep(0.1)
             for key in list(self.cache):
-                expires = self.get_ex(key).get('expires')
-                if time.time() > expires > 0:
-                    self.logger.warning(f'Removing key {key}...')
-                    self.delete(key)
+                cache_entry = self.get_ex(key)
+                if cache_entry:
+                    expires = cache_entry.get('expires')
+                    if expires is not None and 0 < expires < time.time():
+                        self.logger.warning(f'Removing key {key}...')
+                        self.delete(key)
 
     def run_noblock(self) -> None:
         """

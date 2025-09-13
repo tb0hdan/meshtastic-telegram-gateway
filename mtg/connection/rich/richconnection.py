@@ -4,7 +4,7 @@
 import logging
 import random
 import time
-from typing import List
+from typing import Any, Callable, List, Optional, Tuple
 
 from mtg.database import MeshtasticDB
 from mtg.connection.meshtastic import MeshtasticConnection
@@ -16,8 +16,8 @@ class RichConnection(MeshtasticConnection):
     """
 
     # pylint:disable=too-many-arguments,too-many-positional-arguments
-    def __init__(self, dev_path: str, logger: logging.Logger, config, filter_class,
-                 database: MeshtasticDB, startup_ts=time.time(), rg_fn=None):
+    def __init__(self, dev_path: str, logger: logging.Logger, config: Any, filter_class: Any,
+                 database: MeshtasticDB, startup_ts: float = time.time(), rg_fn: Optional[Callable] = None) -> None:
         super().__init__(dev_path, logger, config, filter_class, startup_ts)
         self.config = config
         self.database = database
@@ -25,7 +25,7 @@ class RichConnection(MeshtasticConnection):
         random.seed()
         self.rg_fn = rg_fn
 
-    def get_set_last_position(self, node_id):
+    def get_set_last_position(self, node_id: str) -> Tuple[float, float]:
         """
         Get last position from DB or generate random one
 
@@ -67,12 +67,12 @@ class RichConnection(MeshtasticConnection):
                 node_info['position'] = {'latitude': lat, 'longitude': lon,
                                          'latitudeI': latitude_i, 'longitudeI': longitude_i,
                                          'altitude': 100}
-            if rg_results := self.rg_fn(
+            if self.rg_fn is not None and (rg_results := self.rg_fn(
                 (
                     node_info['position']['latitude'],
                     node_info['position']['longitude'],
                 )
-            ):
+            )):
                 node_info['position']['admin1'] = rg_results[0]['admin1']
             node_list.append(node_info)
         return node_list

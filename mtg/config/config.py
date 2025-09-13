@@ -2,6 +2,7 @@
 """ Configuration module """
 
 import configparser
+from typing import Any, List, Optional, Type, Union
 
 
 class Config:
@@ -9,12 +10,12 @@ class Config:
     Config - two level configuration with functionality similar to dotted dict
     """
 
-    def __init__(self, config_path="mesh.ini"):
-        self.config_path = config_path
-        self.config = None
-        self.elements = []
+    def __init__(self, config_path: str = "mesh.ini") -> None:
+        self.config_path: str = config_path
+        self.config: Optional[configparser.ConfigParser] = None
+        self.elements: List[str] = []
 
-    def read(self):
+    def read(self) -> None:
         """
         Read configuration file
 
@@ -24,7 +25,7 @@ class Config:
         self.config.read(self.config_path)
 
     @staticmethod
-    def enforce_type(value_type, value):
+    def enforce_type(value_type: Type[Union[bool, int, float, str]], value: str) -> Union[bool, int, float, str]:
         """
         Enforce selected type
 
@@ -34,7 +35,7 @@ class Config:
         """
         return value.lower() == 'true' if value_type == bool else value_type(value)
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: str) -> Any:
         """
         Get attribute
 

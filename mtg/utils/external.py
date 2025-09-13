@@ -3,6 +3,7 @@
 """ External plugin base class """
 
 from threading import Thread
+from typing import Any
 
 from .imp import list_classes
 
@@ -12,14 +13,16 @@ class ExternalPlugins:
     ExternalPlugins - container for user supplied plugins
     """
     # pylint:disable=too-many-arguments,too-many-positional-arguments
-    def __init__(self, database, config, meshtastic_connection, telegram_connection, logger):
+    def __init__(
+        self, database: Any, config: Any, meshtastic_connection: Any, telegram_connection: Any, logger: Any
+    ) -> None:
         self.database = database
         self.config = config
         self.meshtastic_connection = meshtastic_connection
         self.telegram_connection = telegram_connection
         self.logger = logger
 
-    def run(self):
+    def run(self) -> None:
         """
         run - start external plugins, each inside separate thread
         """

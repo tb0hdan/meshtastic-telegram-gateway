@@ -2,23 +2,24 @@
 """ OpenAI Bot module """
 
 import os
+from typing import Any, Optional
 import openai
 
 
 class OpenAIBot:
     """ OpenAI Bot container """
 
-    def __init__(self, logger):
+    def __init__(self, logger: Any) -> None:
         api_key = os.getenv("OPENAI_API_KEY", default='')
-        openai.api_key = api_key
         self.logger = logger
-        self.client = openai.OpenAI() if len(api_key) > 0 else None  # pylint:disable=no-member
+        # Use modern OpenAI client initialization instead of deprecated api_key setting
+        self.client = openai.OpenAI(api_key=api_key) if len(api_key) > 0 else None
         self.seed = (
                 "The following is a conversation with an AI assistant. "
                 + "The assistant is helpful, creative, clever, and very friendly.\n\n"
         )
 
-    def run_query(self, user, query):
+    def run_query(self, user: str, query: str) -> Any:
         """
         Run OpenAI query with user info
 
@@ -36,7 +37,7 @@ class OpenAIBot:
                                       frequency_penalty=0, max_tokens=256, user=user,
                                       stop=[f" {user}:", " AI:"])
 
-    def get_response(self, user, incoming):
+    def get_response(self, user: str, incoming: str) -> Optional[str]:
         """
         Get response from OpenAI API
 
@@ -49,4 +50,5 @@ class OpenAIBot:
             return None
         response = self.run_query(user, incoming)
         self.logger.info(user, response)
-        return response.get('choices')[0].get('message').get('content')
+        # Use modern OpenAI response format
+        return response.choices[0].message.content

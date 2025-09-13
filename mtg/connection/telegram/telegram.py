@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 """ Telegram connection module """
 
-
+import asyncio
 import logging
+from typing import Any
 
-import telegram
-from telegram.ext import Updater
+from telegram import Update  # type: ignore[attr-defined]
+from telegram.ext import Application
 
 
 class TelegramConnection:
@@ -15,17 +16,18 @@ class TelegramConnection:
 
     def __init__(self, token: str, logger: logging.Logger):
         self.logger = logger
-        self.updater = Updater(token=token, use_context=True)
+        logging.getLogger("httpx").setLevel(logging.WARNING)
+        self.application = Application.builder().token(token).build()
 
-    def send_message(self, *args, **kwargs) -> None:
+    def send_message(self, *args: Any, **kwargs: Any) -> None:
         """
-        Send Telegram message
+        Send a Telegram message
 
         :param args:
         :param kwargs:
         :return:
         """
-        self.updater.bot.send_message(*args, **kwargs)
+        asyncio.run(self.application.bot.send_message(*args, **kwargs))
 
     def poll(self) -> None:
         """
@@ -33,19 +35,10 @@ class TelegramConnection:
 
         :return:
         """
-        self.updater.start_polling()
+        self.application.run_polling(allowed_updates=Update.ALL_TYPES)
 
-    @property
-    def dispatcher(self) -> telegram.ext.Dispatcher:
-        """
-        Return Telegram dispatcher for commands
-
-        :return:
-        """
-        return self.updater.dispatcher
-
-    def shutdown(self):
+    def shutdown(self) -> None:
         """
         Stop Telegram bot
         """
-        self.updater.stop()
+        self.application.stop_running()

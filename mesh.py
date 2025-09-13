@@ -6,7 +6,6 @@ import argparse
 import logging
 import os
 import sys
-import time
 #
 import reverse_geocoder as rg
 import sentry_sdk
@@ -29,11 +28,11 @@ from mtg.webapp import WebServer
 #
 from mtg.utils.rf.prefixes import ITUPrefix
 
-def before_send(event, hint):
+def before_send(event, hint):  # pylint:disable=unused-argument
     """
-    Check Sentry event before sending it. Does nothing atm.
+    Check Sentry event before sending it. Remove sensitive data.
     """
-    print(event, hint)
+    # Remove sensitive data exposure - don't print to stdout
     return event
 
 # pylint:disable=too-many-locals,too-many-statements
@@ -126,21 +125,19 @@ def main(args):
     # FIFO watcher
     meshtastic_connection.run()
     web_server.run()
-    telegram_bot.run()
     mqtt_connection.run()
     external_plugins.run()
     # blocking
-    while True:
-        try:
-            time.sleep(1)
-        except KeyboardInterrupt:
-            aprs_streamer.shutdown()
-            web_server.shutdown()
-            meshtastic_connection.shutdown()
-            mqtt_connection.shutdown()
-            telegram_bot.shutdown()
-            logger.info('Exit requested...')
-            sys.exit(0)
+    try:
+        telegram_bot.run()
+    except KeyboardInterrupt:
+        aprs_streamer.shutdown()
+        web_server.shutdown()
+        meshtastic_connection.shutdown()
+        mqtt_connection.shutdown()
+        telegram_bot.shutdown()
+        logger.info('Exit requested...')
+        sys.exit(0)
 
 
 def post2mesh(args):

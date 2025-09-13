@@ -2,6 +2,7 @@
 """ Filter module """
 
 import logging
+from typing import Any
 
 from mtg.database import MeshtasticDB
 from mtg.config import Config
@@ -18,7 +19,7 @@ class Filter:
         self.config = config
         self.logger = logger
 
-    def banned(self, identifier) -> bool:
+    def banned(self, identifier: Any) -> bool:
         """
         banned - returns True if identifier is banned
         """

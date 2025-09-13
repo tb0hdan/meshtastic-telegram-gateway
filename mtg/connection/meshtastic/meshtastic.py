@@ -8,8 +8,10 @@ import time
 #
 from threading import RLock, Thread
 from typing import (
+    Any,
     Dict,
     List,
+    Optional,
 )
 #
 from meshtastic import (
@@ -25,27 +27,37 @@ from setproctitle import setthreadtitle
 from mtg.utils import create_fifo, split_message
 from mtg.connection.mqtt import MQTTInterface
 
-FIFO = '/tmp/mtg.fifo'
-FIFO_CMD = '/tmp/mtg.cmd.fifo'
-
 
 # pylint:disable=too-many-instance-attributes
 class MeshtasticConnection:
     """
     Meshtastic device connection
     """
-
+    fifo = '/tmp/mtg.fifo'
+    fifo_cmd = '/tmp/mtg.cmd.fifo'
     # pylint:disable=too-many-arguments,too-many-positional-arguments
-    def __init__(self, dev_path: str, logger: logging.Logger, config, filter_class, startup_ts=time.time()):
+    def __init__(
+        self, dev_path: str, logger: logging.Logger, config: Any, filter_class: Any, startup_ts: float = time.time()
+    ):
         self.dev_path = dev_path
-        self.interface = None
+        self.interface: Optional[Any] = None
         self.logger = logger
         self.config = config
         self.startup_ts = startup_ts
-        self.mqtt_nodes = {}
+        self.mqtt_nodes: Dict[str, Any] = {}
         self.name = 'Meshtastic Connection'
         self.lock = RLock()
+        self.fifo_lock = RLock()  # Add separate lock for FIFO operations
         self.filter = filter_class
+        # Get configurable FIFO paths, use defaults if not set
+        try:
+            self.fifo = getattr(config.Meshtastic, 'FIFOPath', self.fifo)
+        except KeyError:
+            pass
+        try:
+            self.fifo_cmd = getattr(config.Meshtastic, 'FIFOCmdPath', self.fifo_cmd)
+        except KeyError:
+            pass
         # exit
         self.exit = False
 
@@ -83,6 +95,8 @@ class MeshtasticConnection:
         :param kwargs:
         :return:
         """
+        if self.interface is None:
+            return
         if len(msg) < mesh_pb2.Constants.DATA_PAYLOAD_LEN // 2:  # pylint:disable=no-member
             with self.lock:
                 self.interface.sendText(msg, **kwargs)
@@ -99,6 +113,8 @@ class MeshtasticConnection:
         :param kwargs:
         :return:
         """
+        if self.interface is None:
+            return
         with self.lock:
             self.interface.sendData(*args, **kwargs)
 
@@ -109,7 +125,7 @@ class MeshtasticConnection:
         :param node_id:
         :return:
         """
-        return self.interface.nodes.get(node_id, {})
+        return {} if self.interface is None else self.interface.nodes.get(node_id, {})
 
     def reboot(self):
         """
@@ -179,6 +195,8 @@ class MeshtasticConnection:
 
         :return:
         """
+        if self.interface is None:
+            return {}
         return self.interface.nodes or {}
 
     @property
@@ -271,12 +289,13 @@ class MeshtasticConnection:
         setthreadtitle(self.name)
 
         self.logger.debug("Opening FIFO...")
-        create_fifo(FIFO)
+        create_fifo(self.fifo)
         while not self.exit:
-            with open(FIFO, encoding='utf-8') as fifo:
-                for line in fifo:
-                    line = line.rstrip('\n')
-                    self.send_text(line, destinationId=MESHTASTIC_BROADCAST_ADDR)
+            with self.fifo_lock:  # Prevent race conditions
+                with open(self.fifo, encoding='utf-8') as fifo:
+                    for line in fifo:
+                        line = line.rstrip('\n')
+                        self.send_text(line, destinationId=MESHTASTIC_BROADCAST_ADDR)
 
     def run_cmd_loop(self):
         """
@@ -287,17 +306,18 @@ class MeshtasticConnection:
         setthreadtitle("MeshtasticCmd")
 
         self.logger.debug("Opening FIFO...")
-        create_fifo(FIFO_CMD)
+        create_fifo(self.fifo_cmd)
         while not self.exit:
-            with open(FIFO_CMD, encoding='utf-8') as fifo:
-                for line in fifo:
-                    line = line.rstrip('\n')
-                    if line.startswith("reboot"):
-                        self.logger.warning("Reboot requested using CMD...")
-                        self.reboot()
-                    if line.startswith("reset_db"):
-                        self.logger.warning("Reset DB requested using CMD...")
-                        self.reset_db()
+            with self.fifo_lock:  # Use same lock to prevent race conditions
+                with open(self.fifo_cmd, encoding='utf-8') as fifo:
+                    for line in fifo:
+                        line = line.rstrip('\n')
+                        if line.startswith("reboot"):
+                            self.logger.warning("Reboot requested using CMD...")
+                            self.reboot()
+                        if line.startswith("reset_db"):
+                            self.logger.warning("Reset DB requested using CMD...")
+                            self.reset_db()
 
     def shutdown(self):
         """

@@ -5,7 +5,7 @@ import errno
 import os
 
 
-def create_fifo(path):
+def create_fifo(path: str) -> None:
     """
     Create FIFO
 

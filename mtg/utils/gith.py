@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """ Github module for getting firmware info """
 
+from typing import Dict, List, Any
 from github import Github
 
 
-def get_firmware_info(token) -> list:
+def get_firmware_info(token: str) -> List[Dict[str, Any]]:
     """
     Get firmware info from Github
 
