@@ -6,7 +6,6 @@ import argparse
 import logging
 import os
 import sys
-import time
 #
 import reverse_geocoder as rg
 import sentry_sdk

@@ -15,8 +15,7 @@ from urllib.parse import urlparse
 import humanize
 import pyqrcode
 import requests
-# pylint:disable=no-name-in-module
-from setproctitle import setthreadtitle
+#
 from telegram import Update
 from telegram.constants import MessageLimit
 from telegram.ext import CallbackContext
@@ -121,22 +120,21 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         Shorten URL using configured service
         """
         if self.config.WebApp.ShortenerService == 'pls':
-            short_url = self.shorten_pls(long_url)
+            return self.shorten_pls(long_url)
         elif self.config.WebApp.ShortenerService == 'tly':
-            short_url = self.shorten_tly(long_url)
-        else:
-            short_url = long_url
-        return short_url
+            return self.shorten_tly(long_url)
+        return long_url
 
     def shorten_in_text(self, message) -> str:
         """
         Shorten URLs in text messages
         """
         splits = message.split(' ')
-        replacements = {}
-        for pos, part in enumerate(splits):
-            if re.match('https?://.+', part):
-                replacements[pos] = self.shorten_p(part)
+        replacements = {
+            pos: self.shorten_p(part)
+            for pos, part in enumerate(splits)
+            if re.match('https?://.+', part)
+        }
         for pos in replacements:
             splits[pos] = replacements.get(pos)
         return ' '.join([x for x in splits if x])
@@ -237,7 +235,6 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
 
         :return:
         """
-        # setthreadtitle(self.name)
         self.telegram_connection.poll()
 
     @check_room
