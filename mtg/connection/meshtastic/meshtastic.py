@@ -27,17 +27,14 @@ from setproctitle import setthreadtitle
 from mtg.utils import create_fifo, split_message
 from mtg.connection.mqtt import MQTTInterface
 
-# Default FIFO paths - will be overridden by configuration
-FIFO = '/tmp/mtg.fifo'
-FIFO_CMD = '/tmp/mtg.cmd.fifo'
-
 
 # pylint:disable=too-many-instance-attributes
 class MeshtasticConnection:
     """
     Meshtastic device connection
     """
-
+    fifo = '/tmp/mtg.fifo'
+    fifo_cmd = '/tmp/mtg.cmd.fifo'
     # pylint:disable=too-many-arguments,too-many-positional-arguments
     def __init__(
         self, dev_path: str, logger: logging.Logger, config: Any, filter_class: Any, startup_ts: float = time.time()
@@ -52,10 +49,15 @@ class MeshtasticConnection:
         self.lock = RLock()
         self.fifo_lock = RLock()  # Add separate lock for FIFO operations
         self.filter = filter_class
-        # Get configurable FIFO paths
-        global FIFO, FIFO_CMD
-        FIFO = getattr(config.Meshtastic, 'FIFOPath', FIFO)
-        FIFO_CMD = getattr(config.Meshtastic, 'FIFOCmdPath', FIFO_CMD)
+        # Get configurable FIFO paths, use defaults if not set
+        try:
+            self.fifo = getattr(config.Meshtastic, 'FIFOPath', self.fifo)
+        except KeyError:
+            pass
+        try:
+            self.fifo_cmd = getattr(config.Meshtastic, 'FIFOCmdPath', self.fifo_cmd)
+        except KeyError:
+            pass
         # exit
         self.exit = False
 
@@ -123,9 +125,7 @@ class MeshtasticConnection:
         :param node_id:
         :return:
         """
-        if self.interface is None:
-            return {}
-        return self.interface.nodes.get(node_id, {})
+        return {} if self.interface is None else self.interface.nodes.get(node_id, {})
 
     def reboot(self):
         """
@@ -289,10 +289,10 @@ class MeshtasticConnection:
         setthreadtitle(self.name)
 
         self.logger.debug("Opening FIFO...")
-        create_fifo(FIFO)
+        create_fifo(self.fifo)
         while not self.exit:
             with self.fifo_lock:  # Prevent race conditions
-                with open(FIFO, encoding='utf-8') as fifo:
+                with open(self.fifo, encoding='utf-8') as fifo:
                     for line in fifo:
                         line = line.rstrip('\n')
                         self.send_text(line, destinationId=MESHTASTIC_BROADCAST_ADDR)
@@ -306,10 +306,10 @@ class MeshtasticConnection:
         setthreadtitle("MeshtasticCmd")
 
         self.logger.debug("Opening FIFO...")
-        create_fifo(FIFO_CMD)
+        create_fifo(self.fifo_cmd)
         while not self.exit:
             with self.fifo_lock:  # Use same lock to prevent race conditions
-                with open(FIFO_CMD, encoding='utf-8') as fifo:
+                with open(self.fifo_cmd, encoding='utf-8') as fifo:
                     for line in fifo:
                         line = line.rstrip('\n')
                         if line.startswith("reboot"):

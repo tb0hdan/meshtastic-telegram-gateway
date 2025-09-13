@@ -143,7 +143,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
                 splits[pos] = replacement
         return ' '.join([x for x in splits if x])
 
-    async def echo(self, update: Update, _) -> None:  # pylint:disable=too-many-branches,too-many-statements
+    async def echo(self, update: Update, _) -> None:  # pylint:disable=too-many-branches,too-many-statements,too-many-locals
         """
         Telegram bot echo handler. Does actual message forwarding
 

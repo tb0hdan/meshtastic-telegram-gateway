@@ -1,4 +1,5 @@
 [MASTER]
+ignore-patterns=(.)*_test\.py,test_(.)*\.py,conftest.py
 jobs=0
 
 [FORMAT]
