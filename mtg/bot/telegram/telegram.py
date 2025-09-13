@@ -4,11 +4,11 @@
 import functools
 import logging
 import os
-import pkg_resources
 import re
 import tempfile
 import time
 #
+from importlib.metadata import version as importlib_version
 from threading import Thread
 from urllib.parse import urlparse
 #
@@ -368,7 +368,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         if self.meshtastic_connection.interface.myInfo and self.meshtastic_connection.interface.metadata:
             firmware = self.meshtastic_connection.interface.metadata.firmware_version
             reboot_count = self.meshtastic_connection.interface.myInfo.reboot_count
-        the_version = pkg_resources.get_distribution("meshtastic").version
+        the_version = importlib_version('meshtastic')
         formatted_time = humanize.naturaltime(time.time() - self.meshtastic_connection.get_startup_ts)
         text = f'Bot v{VERSION}/FW: v{firmware}/Meshlib: v{the_version}/Reboots: {reboot_count}.'
         text += f'Started {formatted_time}'

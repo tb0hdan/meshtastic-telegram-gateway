@@ -2,9 +2,10 @@
 """ Meshtastic bot module """
 
 import logging
-import pkg_resources
 import re
 import time
+
+from importlib.metadata import version as importlib_version
 
 import humanize
 import requests
@@ -278,7 +279,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         if interface.myInfo:
             firmware = interface.metadata.firmware_version
             reboot_count = interface.myInfo.reboot_count
-        the_version = pkg_resources.get_distribution("meshtastic").version
+        the_version = importlib_version('meshtastic')
         from_id = str(packet.get('fromId', ''))
         formatted_time = humanize.naturaltime(time.time() - self.meshtastic_connection.get_startup_ts)
         text = f'Bot v{VERSION}/FW: v{firmware}/Meshlib: v{the_version}/Reboots: {reboot_count}.'
