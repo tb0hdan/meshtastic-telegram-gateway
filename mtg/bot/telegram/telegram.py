@@ -188,12 +188,22 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         if update.message and update.message.photo:
             photo = sorted(update.message.photo, key=lambda x: x.file_size, reverse=True)[0]
             photo_file = photo.get_file()
-            file_path = os.path.basename(urlparse(photo_file.file_path).path)
+            original_filename = os.path.basename(urlparse(photo_file.file_path).path)
+            # Sanitize filename to prevent path traversal
+            safe_filename = ''.join(c for c in original_filename if c.isalnum() or c in '._-')
+            if not safe_filename:
+                safe_filename = f'image_{int(time.time())}.jpg'
             time_stamp = time.strftime('%Y/%m/%d')
             photo_dir = f'./web/static/t/{time_stamp}'
             os.makedirs(photo_dir, exist_ok=True)
-            photo_file.download(f'{photo_dir}/{file_path}')
-            long_url = f'{self.config.WebApp.ExternalURL}/static/t/{time_stamp}/{file_path}'
+            # Ensure the final path is within the expected directory
+            final_path = os.path.abspath(f'{photo_dir}/{safe_filename}')
+            expected_dir = os.path.abspath(photo_dir)
+            if not final_path.startswith(expected_dir):
+                safe_filename = f'image_{int(time.time())}.jpg'
+                final_path = os.path.abspath(f'{photo_dir}/{safe_filename}')
+            photo_file.download(final_path)
+            long_url = f'{self.config.WebApp.ExternalURL}/static/t/{time_stamp}/{safe_filename}'
             short_url = self.shorten_p(long_url)
             message += f"sent image: {short_url}"
             if self.logger is not None:
@@ -215,29 +225,43 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         """
         Shorten URL using t.ly
         """
-        tly_token = self.config.WebApp.TLYToken
-        url = 'https://t.ly/api/v1/link/shorten'
-        headers = {
-              'Authorization': f"Bearer {tly_token}",
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-        }
-        response = requests.request('POST', url, headers=headers, json={'long_url': long_url}, timeout=10)
-        return response.json().get('short_url')
+        try:
+            tly_token = self.config.WebApp.TLYToken
+            url = 'https://t.ly/api/v1/link/shorten'
+            headers = {
+                  'Authorization': f"Bearer {tly_token}",
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json'
+            }
+            response = requests.request('POST', url, headers=headers, json={'long_url': long_url}, timeout=10)
+            response.raise_for_status()
+            result = response.json()
+            return result.get('short_url', long_url)
+        except (requests.RequestException, ValueError, KeyError) as exc:
+            if self.logger:
+                self.logger.error("URL shortening failed: %s", exc)
+            return long_url
 
     def shorten_pls(self, long_url: str) -> str:
         """
         Shorten URL using pls.st
         """
-        token = self.config.WebApp.PLSST
-        url = 'https://pls.st/api/v1/a/links/shorten'
-        headers = {
-              'Authorization': f"Bearer {token}",
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-        }
-        response = requests.request('POST', url, headers=headers, json={'url': long_url}, timeout=10)
-        return response.json().get('short_url')
+        try:
+            token = self.config.WebApp.PLSST
+            url = 'https://pls.st/api/v1/a/links/shorten'
+            headers = {
+                  'Authorization': f"Bearer {token}",
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json'
+            }
+            response = requests.request('POST', url, headers=headers, json={'url': long_url}, timeout=10)
+            response.raise_for_status()
+            result = response.json()
+            return result.get('short_url', long_url)
+        except (requests.RequestException, ValueError, KeyError) as exc:
+            if self.logger:
+                self.logger.error("URL shortening failed: %s", exc)
+            return long_url
 
 
     def poll(self) -> None:
@@ -272,9 +296,11 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         :param _context:
         :return:
         """
+        # SECURITY WARNING: Authentication based only on chat ID is weak and can be spoofed
+        # Consider implementing proper token-based or username+password authentication
         if update.effective_chat.id != self.config.enforce_type(int, self.config.Telegram.Admin):
             if self.logger is not None:
-                self.logger.info("Reboot requested by non-admin: %d", update.effective_chat.id)
+                self.logger.warning("Reboot requested by non-admin: %d", update.effective_chat.id)
             return
         bot = update.get_bot()
         await bot.send_message(chat_id=update.effective_chat.id, text="Requesting reboot...")

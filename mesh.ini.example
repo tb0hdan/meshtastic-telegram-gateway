@@ -104,6 +104,14 @@ Device = /dev/ttyACM0
 # pl: Nazwa pliku lokalnej bazy danych. Strunowy.
 # pt: Nome do arquivo do banco de dados local. Fragmento.
 DatabaseFile = meshtastic.sqlite
+# en: FIFO file path for messages. String.
+# pl: Ścieżka pliku FIFO dla wiadomości. Strunowy.
+# pt: Caminho do arquivo FIFO para mensagens. Fragmento.
+FIFOPath = /tmp/mtg.fifo
+# en: FIFO file path for commands. String.
+# pl: Ścieżka pliku FIFO dla poleceń. Strunowy.
+# pt: Caminho do arquivo FIFO para comandos. Fragmento.
+FIFOCmdPath = /tmp/mtg.cmd.fifo
 # en: Log node info to file
 # pl: Zapisz informacje o węźle do pliku
 # pt: Registrar informações do nó no arquivo

@@ -49,8 +49,14 @@ class CommonView(View):
         if len(tail) > 0:
             try:
                 tail_value = int(tail[0])
+                # Input validation: limit tail value to reasonable bounds
+                if tail_value < 0:
+                    tail_value = 0
+                elif tail_value > 86400:  # Max 1 day
+                    tail_value = 86400
+                    logger.warning("Tail value clamped to maximum: 86400")
             except ValueError:
-                logger.error("Wrong tail value: ", tail)
+                logger.error("Wrong tail value: %s", tail)
         name_qs = query_string.get('name', [])
         name = name_qs[0] if len(name_qs) > 0 else ''
         return name, int(tail_value)

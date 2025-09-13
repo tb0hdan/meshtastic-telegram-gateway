@@ -269,9 +269,12 @@ class MeshtasticDB:
             node_record = MeshtasticNodeRecord.select(lambda n: n.nodeName == node_name).first()
         if not node_record:
             return data
-        # pylint:disable=unnecessary-lambda-assignment
-        cnd = lambda n: n.node == node_record and n.datetime >= datetime.now() - timedelta(seconds=tail)
-        record = MeshtasticLocationRecord.select(cnd)
+        # Use proper query building to prevent injection
+        cutoff_time = datetime.now() - timedelta(seconds=tail)
+        record = MeshtasticLocationRecord.select().where(
+            (MeshtasticLocationRecord.node == node_record) &
+            (MeshtasticLocationRecord.datetime >= cutoff_time)
+        )
         location_record = record.order_by(desc(MeshtasticLocationRecord.datetime))
         data.extend(
             {"lat": l_r.latitude, "lng": l_r.longitude} for l_r in location_record

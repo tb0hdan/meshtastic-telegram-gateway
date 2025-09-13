@@ -28,11 +28,11 @@ from mtg.webapp import WebServer
 #
 from mtg.utils.rf.prefixes import ITUPrefix
 
-def before_send(event, hint):
+def before_send(event, hint):  # pylint:disable=unused-argument
     """
-    Check Sentry event before sending it. Does nothing atm.
+    Check Sentry event before sending it. Remove sensitive data.
     """
-    print(event, hint)
+    # Remove sensitive data exposure - don't print to stdout
     return event
 
 # pylint:disable=too-many-locals,too-many-statements

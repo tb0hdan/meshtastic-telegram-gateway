@@ -11,9 +11,9 @@ class OpenAIBot:
 
     def __init__(self, logger: Any) -> None:
         api_key = os.getenv("OPENAI_API_KEY", default='')
-        openai.api_key = api_key
         self.logger = logger
-        self.client = openai.OpenAI() if len(api_key) > 0 else None  # pylint:disable=no-member
+        # Use modern OpenAI client initialization instead of deprecated api_key setting
+        self.client = openai.OpenAI(api_key=api_key) if len(api_key) > 0 else None
         self.seed = (
                 "The following is a conversation with an AI assistant. "
                 + "The assistant is helpful, creative, clever, and very friendly.\n\n"
@@ -50,4 +50,5 @@ class OpenAIBot:
             return None
         response = self.run_query(user, incoming)
         self.logger.info(user, response)
-        return response.get('choices')[0].get('message').get('content')
+        # Use modern OpenAI response format
+        return response.choices[0].message.content

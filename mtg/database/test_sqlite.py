@@ -309,7 +309,8 @@ def test_get_last_coordinates_node_not_found(mock_node_record, mock_db, test_db_
 @patch('mtg.database.sqlite.DB')
 @patch('mtg.database.sqlite.MeshtasticNodeRecord')
 @patch('mtg.database.sqlite.MeshtasticLocationRecord')
-def test_get_node_track_by_node_id(mock_location_record, mock_node_record, mock_db):
+@patch('mtg.database.sqlite.desc')
+def test_get_node_track_by_node_id(mock_desc, mock_location_record, mock_node_record, mock_db):
     """Test get_node_track with node ID (starts with !)"""
     mock_node = MagicMock()
     mock_node_record.select.return_value.first.return_value = mock_node
@@ -321,7 +322,21 @@ def test_get_node_track_by_node_id(mock_location_record, mock_node_record, mock_
     mock_location2.latitude = 51.0
     mock_location2.longitude = 31.0
 
-    mock_location_record.select.return_value.order_by.return_value = [mock_location1, mock_location2]
+    # Mock the entire query chain from select() to final result
+    mock_select = MagicMock()
+    mock_where = MagicMock()
+    mock_order_by = MagicMock()
+
+    mock_location_record.select.return_value = mock_select
+    mock_select.where.return_value = mock_where
+    mock_where.order_by.return_value = [mock_location1, mock_location2]
+
+    # Mock the datetime attribute to support comparison
+    mock_datetime_attr = MagicMock()
+    mock_datetime_attr.__ge__ = MagicMock(return_value=MagicMock())
+    mock_datetime_attr.__eq__ = MagicMock(return_value=MagicMock())
+    mock_location_record.datetime = mock_datetime_attr
+    mock_location_record.node = MagicMock()
 
     result = MeshtasticDB.get_node_track("!test_node_id", tail=3600)
 

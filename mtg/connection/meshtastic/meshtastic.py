@@ -27,6 +27,7 @@ from setproctitle import setthreadtitle
 from mtg.utils import create_fifo, split_message
 from mtg.connection.mqtt import MQTTInterface
 
+# Default FIFO paths - will be overridden by configuration
 FIFO = '/tmp/mtg.fifo'
 FIFO_CMD = '/tmp/mtg.cmd.fifo'
 
@@ -49,7 +50,12 @@ class MeshtasticConnection:
         self.mqtt_nodes: Dict[str, Any] = {}
         self.name = 'Meshtastic Connection'
         self.lock = RLock()
+        self.fifo_lock = RLock()  # Add separate lock for FIFO operations
         self.filter = filter_class
+        # Get configurable FIFO paths
+        global FIFO, FIFO_CMD
+        FIFO = getattr(config.Meshtastic, 'FIFOPath', FIFO)
+        FIFO_CMD = getattr(config.Meshtastic, 'FIFOCmdPath', FIFO_CMD)
         # exit
         self.exit = False
 
@@ -285,10 +291,11 @@ class MeshtasticConnection:
         self.logger.debug("Opening FIFO...")
         create_fifo(FIFO)
         while not self.exit:
-            with open(FIFO, encoding='utf-8') as fifo:
-                for line in fifo:
-                    line = line.rstrip('\n')
-                    self.send_text(line, destinationId=MESHTASTIC_BROADCAST_ADDR)
+            with self.fifo_lock:  # Prevent race conditions
+                with open(FIFO, encoding='utf-8') as fifo:
+                    for line in fifo:
+                        line = line.rstrip('\n')
+                        self.send_text(line, destinationId=MESHTASTIC_BROADCAST_ADDR)
 
     def run_cmd_loop(self):
         """
@@ -301,15 +308,16 @@ class MeshtasticConnection:
         self.logger.debug("Opening FIFO...")
         create_fifo(FIFO_CMD)
         while not self.exit:
-            with open(FIFO_CMD, encoding='utf-8') as fifo:
-                for line in fifo:
-                    line = line.rstrip('\n')
-                    if line.startswith("reboot"):
-                        self.logger.warning("Reboot requested using CMD...")
-                        self.reboot()
-                    if line.startswith("reset_db"):
-                        self.logger.warning("Reset DB requested using CMD...")
-                        self.reset_db()
+            with self.fifo_lock:  # Use same lock to prevent race conditions
+                with open(FIFO_CMD, encoding='utf-8') as fifo:
+                    for line in fifo:
+                        line = line.rstrip('\n')
+                        if line.startswith("reboot"):
+                            self.logger.warning("Reboot requested using CMD...")
+                            self.reboot()
+                        if line.startswith("reset_db"):
+                            self.logger.warning("Reset DB requested using CMD...")
+                            self.reset_db()
 
     def shutdown(self):
         """
