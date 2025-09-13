@@ -9,7 +9,7 @@ LOGFORMAT = '%(asctime)s - %(name)s/v{} - %(levelname)s file:%(filename)s %(func
 LOGFORMAT = LOGFORMAT.format(VERSION)
 
 
-def setup_logger(name=__name__, level=logging.INFO) -> logging.Logger:
+def setup_logger(name: str = __name__, level: int = logging.INFO) -> logging.Logger:
     """
     Set up logger and return usable instance
 
@@ -37,7 +37,7 @@ def setup_logger(name=__name__, level=logging.INFO) -> logging.Logger:
     return logger
 
 
-def conditional_log(message, logger, condition) -> None:
+def conditional_log(message: str, logger: logging.Logger, condition: bool) -> None:
     """
     conditional_log - log message when condition is true
 
@@ -46,4 +46,5 @@ def conditional_log(message, logger, condition) -> None:
     :param condition:
     :return:
     """
-    return logger.debug(message) if condition else None
+    if condition:
+        logger.debug(message)

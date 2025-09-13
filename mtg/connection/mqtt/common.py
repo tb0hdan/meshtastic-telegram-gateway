@@ -3,6 +3,7 @@
 
 import socket
 import time
+from typing import Any, Optional
 
 # pylint:disable=no-name-in-module
 from setproctitle import setthreadtitle
@@ -11,18 +12,18 @@ class CommonMQTT: # pylint:disable=too-many-instance-attributes
     """
     CommonMQTT - Common MQTT connection class
     """
-    def __init__(self, name = 'MQTT Connection'):
-        self.host = None
-        self.port = None
-        self.user = None
-        self.password = None
-        self.logger = None
-        self.client = None
+    def __init__(self, name: str = 'MQTT Connection') -> None:
+        self.host: Optional[str] = None
+        self.port: Optional[int] = None
+        self.user: Optional[str] = None
+        self.password: Optional[str] = None
+        self.logger: Optional[Any] = None
+        self.client: Optional[Any] = None
         #
         self.name = name
         self.exit = False
 
-    def set_exit(self, exit_value):
+    def set_exit(self, exit_value: bool) -> None:
         """
         set_exit - exit setter
 
@@ -31,7 +32,7 @@ class CommonMQTT: # pylint:disable=too-many-instance-attributes
         """
         self.exit = exit_value
 
-    def set_config(self, config):
+    def set_config(self, config: Any) -> None:
         """
         set_config - MQTT config setter
 
@@ -43,7 +44,7 @@ class CommonMQTT: # pylint:disable=too-many-instance-attributes
         self.user = config.MQTT.User
         self.password = config.MQTT.Password
 
-    def set_client(self, client):
+    def set_client(self, client: Any) -> None:
         """
         set_client - client setter
 
@@ -52,7 +53,7 @@ class CommonMQTT: # pylint:disable=too-many-instance-attributes
         """
         self.client = client
 
-    def set_logger(self, logger):
+    def set_logger(self, logger: Any) -> None:
         """
         set_logger - logger setter
 
@@ -61,22 +62,27 @@ class CommonMQTT: # pylint:disable=too-many-instance-attributes
         """
         self.logger = logger
 
-    def run_loop(self):
+    def run_loop(self) -> None:
         """
         run_loop - MQTT loop runner
 
         :return:
         """
         setthreadtitle(self.name)
-        self.logger.info(f'Connecting to {self.host}:{self.port}...')
+        if self.logger:
+            self.logger.info(f'Connecting to {self.host}:{self.port}...')
         while not self.exit:
             try:
-                self.client.connect(self.host, self.port, 60)
+                if self.client:
+                    self.client.connect(self.host, self.port, 60)
             except socket.timeout:
-                self.logger.error('Connect timeout...')
+                if self.logger:
+                    self.logger.error('Connect timeout...')
                 time.sleep(10)
             try:
-                self.client.loop_forever()
+                if self.client:
+                    self.client.loop_forever()
             except TimeoutError:
-                self.logger.error('Loop timeout...')
+                if self.logger:
+                    self.logger.error('Loop timeout...')
                 time.sleep(10)

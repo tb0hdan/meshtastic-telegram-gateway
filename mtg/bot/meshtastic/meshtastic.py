@@ -4,6 +4,7 @@
 import logging
 import re
 import time
+from typing import Any, Dict, Optional
 
 from importlib.metadata import version as importlib_version
 
@@ -36,32 +37,32 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
 
     # pylint:disable=too-many-arguments,too-many-positional-arguments
     def __init__(self, database: MeshtasticDB, config: Config, meshtastic_connection: RichConnection,
-                 telegram_connection: TelegramConnection, bot_handler):
+                 telegram_connection: TelegramConnection, bot_handler: Any) -> None:
         self.database = database
         self.config = config
-        self.filter = None
-        self.logger = None
+        self.filter: Optional[MeshtasticFilter] = None
+        self.logger: Optional[logging.Logger] = None
         self.telegram_connection = telegram_connection
         self.meshtastic_connection = meshtastic_connection
         # track ping request/reply
-        self.ping_container = {}
+        self.ping_container: Dict[str, Dict[str, float]] = {}
         # file logger
-        self.writer = CSVFileWriter(dst=self.config.enforce_type(str, self.config.Meshtastic.NodeLogFile))
+        self.writer = CSVFileWriter(dst=str(self.config.enforce_type(str, self.config.Meshtastic.NodeLogFile)))
         # bot
         self.bot_handler = bot_handler
         # aprs
-        self.aprs = None
+        self.aprs: Optional[Any] = None
         # cache
         self.memcache = Memcache(self.logger)
         self.memcache.run_noblock()
 
-    def set_aprs(self, aprs):
+    def set_aprs(self, aprs: Any) -> None:
         """
         Set APRS connection
         """
         self.aprs = aprs
 
-    def set_logger(self, logger: logging.Logger):
+    def set_logger(self, logger: logging.Logger) -> None:
         """
         Set logger
 
@@ -72,7 +73,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         self.memcache.set_logger(logger)
         self.writer.set_logger(self.logger)
 
-    def set_filter(self, filter_class: MeshtasticFilter):
+    def set_filter(self, filter_class: MeshtasticFilter) -> None:
         """
         Set filter class
 
@@ -89,9 +90,10 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         :param topic:
         :return:
         """
-        self.logger.debug("connection on %s topic %s", interface, topic)
+        if self.logger is not None:
+            self.logger.debug("connection on %s topic %s", interface, topic)
 
-    def on_node_info(self, node, interface: meshtastic_serial_interface.SerialInterface) -> None:
+    def on_node_info(self, node: Any, interface: meshtastic_serial_interface.SerialInterface) -> None:
         """
         on node information event
 
@@ -99,7 +101,8 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         :param interface:
         :return:
         """
-        self.logger.debug("node info %s on interface %s", node, interface)
+        if self.logger is not None:
+            self.logger.debug("node info %s on interface %s", node, interface)
 
     def subscribe(self) -> None:
         """
@@ -117,7 +120,9 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
             pub.subscribe(callback, topic)
 
     # pylint:disable=too-many-locals
-    def process_distance_command(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
+    def process_distance_command(
+        self, packet: Dict[str, Any], interface: meshtastic_serial_interface.SerialInterface
+    ) -> None:
         """
         Process /distance Meshtastic command
 
@@ -161,12 +166,15 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
 
         for node in sorted(nodes_with_distance, key=lambda x: x.get('distance', 0))[:10]:
             name = node.get('name')
-            distance = humanize.intcomma(node.get('distance'))
-            msg = f"{name}: {distance}m"
+            distance_value = node.get('distance', 0)
+            distance_str = humanize.intcomma(distance_value)
+            msg = f"{name}: {distance_str}m"
             self.meshtastic_connection.send_text(msg, destinationId=from_id)
 
 
-    def process_ping_command(self, packet, _interface: meshtastic_serial_interface.SerialInterface) -> None:
+    def process_ping_command(
+        self, packet: Dict[str, Any], _interface: meshtastic_serial_interface.SerialInterface
+    ) -> None:
         """
         Process /ping Meshtastic command
 
@@ -184,7 +192,9 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
                                              wantAck=True, wantResponse=True)
 
     # pylint: disable=unused-argument
-    def process_stats_command(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
+    def process_stats_command(
+        self, packet: Dict[str, Any], interface: meshtastic_serial_interface.SerialInterface
+    ) -> None:
         """
         Process /stats Meshtastic command
 
@@ -196,7 +206,9 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         msg = self.database.get_stats(from_id)
         self.meshtastic_connection.send_text(msg, destinationId=from_id)
 
-    def process_meshtastic_command(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
+    def process_meshtastic_command(  # pylint:disable=too-many-return-statements
+        self, packet: Dict[str, Any], interface: meshtastic_serial_interface.SerialInterface
+    ) -> None:
         """
         Process Meshtastic command
 
@@ -205,6 +217,8 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         :return:
         """
         decoded = packet.get('decoded')
+        if decoded is None:
+            return
         from_id = str(packet.get('fromId', ''))
         msg = decoded.get('text', '')
         if msg.startswith("/w"):
@@ -229,7 +243,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
 
 
     @staticmethod
-    def get_cur_temp(lat, lon, key):
+    def get_cur_temp(lat: float, lon: float, key: str) -> str:
         """
         get_cur_temp - get current weather using OpenWeatherMap
         """
@@ -243,7 +257,9 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         short = f"{short}, C:{dataj.get('weather')[0].get('main')}"
         return short
 
-    def process_weather_command(self, packet, interface):
+    def process_weather_command(
+        self, packet: Dict[str, Any], interface: meshtastic_serial_interface.SerialInterface
+    ) -> None:
         """
         Process /w (Weather) Meshtastic command)
         """
@@ -256,17 +272,20 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         lat, lon = self.meshtastic_connection.get_set_last_position(from_id)
         key = self.config.DEFAULT.OpenWeatherKey
         if len(key) == 0:
-            self.meshtastic_connection.send_text("weather command disabled by configuration", destinationId=from_id)
+            self.meshtastic_connection.send_text(
+                "weather command disabled by configuration", destinationId=from_id
+            )
             return
         try:
             text = self.get_cur_temp(lat, lon, key)
         except Exception as exc:  # pylint:disable=broad-exception-caught
-            self.logger.error(repr(exc))
+            if self.logger is not None:
+                self.logger.error(repr(exc))
             text = "could not get weather, see bot logs"
         self.meshtastic_connection.send_text(text, destinationId=from_id)
 
 
-    def process_uptime(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
+    def process_uptime(self, packet: Dict[str, Any], interface: meshtastic_serial_interface.SerialInterface) -> None:
         """
         Process /uptime Meshtastic command
 
@@ -281,12 +300,14 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
             reboot_count = interface.myInfo.reboot_count
         the_version = importlib_version('meshtastic')
         from_id = str(packet.get('fromId', ''))
-        formatted_time = humanize.naturaltime(time.time() - self.meshtastic_connection.get_startup_ts)
+        formatted_time = humanize.naturaltime(
+            time.time() - self.meshtastic_connection.get_startup_ts
+        )
         text = f'Bot v{VERSION}/FW: v{firmware}/Meshlib: v{the_version}/Reboots: {reboot_count}.'
         text += f'Started {formatted_time}'
         self.meshtastic_connection.send_text(text, destinationId=from_id)
 
-    def process_pong(self, packet) -> None:
+    def process_pong(self, packet: Dict[str, Any]) -> None:
         """
         Process pong message
 
@@ -309,7 +330,9 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         msg = f"Pong from {remote_name} at {rx_snr:.2f} SNR, time={processing_time:.3f}s"
         self.meshtastic_connection.send_text(msg, destinationId=from_id)
 
-    def notify_on_new_node(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
+    def notify_on_new_node(
+        self, packet: Dict[str, Any], interface: meshtastic_serial_interface.SerialInterface
+    ) -> None:
         """
         notify_on_new_node - sends notification about newly connected Meshtastic node (just once)
 
@@ -353,7 +376,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
                                               text=f"New node: {msg}")
 
     # pylint:disable=too-many-branches, too-many-statements, too-many-return-statements
-    def on_receive(self, packet, interface: meshtastic_serial_interface.SerialInterface) -> None:
+    def on_receive(self, packet: Dict[str, Any], interface: meshtastic_serial_interface.SerialInterface) -> None:
         """
         onReceive is called when a packet arrives
 
@@ -361,7 +384,8 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         :param interface:
         :return:
         """
-        self.logger.debug(f"Received: {packet}")
+        if self.logger is not None:
+            self.logger.debug(f"Received: {packet}")
         to_id = packet.get('toId')
         decoded = packet.get('decoded')
         from_id = str(packet.get('fromId', ''))
@@ -372,8 +396,9 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
             from_id = f"!{from_id:>08}"
             packet['fromId'] = from_id
         # check for blacklist
-        if self.filter.banned(from_id):
-            self.logger.debug(f"User {from_id} is in a blacklist...")
+        if self.filter is not None and self.filter.banned(from_id):
+            if self.logger is not None:
+                self.logger.debug(f"User {from_id} is in a blacklist...")
             return
         # Send notifications if they're enabled
         if from_id is not None and self.config.enforce_type(bool, self.config.Telegram.NotificationsEnabled):
@@ -381,12 +406,13 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         # check hop count
         hop_limit = packet.get('hopLimit', 0)
         if hop_limit > self.config.enforce_type(int, self.config.Meshtastic.MaxHopCount):
-            self.logger.debug(f"User {from_id} exceeds {hop_limit}...")
+            if self.logger is not None:
+                self.logger.debug(f"User {from_id} exceeds {hop_limit}...")
             return
         #
-        if decoded.get('portnum') != 'TEXT_MESSAGE_APP':
+        if decoded is not None and decoded.get('portnum') != 'TEXT_MESSAGE_APP':
             # notifications
-            if decoded.get('portnum') == 'POSITION_APP':
+            if decoded is not None and decoded.get('portnum') == 'POSITION_APP':
                 # Log if writer is enabled
                 if from_id is not None and self.config.enforce_type(bool, self.config.Meshtastic.NodeLogEnabled):
                     self.writer.write(packet)
@@ -396,12 +422,12 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
                     self.aprs.send_location(packet)
                 return
             # pong
-            if decoded.get('portnum') == 'REPLY_APP':
+            if decoded is not None and decoded.get('portnum') == 'REPLY_APP':
                 self.process_pong(packet)
                 return
             return
         # get msg
-        msg = decoded.get('text', '')
+        msg = decoded.get('text', '') if decoded is not None else ''
 
         # ignore non-broadcast messages
         if to_id != MESHTASTIC_BROADCAST_ADDR:
@@ -411,7 +437,8 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
 
             text = self.bot_handler.get_response(from_id, msg)
             if text:
-                self.logger.info(f"{from_id}: {msg} -> {text}")
+                if self.logger is not None:
+                    self.logger.info(f"{from_id}: {msg} -> {text}")
                 self.meshtastic_connection.send_text(text, destinationId=from_id)
 
             return
@@ -419,7 +446,8 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         try:
             self.database.store_message(packet)
         except Exception as exc:  # pylint:disable=broad-except
-            self.logger.error('Could not store message: ', exc, repr(exc))
+            if self.logger is not None:
+                self.logger.error('Could not store message: %s %s', exc, repr(exc))
         # Process commands and forward messages
         node_info = interface.nodes.get(from_id)
         long_name = from_id
@@ -437,35 +465,45 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
 
         # Range test module should not spam telegram room
         if re.match(r'^seq\s[0-9]+', msg, re.I) is not None:
-            self.logger.debug(f"User {long_name} has sent range test... {msg}")
+            if self.logger is not None:
+                self.logger.debug(f"User {long_name} has sent range test... {msg}")
             return
 
         # Telemetry
         node_part = from_id[5:]
         if re.match(r'^(\-?[0-9]+,)+' + f'{node_part}$', msg) is not None:
-            self.logger.debug('Banned telemetry: ', from_id, msg)
+            if self.logger is not None:
+                self.logger.debug('Banned telemetry: %s %s', from_id, msg)
             return
 
         # Meshtastic nodes sometimes duplicate messages sent by bot. Filter these.
-        self_name = self.meshtastic_connection.interface.getLongName()
+        self_name = (
+            self.meshtastic_connection.interface.getLongName()
+            if self.meshtastic_connection.interface is not None
+            else ''
+        )
         if msg.startswith(self_name) or self_name == long_name:
-            self.logger.debug(f"Bot duplicate via meshtastic... {msg}")
+            if self.logger is not None:
+                self.logger.debug(f"Bot duplicate via meshtastic... {msg}")
             return
 
         long_name = long_name.strip()
         # Do cache check
         key = f"{long_name}:{msg}"
         if self.memcache.get_ex(key):
-            self.logger.debug(f"Cache hit for {key}")
+            if self.logger is not None:
+                self.logger.debug(f"Cache hit for {key}")
             return
         self.memcache.set(key, True, expires=300)
         #
-        self.logger.info(f"MTG-M-BOT: {long_name}: -> {msg}")
+        if self.logger is not None:
+            self.logger.info(f"MTG-M-BOT: {long_name}: -> {msg}")
 
         if msg.startswith('APRS-'):
             addressee = msg.split(' ')[0].lstrip('APRS-').rstrip(':')
             new_msg = msg.replace(msg.split(' ')[0], '').strip()
-            self.aprs.send_text(addressee, f'{long_name}: {new_msg}')
+            if self.aprs is not None:
+                self.aprs.send_text(addressee, f'{long_name}: {new_msg}')
 
         self.telegram_connection.send_message(chat_id=self.config.enforce_type(int, self.config.Telegram.Room),
                                               text=f"{long_name}: {msg}")

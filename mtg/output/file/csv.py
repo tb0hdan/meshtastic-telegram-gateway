@@ -3,6 +3,7 @@
 
 import csv
 import time
+from typing import Any, Dict
 
 
 class CSVFileWriter:
@@ -10,11 +11,11 @@ class CSVFileWriter:
     CSVFileWriter - CSV file writer. Stores node coordinates
     """
 
-    def __init__(self, dst='logfile.csv'):
+    def __init__(self, dst: str = 'logfile.csv') -> None:
         self.logger = None
         self.dst = dst
 
-    def set_logger(self, logger) -> None:
+    def set_logger(self, logger: Any) -> None:
         """
         set_logger - set up logger
 
@@ -23,7 +24,7 @@ class CSVFileWriter:
         """
         self.logger = logger
 
-    def write(self, packet) -> None:
+    def write(self, packet: Dict[str, Any]) -> None:
         """
         write - write packet to CSV file
 

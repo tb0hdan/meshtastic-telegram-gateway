@@ -2,6 +2,7 @@
 """ MQTT connection module """
 
 from threading import Thread
+from typing import Any, Callable, Optional
 #
 import paho.mqtt.client as mqtt
 from .common import CommonMQTT
@@ -11,21 +12,21 @@ class MQTT:  # pylint:disable=too-many-instance-attributes
     MQTT - MQTT connection class
     """
     # pylint:disable=too-many-arguments,too-many-positional-arguments
-    def __init__(self, topic, host, user, password, logger, port=1883):
+    def __init__(self, topic: str, host: str, user: str, password: str, logger: Any, port: int = 1883) -> None:
         self.topic = topic
         self.client = mqtt.Client()
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
         self.client.username_pw_set(user, password)
         #
-        self.config = None
+        self.config: Optional[Any] = None
         #
         self.logger = logger
         # for connection
         self.host = host
         self.port = port
         # for processing
-        self.handler = None
+        self.handler: Optional[Callable[[str, bytes], None]] = None
         #
         self.name = 'MQTT Connection'
         # exit
@@ -35,7 +36,7 @@ class MQTT:  # pylint:disable=too-many-instance-attributes
         self.common.set_client(self.client)
         self.common.set_logger(logger)
 
-    def set_config(self, config):
+    def set_config(self, config: Any) -> None:
         """
         set_config - MQTT config setter
 
@@ -45,7 +46,7 @@ class MQTT:  # pylint:disable=too-many-instance-attributes
         self.config = config
         self.common.set_config(config)
 
-    def on_connect(self, client, _userdata, _flags, result_code):
+    def on_connect(self, client: Any, _userdata: Any, _flags: Any, result_code: int) -> None:
         """
         on_connect - MQTT callback for connection event
 
@@ -58,7 +59,7 @@ class MQTT:  # pylint:disable=too-many-instance-attributes
         self.logger.info(f"Connected with result code {str(result_code)}")
         client.subscribe(f'{self.topic}/#')
 
-    def on_message(self, _client, _userdata, msg):
+    def on_message(self, _client: Any, _userdata: Any, msg: Any) -> None:
         """
         on_message - MQTT callback for message event
 
@@ -73,7 +74,7 @@ class MQTT:  # pylint:disable=too-many-instance-attributes
             except Exception as exc:  # pylint:disable=broad-exception-caught
                 self.logger.error('An exception occured in self.handler: %s', repr(exc))
 
-    def set_handler(self, handler):
+    def set_handler(self, handler: Callable[[str, bytes], None]) -> None:
         """
         set_handler - MQTT handler setter
 
@@ -82,7 +83,7 @@ class MQTT:  # pylint:disable=too-many-instance-attributes
         """
         self.handler = handler
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         """
         shutdown - MQTT shutdown method
         """
@@ -90,13 +91,13 @@ class MQTT:  # pylint:disable=too-many-instance-attributes
         self.exit = True
         self.common.set_exit(True)
 
-    def run(self):
+    def run(self) -> None:
         """
         MQTT runner
 
         :return:
         """
-        if self.config.enforce_type(bool, self.config.MQTT.Enabled):
+        if self.config is not None and self.config.enforce_type(bool, self.config.MQTT.Enabled):
             self.logger.info('Starting MQTT client...')
             thread = Thread(target=self.common.run_loop, daemon=True, name=self.name)
             thread.start()

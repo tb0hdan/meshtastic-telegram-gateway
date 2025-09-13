@@ -7,7 +7,7 @@ import time
 #
 from datetime import datetime, timedelta
 from typing import (
-    AnyStr
+    Any, AnyStr, Dict, List, Optional as TypingOptional, Tuple
 )
 #
 from pony.orm import db_session, desc, Database, Optional, PrimaryKey, Required, Set, set_sql_debug
@@ -18,14 +18,14 @@ from mtg.log import conditional_log
 DB = Database()
 
 
-def sql_debug():
+def sql_debug() -> None:
     """
     sql_debug - wrapper to enable debugging
     """
     set_sql_debug(True)
 
 
-class FirmwareReleaseRecord(DB.Entity):  # pylint:disable=too-few-public-methods
+class FirmwareReleaseRecord(DB.Entity):  # type: ignore[name-defined] # pylint:disable=too-few-public-methods
     """
     FirmwareReleaseRecord: firmware release representation in DB
     """
@@ -35,7 +35,7 @@ class FirmwareReleaseRecord(DB.Entity):  # pylint:disable=too-few-public-methods
     download_url = Required(str)
 
 
-class MeshtasticNodeRecord(DB.Entity):  # pylint:disable=too-few-public-methods
+class MeshtasticNodeRecord(DB.Entity):  # type: ignore[name-defined] # pylint:disable=too-few-public-methods
     """
     MeshtasticNodeRecord: node record representation in DB
     """
@@ -49,7 +49,7 @@ class MeshtasticNodeRecord(DB.Entity):  # pylint:disable=too-few-public-methods
     # shortName = Optional(str)
 
 
-class MeshtasticLocationRecord(DB.Entity):  # pylint:disable=too-few-public-methods
+class MeshtasticLocationRecord(DB.Entity):  # type: ignore[name-defined] # pylint:disable=too-few-public-methods
     """
     MeshtasticLocationRecord: location record representation in DB
     """
@@ -65,7 +65,7 @@ class MeshtasticLocationRecord(DB.Entity):  # pylint:disable=too-few-public-meth
     # airUtil = Optional(float)
 
 
-class MeshtasticMessageRecord(DB.Entity):  # pylint:disable=too-few-public-methods
+class MeshtasticMessageRecord(DB.Entity):  # type: ignore[name-defined] # pylint:disable=too-few-public-methods
     """
     MeshtasticMessageRecord: message record representation in DB
     """
@@ -74,7 +74,7 @@ class MeshtasticMessageRecord(DB.Entity):  # pylint:disable=too-few-public-metho
     node = Optional(MeshtasticNodeRecord)
 
 
-class FilterRecord(DB.Entity):
+class FilterRecord(DB.Entity):  # type: ignore[name-defined]
     """
     MeshtasticFilterRecord: filter representation in DB
     """
@@ -91,12 +91,12 @@ class MeshtasticDB:
     """
 
     def __init__(self, db_file: AnyStr, logger: logging.Logger):
-        self.connection = None
+        self.connection: TypingOptional[Any] = None
         self.logger = logger
         DB.bind(provider='sqlite', filename=db_file, create_db=True)
         DB.generate_mapping(create_tables=True)
 
-    def set_meshtastic(self, connection) -> None:
+    def set_meshtastic(self, connection: Any) -> None:
         """
         set_meshtastic - set meshtastic connection
 
@@ -106,7 +106,7 @@ class MeshtasticDB:
         self.connection = connection
 
     @db_session
-    def get_filter(self, connection, identifier):
+    def get_filter(self, connection: str, identifier: str) -> Tuple[bool, TypingOptional[FilterRecord]]:
         """
         get_filter - get filter record from DB
 
@@ -121,7 +121,7 @@ class MeshtasticDB:
         return False, None
 
     @db_session
-    def get_node_record(self, node_id: AnyStr):
+    def get_node_record(self, node_id: AnyStr) -> Tuple[bool, TypingOptional[MeshtasticNodeRecord]]:
         """
         get_node_record - get node record from DB
 
@@ -129,6 +129,8 @@ class MeshtasticDB:
         :return:
         """
         node_record = MeshtasticNodeRecord.select(lambda n: n.nodeId == node_id).first()
+        if self.connection is None:
+            return False, None
         node_info = self.connection.node_info(node_id)
         last_heard = datetime.fromtimestamp(node_info.get('lastHeard', 0))
         node_name = node_info.get('user', {}).get('longName', '')
@@ -154,7 +156,7 @@ class MeshtasticDB:
 
     @staticmethod
     @db_session
-    def get_stats(node_id: AnyStr) -> AnyStr:
+    def get_stats(node_id: AnyStr) -> str:
         """
         Get node stats
 
@@ -166,7 +168,7 @@ class MeshtasticDB:
 
     @staticmethod
     @db_session
-    def get_normalized_node(node_name: AnyStr):
+    def get_normalized_node(node_name: AnyStr) -> TypingOptional[MeshtasticNodeRecord]:
         """
         get_normalized_node - get normalized node name
         """
@@ -179,7 +181,7 @@ class MeshtasticDB:
         return None
 
     @db_session
-    def store_message(self, packet: dict) -> None:
+    def store_message(self, packet: Dict[str, Any]) -> None:
         """
         Store Meshtastic message in DB
 
@@ -189,7 +191,7 @@ class MeshtasticDB:
         from_id = packet.get("fromId")
         _, node_record = self.get_node_record(from_id)
         decoded = packet.get('decoded')
-        message = decoded.get('text', '')
+        message = decoded.get('text', '') if decoded else ''
         # Save meshtastic message
         MeshtasticMessageRecord(
             datetime=datetime.fromtimestamp(time.time()),
@@ -198,7 +200,7 @@ class MeshtasticDB:
         )
 
     @db_session
-    def store_location(self, packet: dict) -> None:
+    def store_location(self, packet: Dict[str, Any]) -> None:
         """
         Store Meshtastic location in DB
 
@@ -223,7 +225,7 @@ class MeshtasticDB:
         )
 
     @db_session
-    def get_node_info(self, node_id: str):
+    def get_node_info(self, node_id: str) -> MeshtasticNodeRecord:
         """
         get_node_info - get node info
         """
@@ -233,7 +235,7 @@ class MeshtasticDB:
         return node_record
 
     @db_session
-    def get_last_coordinates(self, node_id: str):
+    def get_last_coordinates(self, node_id: str) -> Tuple[float, float]:
         """
         get_last_coordinates - get last coordinates for node
 
@@ -252,7 +254,7 @@ class MeshtasticDB:
 
     @staticmethod
     @db_session
-    def get_node_track(node_name, tail=3600):
+    def get_node_track(node_name: str, tail: int = 3600) -> List[Dict[str, float]]:
         """
         get_node_track - get node track
 
@@ -260,7 +262,7 @@ class MeshtasticDB:
         :param tail:
         :return:
         """
-        data = []
+        data: List[Dict[str, float]] = []
         if node_name.startswith('!'):
             node_record = MeshtasticNodeRecord.select(lambda n: n.nodeId == node_name).first()
         else:
@@ -278,7 +280,7 @@ class MeshtasticDB:
 
     @staticmethod
     @db_session
-    def set_coordinates(node_id, lat_r, lon_r) -> None:
+    def set_coordinates(node_id: str, lat_r: float, lon_r: float) -> None:
         """
         set_coordinates - set node coordinates
 

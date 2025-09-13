@@ -3,8 +3,9 @@
 
 import asyncio
 import logging
+from typing import Any
 
-from telegram import Update
+from telegram import Update  # type: ignore[attr-defined]
 from telegram.ext import Application
 
 
@@ -18,7 +19,7 @@ class TelegramConnection:
         logging.getLogger("httpx").setLevel(logging.WARNING)
         self.application = Application.builder().token(token).build()
 
-    def send_message(self, *args, **kwargs) -> None:
+    def send_message(self, *args: Any, **kwargs: Any) -> None:
         """
         Send a Telegram message
 
@@ -36,7 +37,7 @@ class TelegramConnection:
         """
         self.application.run_polling(allowed_updates=Update.ALL_TYPES)
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         """
         Stop Telegram bot
         """

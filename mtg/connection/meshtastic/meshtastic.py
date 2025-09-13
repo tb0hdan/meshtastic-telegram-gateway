@@ -8,8 +8,10 @@ import time
 #
 from threading import RLock, Thread
 from typing import (
+    Any,
     Dict,
     List,
+    Optional,
 )
 #
 from meshtastic import (
@@ -36,13 +38,15 @@ class MeshtasticConnection:
     """
 
     # pylint:disable=too-many-arguments,too-many-positional-arguments
-    def __init__(self, dev_path: str, logger: logging.Logger, config, filter_class, startup_ts=time.time()):
+    def __init__(
+        self, dev_path: str, logger: logging.Logger, config: Any, filter_class: Any, startup_ts: float = time.time()
+    ):
         self.dev_path = dev_path
-        self.interface = None
+        self.interface: Optional[Any] = None
         self.logger = logger
         self.config = config
         self.startup_ts = startup_ts
-        self.mqtt_nodes = {}
+        self.mqtt_nodes: Dict[str, Any] = {}
         self.name = 'Meshtastic Connection'
         self.lock = RLock()
         self.filter = filter_class
@@ -83,6 +87,8 @@ class MeshtasticConnection:
         :param kwargs:
         :return:
         """
+        if self.interface is None:
+            return
         if len(msg) < mesh_pb2.Constants.DATA_PAYLOAD_LEN // 2:  # pylint:disable=no-member
             with self.lock:
                 self.interface.sendText(msg, **kwargs)
@@ -99,6 +105,8 @@ class MeshtasticConnection:
         :param kwargs:
         :return:
         """
+        if self.interface is None:
+            return
         with self.lock:
             self.interface.sendData(*args, **kwargs)
 
@@ -109,6 +117,8 @@ class MeshtasticConnection:
         :param node_id:
         :return:
         """
+        if self.interface is None:
+            return {}
         return self.interface.nodes.get(node_id, {})
 
     def reboot(self):
@@ -179,6 +189,8 @@ class MeshtasticConnection:
 
         :return:
         """
+        if self.interface is None:
+            return {}
         return self.interface.nodes or {}
 
     @property

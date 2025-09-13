@@ -6,6 +6,7 @@ import json
 import struct
 import time
 from threading import Thread
+from typing import Any, Dict, Optional
 
 from cryptography.hazmat.primitives.ciphers import (
     Cipher, algorithms, modes
@@ -26,11 +27,11 @@ from .common import CommonMQTT
 class MQTTCrypto:
     """ MQTT Crypto module """
     KEY = 'd4f1bb3a20290759f0bcffabcf4e6901'
-    def __init__(self, key=None):
+    def __init__(self, key: Optional[str] = None) -> None:
         self.key = bytes.fromhex(key) if key else bytes.fromhex(self.KEY)
 
     @staticmethod
-    def init_nonce(from_node, packet_id):
+    def init_nonce(from_node: int, packet_id: int) -> bytearray:
         """
         init_nonce - Initialize nonce. Ported from meshtastic/firmware
         """
@@ -40,7 +41,7 @@ class MQTTCrypto:
         return nonce
 
     @staticmethod
-    def decrypt(key, nonce, ciphertext):
+    def decrypt(key: bytes, nonce: bytearray, ciphertext: bytes) -> bytes:
         """
         decrypt - decrypt data using nonce and ciphertext
         """
@@ -51,16 +52,23 @@ class MQTTCrypto:
 
         return decryptor.update(ciphertext) + decryptor.finalize()
 
-    def decrypt_packet(self, packet):
+    def decrypt_packet(self, packet: Dict[str, Any]) -> Any:
         """
         decrypt_packet - decrypt MQTT packet
         """
-        data = base64.b64decode(packet.get('encrypted'))
-        nonce = self.init_nonce(packet.get('from'), packet.get('id'))
+        encrypted_data = packet.get('encrypted')
+        if encrypted_data is None:
+            raise ValueError("No encrypted data in packet")
+        data = base64.b64decode(encrypted_data)
+        packet_from = packet.get('from')
+        packet_id = packet.get('id')
+        if packet_from is None or packet_id is None:
+            raise ValueError("Missing from or id in packet")
+        nonce = self.init_nonce(packet_from, packet_id)
         r = self.decrypt(self.key, nonce, data)
         return mesh_pb2.Data().FromString(r)  # pylint:disable=no-member
 
-    def encrypt_packet(self):
+    def encrypt_packet(self) -> None:
         """
         encrypt_packet - Not implemented yet
         """
@@ -71,22 +79,22 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
     """
     MQTTInterface - MQTT to Radio emulation transport class
     """
-    def __init__(self, debugOut=None,  # pylint:disable=too-many-arguments,too-many-positional-arguments
-                 noProto=False,
-                 connectNow=True,
-                 cfg=None,
-                 logger=None):
+    def __init__(self, debugOut: Optional[Any] = None,  # pylint:disable=too-many-arguments,too-many-positional-arguments
+                 noProto: bool = False,
+                 connectNow: bool = True,
+                 cfg: Optional[Any] = None,
+                 logger: Optional[Any] = None) -> None:
 
         self.stream = None
         self.cfg = cfg
         self.logger = logger
-        self.connection_thread = None
+        self.connection_thread: Optional[Thread] = None
         self.name = "MQTT Interface"
         #
         self.topic = (
-            self.cfg.MQTT.Topic
-            if self.cfg.MQTT.Topic.endswith('#')
-            else f'{self.cfg.MQTT.Topic}/#'
+            self.cfg.MQTT.Topic  # type: ignore[union-attr]
+            if self.cfg and self.cfg.MQTT.Topic.endswith('#')
+            else f'{self.cfg.MQTT.Topic}/#' if self.cfg else 'meshtastic/2/e/#'
         )
         # for connection
         self.my_hw_node_id = gma().replace(':', '')[:8]
@@ -96,7 +104,8 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         self.client = mqtt.Client()
         self.client.on_message = self.on_message
         self.client.on_connect = self.on_connect
-        self.client.username_pw_set(self.cfg.MQTT.User, self.cfg.MQTT.Password)
+        if self.cfg:
+            self.client.username_pw_set(self.cfg.MQTT.User, self.cfg.MQTT.Password)
         #
         self.common = CommonMQTT(self.name)
         self.common.set_client(self.client)
@@ -109,34 +118,37 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
             self, debugOut=debugOut, noProto=noProto, connectNow=connectNow
         )
 
-    def close(self):
+    def close(self) -> None:
         """Close a connection to the device"""
-        self.logger.info("Closing MQTT connection")
+        if self.logger:
+            self.logger.info("Closing MQTT connection")
         StreamInterface.close(self)
         self._wantExit = True
         self.common.set_exit(True)
 
-    def connect(self):
+    def connect(self) -> None:
         """Connect to MQTT and emulate device"""
-        if not self.cfg.MQTT.Enabled:
+        if not self.cfg or not self.cfg.MQTT.Enabled:
             return
         self.connection_thread = Thread(target=self.common.run_loop, daemon=True)
         self.connection_thread.start()
 
-    def on_message(self, client, userdata, msg):
+    def on_message(self, client: Any, userdata: Any, msg: Any) -> None:
         """
         on_message - MQTT callback for message event
         """
         try:
             self.on_message_wrapped(client, userdata, msg)
         except Exception as exc:  # pylint:disable=broad-exception-caught
-            self.logger.error('Exception in on_message_wrapped: %s -> %s', repr(exc), msg.payload)
+            if self.logger:
+                self.logger.error('Exception in on_message_wrapped: %s -> %s', repr(exc), msg.payload)
 
-    def on_message_wrapped(self, _client, _userdata, msg):
+    def on_message_wrapped(self, _client: Any, _userdata: Any, msg: Any) -> None:
         """
         on_message_wrapped - safe MQTT callback for message event
         """
-        self.logger.debug(msg.topic)
+        if self.logger:
+            self.logger.debug(msg.topic)
         # skip node status messages
         if msg.payload in [b'online', b'offline']:
             return
@@ -152,7 +164,10 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         try:
             mqtt_incoming = mqtt_pb2.ServiceEnvelope().FromString(msg.payload)  # pylint:disable=no-member
         except Exception as exc:  # pylint:disable=broad-except
-            self.logger.error("failed to decode incoming MQTT message: %s, %s", exc, str(msg.payload), exc_info=True)
+            if self.logger:
+                self.logger.error(
+                    "failed to decode incoming MQTT message: %s, %s", exc, str(msg.payload), exc_info=True
+                )
             return
 
         full = json_format.MessageToDict(mqtt_incoming.packet)
@@ -166,7 +181,8 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
             full['decoded'] = json_format.MessageToDict(self.crypto.decrypt_packet(full))
         # drop messages without decoded
         if not full.get('decoded', None):
-            self.logger.error("No decoded message in MQTT message: %s", full)
+            if self.logger:
+                self.logger.error("No decoded message in MQTT message: %s", full)
             return
         # Reassemble message
         new_packet = {
@@ -186,9 +202,10 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         try:
             self._handlePacketFromRadio(radio_msg)
         except Exception as exc:  # pylint:disable=broad-except
-            self.logger.error(exc)
+            if self.logger:
+                self.logger.error(exc)
 
-    def nodeinfo(self):
+    def nodeinfo(self) -> bytes:
         """
         nodeinfo - prepare node info
         """
@@ -199,7 +216,7 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         new_node.hw_model = 'RAK4631'
         return new_node.SerializeToString()
 
-    def node_publisher(self):
+    def node_publisher(self) -> None:
         """
         node_publisher - send node info regularly
         """
@@ -208,17 +225,20 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
             self.sendData(self.nodeinfo(), portNum=PortNum.NODEINFO_APP)  # pylint:disable=no-member
             time.sleep(1800)
 
-    def on_connect(self, client, _userdata, _flags, result_code):
+    def on_connect(self, client: Any, _userdata: Any, _flags: Any, result_code: int) -> None:
         """
         on_connect - MQTT callback for connect event
         """
-        self.logger.info(f"Connected with result code {str(result_code)}")
+        if self.logger:
+            self.logger.info(f"Connected with result code {str(result_code)}")
         client.subscribe(self.topic)
         # initialize interface
         self._startConfig()
 
     # pylint:disable=arguments-differ,unused-argument,no-member
-    def sendData(self, msg, destinationId=BROADCAST_ADDR, portNum=PortNum.TEXT_MESSAGE_APP, **kwargs):
+    def sendData(
+        self, msg: bytes, destinationId: Any = BROADCAST_ADDR, portNum: Any = PortNum.TEXT_MESSAGE_APP, **kwargs: Any
+    ) -> None:
         """
         Send Meshtastic data message
         """
@@ -228,10 +248,12 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
             # pylint:disable=line-too-long
             int(f"0x{str(destinationId).removeprefix('!')}", base=16) if destinationId != BROADCAST_ADDR else BROADCAST_NUM
         )
-        self.logger.info(f"Sending data to {destinationId} with portNum {portNum} and message {msg}")
+        if self.logger:
+            self.logger.info(f"Sending data to {destinationId} with portNum {portNum} and message {msg!r}")
         # Create first message without from
         original_mqtt_message = mqtt_pb2.ServiceEnvelope()  # pylint:disable=no-member
-        original_mqtt_message.channel_id = self.cfg.MQTT.Channel
+        if self.cfg:
+            original_mqtt_message.channel_id = self.cfg.MQTT.Channel
         original_mqtt_message.gateway_id = self.my_hw_hex_id
         original_mqtt_message.packet.to = packet_to
         original_mqtt_message.packet.hop_limit = 2
@@ -255,23 +277,25 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         mqtt_msg = json_format.ParseDict(full, new_msg)
         Thread(target=self.send_mqtt_message, args=(mqtt_msg,), daemon=True).start()
 
-    def send_mqtt_message(self, mqtt_msg):
+    def send_mqtt_message(self, mqtt_msg: Any) -> None:
         """
         sendMQTTMessage - deliver message over MQTT. With retries.
         """
-        for subtopic in ['c', 'e']:
-            mqtt_topic = f"{self.cfg.MQTT.Topic}/2/{subtopic}/{self.cfg.MQTT.Channel}/{self.my_hw_hex_id}"
-            for _ in range(3):
-                result = self.client.publish(mqtt_topic, mqtt_msg.SerializeToString())
-                self.logger.info(f"MQTT message sent with result: {result}")
+        if self.cfg:
+            for subtopic in ['c', 'e']:
+                mqtt_topic = f"{self.cfg.MQTT.Topic}/2/{subtopic}/{self.cfg.MQTT.Channel}/{self.my_hw_hex_id}"
+                for _ in range(3):
+                    result = self.client.publish(mqtt_topic, mqtt_msg.SerializeToString())
+                    if self.logger:
+                        self.logger.info(f"MQTT message sent with result: {result}")
                 # Sleep time for LongFast
                 time.sleep(30)
 
-    def waitForConfig(self):
+    def waitForConfig(self) -> None:
         """Wait for configuration"""
         return
 
-    def getLongName(self):
+    def getLongName(self) -> str:
         """
         Return this node long name
         """

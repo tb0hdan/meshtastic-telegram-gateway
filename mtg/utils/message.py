@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 """ message utilities """
 
+from typing import Any, Callable, List
 
-def split_message(msg, chunk_len, callback, **kwargs) -> None:
+
+def split_message(msg: str, chunk_len: int, callback: Callable[..., Any], **kwargs: Any) -> None:
     """
     split_message - split message into smaller parts and invoke callback on each one
 
     :return:
     """
     # split into parts
-    parts = []
-    part = []
+    parts: List[List[str]] = []
+    part: List[str] = []
     for line in msg.split('\n'):
         if len(line) == 0:
             continue

@@ -4,6 +4,7 @@ import logging
 import time
 import sys
 from threading import Thread
+from typing import Optional
 # pylint:disable=no-name-in-module
 from setproctitle import setthreadtitle
 from slack_sdk.rtm_v2 import RTMClient
@@ -12,7 +13,7 @@ class SlackBot:
     """
     Slack bot class
     """
-    def __init__(self, logger: logging.Logger):
+    def __init__(self, logger: logging.Logger) -> None:
         self.name = "SlackBot"
         self.logger = logger
         self.rtm = RTMClient(token="",
@@ -20,7 +21,7 @@ class SlackBot:
                              all_message_trace_enabled = True,
                              ping_pong_trace_enabled = True)
 
-    def handle(self, _client: RTMClient, event: dict):
+    def handle(self, _client: RTMClient, event: dict) -> None:
         """
         Event handler for the bot
 
@@ -37,7 +38,7 @@ class SlackBot:
 
             self.send_text(channel_id, f"Hi <@{user}>!")
 
-    def send_text(self, channel: str, text: str, thread_ts: str = None):
+    def send_text(self, channel: str, text: str, thread_ts: Optional[str] = None) -> None:
         """
         Send text to channel
 
@@ -51,7 +52,7 @@ class SlackBot:
             thread_ts=thread_ts
         )
 
-    def poll(self):
+    def poll(self) -> None:
         """
         Polling method for the bot
 
@@ -66,7 +67,7 @@ class SlackBot:
             except KeyboardInterrupt:
                 sys.exit(0)
 
-    def run(self):
+    def run(self) -> None:
         """
         Telegram bot runner
 

@@ -2,13 +2,14 @@
 """ OpenAI Bot module """
 
 import os
+from typing import Any, Optional
 import openai
 
 
 class OpenAIBot:
     """ OpenAI Bot container """
 
-    def __init__(self, logger):
+    def __init__(self, logger: Any) -> None:
         api_key = os.getenv("OPENAI_API_KEY", default='')
         openai.api_key = api_key
         self.logger = logger
@@ -18,7 +19,7 @@ class OpenAIBot:
                 + "The assistant is helpful, creative, clever, and very friendly.\n\n"
         )
 
-    def run_query(self, user, query):
+    def run_query(self, user: str, query: str) -> Any:
         """
         Run OpenAI query with user info
 
@@ -36,7 +37,7 @@ class OpenAIBot:
                                       frequency_penalty=0, max_tokens=256, user=user,
                                       stop=[f" {user}:", " AI:"])
 
-    def get_response(self, user, incoming):
+    def get_response(self, user: str, incoming: str) -> Optional[str]:
         """
         Get response from OpenAI API
 
