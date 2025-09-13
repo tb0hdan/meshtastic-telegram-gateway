@@ -2,7 +2,7 @@ VERSION = $(shell cat ./VERSION)
 
 all: check
 
-check: lint mypy
+check: lint mypy test
 
 lint:
 	@pylint -r y -j 0 mesh.py mtg/
@@ -22,4 +22,4 @@ tag:
 	@git push --tags
 
 test:
-	@pytest mtg
+	@pytest --cov mtg
