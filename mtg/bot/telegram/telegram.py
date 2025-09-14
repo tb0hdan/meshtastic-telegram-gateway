@@ -468,8 +468,8 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
                                      text=formatted,
                                      parse_mode='MarkdownV2')
             return
-        split_message(formatted, MessageLimit.MAX_TEXT_LENGTH,
-                      lambda msg: bot.send_message(chat_id=update.effective_chat.id,
+        split_message(formatted, MessageLimit.MAX_TEXT_LENGTH,  # type: ignore[func-returns-value]
+                      lambda msg: self.telegram_connection.send_message(chat_id=update.effective_chat.id,
                                                            text=msg,
                                                            parse_mode='MarkdownV2')
                       )
@@ -482,7 +482,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         :param hop_limit:
         :return:
         """
-        if len(dest) == 0:
+        if not dest:
             return
         if self.meshtastic_connection.interface is not None:
             thread = Thread(target=self.meshtastic_connection.interface.sendTraceRoute,
