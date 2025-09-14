@@ -350,7 +350,7 @@ class TestMeshtasticBot:
             meshtastic_bot.notify_on_new_node(packet, mock_interface)
 
         # Should send notification
-        meshtastic_bot.telegram_connection.send_message.assert_called_once()
+        meshtastic_bot.telegram_connection.send_message_sync.assert_called_once()
         meshtastic_bot.meshtastic_connection.send_text.assert_called_once()
 
     def test_process_meshtastic_command_weather(self, meshtastic_bot):
@@ -466,6 +466,6 @@ class TestMeshtasticBot:
             meshtastic_bot.on_receive(packet, mock_interface)
 
         mock_database.store_message.assert_called_once_with(packet)
-        meshtastic_bot.telegram_connection.send_message.assert_called_once_with(
+        meshtastic_bot.telegram_connection.send_message_sync.assert_called_once_with(
             chat_id=67890, text="TestNode: Hello mesh!"
         )

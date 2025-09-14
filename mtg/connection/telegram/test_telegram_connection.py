@@ -46,41 +46,56 @@ class TestTelegramConnection:
                 mock_get_logger.assert_called_once_with("httpx")
                 mock_logger_httpx.setLevel.assert_called_once_with(30)  # logging.WARNING = 30
 
-    def test_send_message(self, telegram_connection):
+    @pytest.mark.asyncio
+    async def test_send_message(self, telegram_connection):
         """Test send_message method"""
         telegram_connection.application.bot = AsyncMock()
+        # Initialize the message queue with the current event loop
+        telegram_connection.msg_queue = asyncio.Queue()
 
-        with patch('asyncio.run') as mock_run:
+        with patch('asyncio.run_coroutine_threadsafe') as mock_run_threadsafe:
             telegram_connection.send_message(chat_id=12345, text="Test message")
 
-            mock_run.assert_called_once()
-            # Verify the coroutine was passed to asyncio.run
-            coro = mock_run.call_args[0][0]
+            mock_run_threadsafe.assert_called_once()
+            # Verify the coroutine was passed to asyncio.run_coroutine_threadsafe
+            coro = mock_run_threadsafe.call_args[0][0]
             assert asyncio.iscoroutine(coro)
 
-    def test_send_message_with_args_and_kwargs(self, telegram_connection):
+    @pytest.mark.asyncio
+    async def test_send_message_with_args_and_kwargs(self, telegram_connection):
         """Test send_message method with various args and kwargs"""
         telegram_connection.application.bot = AsyncMock()
+        # Initialize the message queue with the current event loop
+        telegram_connection.msg_queue = asyncio.Queue()
 
-        with patch('asyncio.run') as mock_run:
+        with patch('asyncio.run_coroutine_threadsafe') as mock_run_threadsafe:
             telegram_connection.send_message(
                 12345, "Test message",
                 parse_mode="HTML",
                 reply_to_message_id=67890
             )
 
-            mock_run.assert_called_once()
+            mock_run_threadsafe.assert_called_once()
 
     def test_poll(self, telegram_connection):
         """Test poll method"""
         telegram_connection.application.run_polling = MagicMock()
 
-        telegram_connection.poll()
+        with patch('asyncio.new_event_loop') as mock_new_loop:
+            with patch('asyncio.set_event_loop') as mock_set_loop:
+                mock_loop = MagicMock()
+                mock_new_loop.return_value = mock_loop
+                mock_loop.run_until_complete = MagicMock()
 
-        # The actual call should pass the string value 'all_types' (Update.ALL_TYPES)
-        telegram_connection.application.run_polling.assert_called_once_with(
-            allowed_updates='all_types'
-        )
+                telegram_connection.poll()
+
+                # The actual call should pass the string value 'all_types' (Update.ALL_TYPES)
+                telegram_connection.application.run_polling.assert_called_once_with(
+                    allowed_updates='all_types'
+                )
+                # Check that start_queue_processor was called
+                mock_loop.run_until_complete.assert_called_once()
+                mock_set_loop.assert_called_once_with(mock_loop)
 
     def test_shutdown(self, telegram_connection):
         """Test shutdown method"""

@@ -297,7 +297,7 @@ class RenderAirRaidView(CommonView):  # pylint:disable=too-many-instance-attribu
         # Telegram - Kyiv/obl only
         if region_id in [14, 31]:
             chat_id = self.config.enforce_type(int, self.config.Telegram.NotificationsRoom)
-            self.telegram_connection.send_message(chat_id=chat_id,
+            self.telegram_connection.send_message_sync(chat_id=chat_id,
                                                   text=new_msg)
         Thread(target=self.slow_alert, args=(alert_place, new_msg)).start()
         return 'Ok'

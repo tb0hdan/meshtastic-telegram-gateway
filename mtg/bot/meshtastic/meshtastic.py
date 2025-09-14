@@ -371,7 +371,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         msg = f"{from_id} -> {long_name}"
         if self.config.enforce_type(bool, self.config.Meshtastic.WelcomeMessageEnabled):
             self.meshtastic_connection.send_text(self.config.Meshtastic.WelcomeMessage, destinationId=from_id)
-        self.telegram_connection.send_message(chat_id=self.config.enforce_type(int,
+        self.telegram_connection.send_message_sync(chat_id=self.config.enforce_type(int,
                                                                                self.config.Telegram.NotificationsRoom),
                                               text=f"New node: {msg}")
 
@@ -505,5 +505,6 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
             if self.aprs is not None:
                 self.aprs.send_text(addressee, f'{long_name}: {new_msg}')
 
-        self.telegram_connection.send_message(chat_id=self.config.enforce_type(int, self.config.Telegram.Room),
+        print(f"Queued {long_name}: {msg}")
+        self.telegram_connection.send_message_sync(chat_id=self.config.enforce_type(int, self.config.Telegram.Room),
                                               text=f"{long_name}: {msg}")

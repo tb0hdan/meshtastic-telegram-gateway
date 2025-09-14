@@ -129,7 +129,7 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
             self.memcache.set(str(node) + str(msg), True, expires=300)
         # TG
         if self.telegram_connection is not None and node is not None and msg is not None:
-            self.telegram_connection.send_message(
+            self.telegram_connection.send_message_sync(
                 chat_id=self.config.enforce_type(int, self.config.Telegram.NotificationsRoom),
                 text=f"APRS-{str(node)}: {str(msg)}"
             )
