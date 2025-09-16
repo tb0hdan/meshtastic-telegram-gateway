@@ -32,7 +32,7 @@ def list_classes(logger: Any, package: str = 'a.b.classes', base_class: str = 'B
     base_cls = getattr(mod, base_class)
 
     # Whitelist of allowed packages for security
-    allowed_packages = ['mtg.bot', 'mtg.connection', 'mtg.filter', 'mtg.webapp']
+    allowed_packages = ['mtg.bot', 'mtg.connection', 'mtg.filter', 'mtg.utils', 'mtg.webapp']
 
     for top, _, files in os.walk(base):
         for fname in files:
