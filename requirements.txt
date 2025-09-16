@@ -1,7 +1,7 @@
 anyio==4.10.0
 aprslib==0.7.2
 cryptography==45.0.7
-flask~=3.1.0
+flask~=3.1.2
 getmac==0.9.5
 haversine~=2.9.0
 humanize~=4.13.0
