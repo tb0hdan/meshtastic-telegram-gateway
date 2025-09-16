@@ -115,15 +115,13 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
             self.logger.info(f'Got APRS PACKET: {packet}')
         msg = packet.get('message_text')
         node = packet.get('from')
-        msg_no = str(packet.get('msgNo', ''))
-        if msg_no:
-            self.send_text(str(node) if node is not None else '', 'ack' + str(msg_no))
+        if msg_no := str(packet.get('msgNo', '')):
+            self.send_text(str(node) if node is not None else '', f'ack{msg_no}')
         if msg is not None and node is not None and self.memcache.get(str(node) + str(msg)):
             return
         # bot functionality
-        if msg is not None and msg.lower() in ['ping', 'test']:
-            if node is not None:
-                self.send_text(str(node), 'passed')
+        if msg is not None and msg.lower() in ['ping', 'test'] and node is not None:
+            self.send_text(str(node), 'passed')
         #
         if node is not None and msg is not None:
             self.memcache.set(str(node) + str(msg), True, expires=300)
