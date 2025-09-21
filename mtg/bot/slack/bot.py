@@ -5,7 +5,7 @@ import time
 import sys
 from threading import Thread
 from typing import Optional
-# pylint:disable=no-name-in-module
+# 3rd party
 from setproctitle import setthreadtitle
 from slack_sdk.rtm_v2 import RTMClient
 

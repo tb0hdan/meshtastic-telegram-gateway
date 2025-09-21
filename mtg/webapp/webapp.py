@@ -19,7 +19,7 @@ from flask import Flask, jsonify, make_response, request, render_template, send_
 from flask.views import View
 from flask.typing import ResponseReturnValue
 from pytz import timezone
-# pylint:disable=no-name-in-module
+
 from setproctitle import setthreadtitle
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.serving import make_server

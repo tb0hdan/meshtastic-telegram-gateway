@@ -24,6 +24,7 @@ from mtg.database import sql_debug, MeshtasticDB
 from mtg.filter import CallSignFilter, MeshtasticFilter, TelegramFilter
 from mtg.log import setup_logger, LOGFORMAT
 from mtg.utils import create_fifo, ExternalPlugins
+from mtg.utils.thread_manager import ThreadManager
 from mtg.webapp import WebServer
 #
 from mtg.utils.rf.prefixes import ITUPrefix
@@ -120,23 +121,36 @@ def main(args):
     # external plugins
     external_plugins = ExternalPlugins(database, config, meshtastic_connection, telegram_connection, logger)
 
-    # non-blocking
-    aprs_streamer.run()
-    # FIFO watcher
-    meshtastic_connection.run()
-    web_server.run()
-    mqtt_connection.run()
-    external_plugins.run()
+    # Initialize thread manager for runners with restart functionality
+    thread_manager = ThreadManager(logger)
+
+    # Register all runners with the thread manager
+    thread_manager.register_runner("APRS Streamer", aprs_streamer,
+                                  restart_delay=10.0,
+                                  thread_patterns=["APRS Streamer"])
+    thread_manager.register_runner("Meshtastic Connection", meshtastic_connection,
+                                  restart_delay=5.0,
+                                  thread_patterns=["Meshtastic Connection", "MeshtasticCmd"])
+    thread_manager.register_runner("Web Server", web_server,
+                                  restart_delay=5.0,
+                                  thread_patterns=["ServerThread"])
+    thread_manager.register_runner("MQTT Connection", mqtt_connection,
+                                  restart_delay=10.0,
+                                  thread_patterns=["MQTT Connection"])
+    thread_manager.register_runner("External Plugins", external_plugins,
+                                  restart_delay=15.0,
+                                  thread_patterns=[])
+
+    # Start all managed runners
+    thread_manager.start_all()
+
     # blocking
     try:
         telegram_bot.run()
     except KeyboardInterrupt:
-        aprs_streamer.shutdown()
-        web_server.shutdown()
-        meshtastic_connection.shutdown()
-        mqtt_connection.shutdown()
-        telegram_bot.shutdown()
         logger.info('Exit requested...')
+        thread_manager.shutdown_all()
+        telegram_bot.shutdown()
         sys.exit(0)
 
 

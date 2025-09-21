@@ -8,7 +8,7 @@ lint:
 	@pylint -r y -j 0 mesh.py mtg/
 
 mypy:
-	@mypy mesh.py
+	@mypy mesh.py mtg/
 
 
 reboot:

@@ -4,8 +4,7 @@
 import time
 from threading import RLock, Thread
 from typing import Any, Dict, Optional
-
-# pylint:disable=no-name-in-module
+# 3rd party
 from setproctitle import setthreadtitle
 
 

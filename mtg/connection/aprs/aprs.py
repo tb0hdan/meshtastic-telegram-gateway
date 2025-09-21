@@ -8,11 +8,10 @@ from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime
 from decimal import Decimal
 from threading import Thread
-#
+# 3rd party
 import aprslib
 #
 from pubsub import pub
-# pylint:disable=no-name-in-module
 from setproctitle import setthreadtitle
 #
 from mtg.config import Config
