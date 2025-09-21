@@ -331,8 +331,7 @@ class MeshtasticConnection:
 
         :return:
         """
-        if self.config.enforce_type(bool, self.config.Meshtastic.FIFOEnabled):
-            thread = Thread(target=self.run_loop, daemon=True, name=self.name)
-            thread.start()
-            cmd_thread = Thread(target=self.run_cmd_loop, daemon=True, name="MeshtasticCmd")
-            cmd_thread.start()
+        thread = Thread(target=self.run_loop, daemon=True, name=self.name)
+        thread.start()
+        cmd_thread = Thread(target=self.run_cmd_loop, daemon=True, name="MeshtasticCmd")
+        cmd_thread.start()

@@ -276,7 +276,6 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
 
         :return:
         """
-        if self.config.enforce_type(bool, self.config.APRS.Enabled):
-            pub.subscribe(self.process, 'APRS')
-            thread = Thread(target=self.run_loop, daemon=True, name=self.name)
-            thread.start()
+        pub.subscribe(self.process, 'APRS')
+        thread = Thread(target=self.run_loop, daemon=True, name=self.name)
+        thread.start()
