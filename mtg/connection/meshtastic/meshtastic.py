@@ -21,7 +21,7 @@ from meshtastic import (
     tcp_interface as meshtastic_tcp_interface,
     mesh_pb2
 )
-# pylint:disable=no-name-in-module
+# 3rd party
 from setproctitle import setthreadtitle
 
 from mtg.utils import create_fifo, split_message
@@ -331,8 +331,7 @@ class MeshtasticConnection:
 
         :return:
         """
-        if self.config.enforce_type(bool, self.config.Meshtastic.FIFOEnabled):
-            thread = Thread(target=self.run_loop, daemon=True, name=self.name)
-            thread.start()
-            cmd_thread = Thread(target=self.run_cmd_loop, daemon=True, name="MeshtasticCmd")
-            cmd_thread.start()
+        thread = Thread(target=self.run_loop, daemon=True, name=self.name)
+        thread.start()
+        cmd_thread = Thread(target=self.run_cmd_loop, daemon=True, name="MeshtasticCmd")
+        cmd_thread.start()

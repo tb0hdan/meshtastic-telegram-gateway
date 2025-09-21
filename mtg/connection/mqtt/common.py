@@ -4,8 +4,7 @@
 import socket
 import time
 from typing import Any, Optional
-
-# pylint:disable=no-name-in-module
+# 3rd party
 from setproctitle import setthreadtitle
 
 class CommonMQTT: # pylint:disable=too-many-instance-attributes

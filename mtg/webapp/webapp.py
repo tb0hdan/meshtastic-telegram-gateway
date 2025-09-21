@@ -19,7 +19,7 @@ from flask import Flask, jsonify, make_response, request, render_template, send_
 from flask.views import View
 from flask.typing import ResponseReturnValue
 from pytz import timezone
-# pylint:disable=no-name-in-module
+
 from setproctitle import setthreadtitle
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.serving import make_server
@@ -461,17 +461,16 @@ class WebServer:  # pylint:disable=too-few-public-methods
 
         :return:
         """
-        if self.config.enforce_type(bool, self.config.WebApp.Enabled):
-            memcache = Memcache(self.logger)
-            memcache.run_noblock()
-            web_app = WebApp(self.database, self.app, self.config,
+        memcache = Memcache(self.logger)
+        memcache.run_noblock()
+        web_app = WebApp(self.database, self.app, self.config,
                              self.meshtastic_connection,
                              self.telegram_connection,
                              self.logger,
                              memcache)
-            web_app.register()
-            self.server = ServerThread(self.app, self.config, self.logger)
-            self.server.start()
+        web_app.register()
+        self.server = ServerThread(self.app, self.config, self.logger)
+        self.server.start()
 
     def shutdown(self) -> None:
         """

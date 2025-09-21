@@ -8,11 +8,10 @@ from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime
 from decimal import Decimal
 from threading import Thread
-#
+# 3rd party
 import aprslib
 #
 from pubsub import pub
-# pylint:disable=no-name-in-module
 from setproctitle import setthreadtitle
 #
 from mtg.config import Config
@@ -277,7 +276,6 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
 
         :return:
         """
-        if self.config.enforce_type(bool, self.config.APRS.Enabled):
-            pub.subscribe(self.process, 'APRS')
-            thread = Thread(target=self.run_loop, daemon=True, name=self.name)
-            thread.start()
+        pub.subscribe(self.process, 'APRS')
+        thread = Thread(target=self.run_loop, daemon=True, name=self.name)
+        thread.start()

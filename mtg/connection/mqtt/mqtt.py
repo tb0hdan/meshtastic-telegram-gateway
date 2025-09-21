@@ -97,7 +97,6 @@ class MQTT:  # pylint:disable=too-many-instance-attributes
 
         :return:
         """
-        if self.config is not None and self.config.enforce_type(bool, self.config.MQTT.Enabled):
-            self.logger.info('Starting MQTT client...')
-            thread = Thread(target=self.common.run_loop, daemon=True, name=self.name)
-            thread.start()
+        self.logger.info('Starting MQTT client...')
+        thread = Thread(target=self.common.run_loop, daemon=True, name=self.name)
+        thread.start()
