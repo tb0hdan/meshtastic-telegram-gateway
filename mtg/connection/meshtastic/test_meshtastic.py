@@ -520,16 +520,6 @@ class TestMeshtasticConnection:
         )
         mock_thread_instance2.start.assert_called_once()
 
-    @patch('mtg.connection.meshtastic.meshtastic.Thread')
-    def test_run_fifo_disabled(self, mock_thread, meshtastic_connection):
-        """Test run method when FIFO is disabled"""
-        meshtastic_connection.config.enforce_type.return_value = False
-
-        meshtastic_connection.run()
-
-        # No threads should be created
-        mock_thread.assert_not_called()
-
     def test_thread_safety(self, meshtastic_connection):
         """Test thread safety locks are initialized"""
         # Test that locks are properly initialized

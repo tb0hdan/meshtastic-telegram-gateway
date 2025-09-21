@@ -67,9 +67,8 @@ def main(args):
     # meshtastic logger
     logging.basicConfig(level=level,
                         format=LOGFORMAT)
-    basedir = os.path.abspath(os.path.dirname(__file__))
     #
-    database = MeshtasticDB(os.path.join(basedir, config.Meshtastic.DatabaseFile), logger)
+    database = MeshtasticDB(os.path.join(args.basedir, config.Meshtastic.DatabaseFile), logger)
     meshtastic_filter = MeshtasticFilter(database, config, logger)
     #
     telegram_connection = TelegramConnection(config.Telegram.Token, logger)
@@ -110,8 +109,8 @@ def main(args):
     meshtastic_bot.set_aprs(aprs_streamer)
     meshtastic_bot.subscribe()
     #
-    template_folder = os.path.join(basedir, "web", "templates")
-    static_folder = os.path.join(basedir, "web", "static")
+    template_folder = os.path.join(args.basedir, "web", "templates")
+    static_folder = os.path.join(args.basedir, "web", "static")
     web_server = WebServer(database, config,
                            meshtastic_connection,
                            telegram_connection,
@@ -185,7 +184,7 @@ def post_cmd(args):
     with open(FIFO_CMD, 'w', encoding='utf-8') as fifo:
         fifo.write(args.command + '\n')
 
-def cmd():
+def cmd(basedir):
     """
     cmd - Run argument parser and process command line parameters
 
@@ -200,6 +199,7 @@ def cmd():
     #
     run = subparser.add_parser("run", help="run")
     run.add_argument("-c", "--config", help="path to config", default="./mesh.ini")
+    run.add_argument("-b", "--basedir", help="base directory for web files etc", default=basedir)
     run.set_defaults(func=main)
     #
     reboot = subparser.add_parser("command", help="Send command")

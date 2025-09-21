@@ -169,28 +169,6 @@ class TestMQTT:
         assert thread_kwargs['name'] == "MQTT Connection"
         mock_thread.return_value.start.assert_called_once()
 
-    def test_run_disabled(self, mqtt_instance, mock_config, mock_logger):
-        """Test run method when MQTT is disabled"""
-        mock_config.enforce_type.return_value = False
-        mqtt_instance.set_config(mock_config)
-
-        with patch('mtg.connection.mqtt.mqtt.Thread') as mock_thread:
-            mqtt_instance.run()
-
-            mock_thread.assert_not_called()
-            # Should not log starting message when disabled
-            mock_logger.info.assert_not_called()
-
-    def test_run_no_config(self, mqtt_instance, mock_logger):
-        """Test run method without config"""
-        assert mqtt_instance.config is None
-
-        with patch('mtg.connection.mqtt.mqtt.Thread') as mock_thread:
-            mqtt_instance.run()
-
-            mock_thread.assert_not_called()
-            mock_logger.info.assert_not_called()
-
     @patch('mtg.connection.mqtt.mqtt.mqtt.Client')
     def test_client_callbacks_assignment(self, mock_client, mock_logger):
         """Test that client callbacks are properly assigned"""

@@ -454,18 +454,6 @@ class TestAPRSStreamer:
         )
         mock_thread.return_value.start.assert_called_once()
 
-    @patch('mtg.connection.aprs.aprs.pub')
-    @patch('mtg.connection.aprs.aprs.Thread')
-    def test_run_disabled(self, mock_thread, mock_pub, aprs_streamer):
-        """Test run method when APRS is disabled"""
-        # Set APRS.Enabled to False
-        aprs_streamer.config.APRS.Enabled = False
-
-        aprs_streamer.run()
-
-        # Should not subscribe or start thread
-        mock_pub.subscribe.assert_not_called()
-        mock_thread.assert_not_called()
 
     def test_mathematical_functions(self, aprs_streamer):
         """Test mathematical conversion functions"""

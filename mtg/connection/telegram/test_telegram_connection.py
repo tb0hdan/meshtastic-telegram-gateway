@@ -6,7 +6,11 @@ import sys
 from unittest.mock import MagicMock, patch, AsyncMock
 
 # Mock external dependencies to avoid import conflicts
-sys.modules['telegram'] = MagicMock()
+mock_telegram = MagicMock()
+mock_update = MagicMock()
+mock_update.ALL_TYPES = ['mocked_all_types']
+mock_telegram.Update = mock_update
+sys.modules['telegram'] = mock_telegram
 sys.modules['telegram.ext'] = MagicMock()
 
 from mtg.connection.telegram.telegram import TelegramConnection
@@ -81,21 +85,25 @@ class TestTelegramConnection:
         """Test poll method"""
         telegram_connection.application.run_polling = MagicMock()
 
-        with patch('asyncio.new_event_loop') as mock_new_loop:
-            with patch('asyncio.set_event_loop') as mock_set_loop:
-                mock_loop = MagicMock()
-                mock_new_loop.return_value = mock_loop
-                mock_loop.run_until_complete = MagicMock()
+        # Mock the Update import in the actual module
+        with patch('mtg.connection.telegram.telegram.Update') as mock_update:
+            mock_update.ALL_TYPES = ['mocked_all_types']
 
-                telegram_connection.poll()
+            with patch('asyncio.new_event_loop') as mock_new_loop:
+                with patch('asyncio.set_event_loop') as mock_set_loop:
+                    mock_loop = MagicMock()
+                    mock_new_loop.return_value = mock_loop
+                    mock_loop.run_until_complete = MagicMock()
 
-                # The actual call should pass the string value 'all_types' (Update.ALL_TYPES)
-                telegram_connection.application.run_polling.assert_called_once_with(
-                    allowed_updates='all_types'
-                )
-                # Check that start_queue_processor was called
-                mock_loop.run_until_complete.assert_called_once()
-                mock_set_loop.assert_called_once_with(mock_loop)
+                    telegram_connection.poll()
+
+                    # The actual call should pass the mocked Update.ALL_TYPES
+                    telegram_connection.application.run_polling.assert_called_once_with(
+                        allowed_updates=['mocked_all_types']
+                    )
+                    # Check that start_queue_processor was called
+                    mock_loop.run_until_complete.assert_called_once()
+                    mock_set_loop.assert_called_once_with(mock_loop)
 
     def test_shutdown(self, telegram_connection):
         """Test shutdown method"""
