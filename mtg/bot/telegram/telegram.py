@@ -71,7 +71,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
                  telegram_connection: TelegramConnection):
         self.config = config
         self.filter: Optional[TelegramFilter] = None
-        self.logger: Optional[logging.Logger] = None
+        self.logger: logging.Logger = logging.getLogger('Telegram Bot') # default logger
         self.meshtastic_connection = meshtastic_connection
         self.telegram_connection = telegram_connection
         self.aprs = None
@@ -152,27 +152,23 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         :return:
         """
         if update.effective_chat.id != self.config.enforce_type(int, self.config.Telegram.Room):
-            if self.logger is not None:
-                self.logger.debug("%d %s",
+            self.logger.debug("%d %s",
                                   update.effective_chat.id,
                                   self.config.enforce_type(int, self.config.Telegram.Room))
             return
         if self.filter is not None and self.filter.banned(str(update.effective_user.id)):
-            if self.logger is not None:
-                self.logger.debug(f"User {update.effective_user.id} is in a blacklist...")
+            self.logger.debug("User %s is in a blacklist...", update.effective_user.id)
             return
         # topic support
         if update.message and update.message.is_topic_message and update.message.reply_to_message.forum_topic_created:
             topic = update.message.reply_to_message.forum_topic_created.name
             if topic != 'General':
-                if self.logger is not None:
-                    self.logger.debug(f'Topic {topic} != General')
+                self.logger.debug('Topic %s != General', topic)
                 return
         # replies
         if update.message and update.message.reply_to_message and update.message.reply_to_message.is_topic_message:
             # Reply not in general
-            if self.logger is not None:
-                self.logger.debug('Reply not in General')
+            self.logger.debug('Reply not in General')
             return
         #
         full_user = update.effective_user.first_name
@@ -206,14 +202,12 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             long_url = f'{self.config.WebApp.ExternalURL}/static/t/{time_stamp}/{safe_filename}'
             short_url = self.shorten_p(long_url)
             message += f"sent image: {short_url}"
-            if self.logger is not None:
-                self.logger.info(message)
+            self.logger.info(message)
 
         # check if we got our message
         if not message:
             return
-        if self.logger is not None:
-            self.logger.debug(f"{update.effective_chat.id} {full_user} {message}")
+        self.logger.debug("%s %s %s", update.effective_chat.id, full_user, message)
         if message.startswith('APRS-'):
             addressee = message.split(' ', maxsplit=1)[0].lstrip('APRS-').rstrip(':')
             msg = message.replace(message.split(' ', maxsplit=1)[0], '').strip()
@@ -238,8 +232,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             result = response.json()
             return result.get('short_url', long_url)
         except (requests.RequestException, ValueError, KeyError) as exc:
-            if self.logger:
-                self.logger.error("URL shortening failed: %s", exc)
+            self.logger.error("URL shortening failed: %s", exc)
             return long_url
 
     def shorten_pls(self, long_url: str) -> str:
@@ -259,8 +252,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             result = response.json()
             return result.get('short_url', long_url)
         except (requests.RequestException, ValueError, KeyError) as exc:
-            if self.logger:
-                self.logger.error("URL shortening failed: %s", exc)
+            self.logger.error("URL shortening failed: %s", exc)
             return long_url
 
 
@@ -282,8 +274,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         :return:
         """
         chat_id = update.effective_chat.id
-        if self.logger is not None:
-            self.logger.info(f"Got /start from {chat_id}")
+        self.logger.info("Got /start from %s", chat_id)
         bot = update.get_bot()
         await bot.send_message(chat_id=chat_id, text="I'm a bot, please talk to me!")
 
@@ -299,8 +290,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         # SECURITY WARNING: Authentication based only on chat ID is weak and can be spoofed
         # Consider implementing proper token-based or username+password authentication
         if update.effective_chat.id != self.config.enforce_type(int, self.config.Telegram.Admin):
-            if self.logger is not None:
-                self.logger.warning("Reboot requested by non-admin: %d", update.effective_chat.id)
+            self.logger.warning("Reboot requested by non-admin: %d", update.effective_chat.id)
             return
         bot = update.get_bot()
         await bot.send_message(chat_id=update.effective_chat.id, text="Requesting reboot...")
@@ -316,8 +306,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         :return:
         """
         if update.effective_chat.id != self.config.enforce_type(int, self.config.Telegram.Admin):
-            if self.logger is not None:
-                self.logger.info("Reset node DB requested by non-admin: %d", update.effective_chat.id)
+            self.logger.info("Reset node DB requested by non-admin: %d", update.effective_chat.id)
             return
         bot = update.get_bot()
         await bot.send_message(chat_id=update.effective_chat.id, text="Requesting node DB reset...")
@@ -333,8 +322,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         :return:
         """
         if update.effective_chat.id != self.config.enforce_type(int, self.config.Telegram.Admin):
-            if self.logger is not None:
-                self.logger.info("Traceroute requested by non-admin: %d", update.effective_chat.id)
+            self.logger.info("Traceroute requested by non-admin: %d", update.effective_chat.id)
             return
         bot = update.get_bot()
         await bot.send_message(chat_id=update.effective_chat.id, text="Sending traceroute... See bot logs")
@@ -344,8 +332,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             return
         hop_limit = getattr(lora_config, 'hop_limit')
         dest = update.message.text.lstrip('/traceroute ')
-        if self.logger is not None:
-            self.logger.info(f"Sending traceroute request to {dest} (this could take a while)")
+        self.logger.info("Sending traceroute request to %s this could take a while)", dest)
         self.bg_route(dest, hop_limit)
 
     @check_room
@@ -358,8 +345,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         :return:
         """
         if update.effective_chat.id != self.config.enforce_type(int, self.config.Telegram.Admin):
-            if self.logger is not None:
-                self.logger.info("Routes requested by non-admin: %d", update.effective_chat.id)
+            self.logger.info("Routes requested by non-admin: %d", update.effective_chat.id)
             return
         if self.meshtastic_connection.interface is not None:
             lora_config = getattr(self.meshtastic_connection.interface.localNode.localConfig, 'lora')
@@ -383,8 +369,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             url = self.meshtastic_connection.interface.localNode.getURL(includeAll=False)
         else:
             return
-        if self.logger is not None:
-            self.logger.debug(f"Primary channel URL {url}")
+        self.logger.debug("Primary channel URL %s", url)
         qr_url = pyqrcode.create(url)
         _, tmp = tempfile.mkstemp()
         qr_url.png(tmp, scale=5)
@@ -406,8 +391,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             url = self.meshtastic_connection.interface.localNode.getURL(includeAll=False)
         else:
             return
-        if self.logger is not None:
-            self.logger.debug(f"Primary channel URL {url}")
+        self.logger.debug("Primary channel URL %s", url)
         bot = update.get_bot()
         await bot.send_message(chat_id=update.effective_chat.id, text=url)
 

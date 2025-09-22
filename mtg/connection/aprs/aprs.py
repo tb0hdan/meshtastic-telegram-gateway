@@ -28,7 +28,7 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
         self.aprs_is = None
         self.filter: Optional[CallSignFilter] = None
         self.config = config
-        self.logger: Optional[logging.Logger] = None
+        self.logger: logging.Logger = logging.getLogger('APRS') # default logger
         self.exit = False
         self.name = 'APRS Streamer'
         self.database = None
@@ -110,8 +110,7 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
             return
         if packet.get('addresse') != self.config.APRS.Callsign:
             return
-        if self.logger is not None:
-            self.logger.info(f'Got APRS PACKET: {packet}')
+        self.logger.info('Got APRS PACKET: %s', packet)
         msg = packet.get('message_text')
         node = packet.get('from')
         if msg_no := str(packet.get('msgNo', '')):
@@ -173,8 +172,7 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
             else:
                 raise RuntimeError("Database not available")
         except RuntimeError:
-            if self.logger is not None:
-                self.logger.warning('Node %s not in node DB', from_id)
+            self.logger.warning('Node %s not in node DB', from_id)
             return
         # cache node position for 60 seconds
         key = f"{from_id}-location"
@@ -199,8 +197,7 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
                 break
         #
         if not found:
-            if self.logger is not None:
-                self.logger.warning('APRS: %s not a ham call sign', node_name)
+            self.logger.warning('APRS: %s not a ham call sign', node_name)
             return
         #
         degrees, minutes, seconds = self.dec2sexagesimal(latitude)
@@ -222,8 +219,7 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
         aprs_packet = f"{node_name}>APRS,TCPIP*:@{timestamp}/{coordinates}-/A={altitude:06d} Forwarded for {room_link}"
         if self.aprs_is is not None:
             self.aprs_is.sendall(aprs_packet)
-        if self.logger is not None:
-            self.logger.warning('APRS: %s', aprs_packet)
+        self.logger.warning('APRS: %s', aprs_packet)
 
     def run_loop(self) -> None:
         """
@@ -239,8 +235,7 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
         prefixes = self.itu_prefix.get_prefixes_by_callsign(self.config.APRS.Callsign)
         self.prefixes = prefixes if prefixes is not None else []
         #
-        if self.logger is not None:
-            self.logger.info(f'Starting APRS for country {country}...')
+        self.logger.info('Starting APRS for country %s...', country)
         self.aprs_is = aprslib.IS(self.config.APRS.Callsign,
                                   self.config.APRS.Password,
                                   host='rotate.aprs2.net',
@@ -258,11 +253,9 @@ class APRSStreamer:  # pylint:disable=too-many-instance-attributes
             except KeyboardInterrupt:
                 break
             except aprslib.exceptions.ConnectionDrop:
-                if self.logger is not None:
-                    self.logger.debug("aprs conn drop")
+                self.logger.debug("aprs conn drop")
             except aprslib.exceptions.LoginError:
-                if self.logger is not None:
-                    self.logger.debug("aprs login error")
+                self.logger.debug("aprs login error")
 
     def shutdown(self) -> None:
         """
