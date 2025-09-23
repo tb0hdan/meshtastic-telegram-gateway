@@ -5,7 +5,9 @@
 import argparse
 import logging
 import os
+import signal
 import sys
+import threading
 #
 import reverse_geocoder as rg
 import sentry_sdk
@@ -135,7 +137,7 @@ def main(args):
     if config is not None and config.enforce_type(bool, config.WebApp.Enabled):
         thread_manager.register_runner("Web Server", web_server,
                                   restart_delay=5.0,
-                                  thread_patterns=["ServerThread"])
+                                  thread_patterns=['WebApp Server'])
     if config is not None and config.enforce_type(bool, config.MQTT.Enabled):
         thread_manager.register_runner("MQTT Connection", mqtt_connection,
                                   restart_delay=10.0,
@@ -147,14 +149,34 @@ def main(args):
     # Start all managed runners
     thread_manager.start_all()
 
+    # Setup shutdown flag and signal handlers for graceful shutdown
+    shutdown_event = threading.Event()
+
+    def signal_handler(signum, frame):  # pylint: disable=unused-argument
+        logger.info('Exit requested via signal %s...', signum)
+        shutdown_event.set()
+        telegram_bot.shutdown()
+        thread_manager.shutdown_all()
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
     # blocking
     try:
         telegram_bot.run()
     except KeyboardInterrupt:
         logger.info('Exit requested...')
-        thread_manager.shutdown_all()
+        shutdown_event.set()
         telegram_bot.shutdown()
+        thread_manager.shutdown_all()
         sys.exit(0)
+    finally:
+        # Ensure cleanup even if an exception occurs
+        if not shutdown_event.is_set():
+            shutdown_event.set()
+            telegram_bot.shutdown()
+            thread_manager.shutdown_all()
 
 
 def post2mesh(args):
