@@ -415,6 +415,7 @@ class ServerThread(Thread):
         self.ctx = app.app_context()
         self.ctx.push()
         self.name = 'WebApp Server'
+        self.shutdown_requested = False
 
     def run(self) -> None:
         """
@@ -430,10 +431,14 @@ class ServerThread(Thread):
 
         :return:
         """
+        self.shutdown_requested = True
         self.server.shutdown()
+        self.server.server_close()
+        if self.ctx:
+            self.ctx.pop()
 
 
-class WebServer:  # pylint:disable=too-few-public-methods
+class WebServer:  # pylint:disable=too-few-public-methods,too-many-instance-attributes
     """
     Web server wrapper around Flask app
     """
@@ -454,6 +459,7 @@ class WebServer:  # pylint:disable=too-few-public-methods
             self.app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
         )
         self.server: Optional[ServerThread] = None
+        self.memcache: Optional[Memcache] = None
 
     def run(self) -> None:
         """
@@ -461,13 +467,13 @@ class WebServer:  # pylint:disable=too-few-public-methods
 
         :return:
         """
-        memcache = Memcache(self.logger)
-        memcache.run_noblock()
+        self.memcache = Memcache(self.logger)
+        self.memcache.run_noblock()
         web_app = WebApp(self.database, self.app, self.config,
                              self.meshtastic_connection,
                              self.telegram_connection,
                              self.logger,
-                             memcache)
+                             self.memcache)
         web_app.register()
         self.server = ServerThread(self.app, self.config, self.logger)
         self.server.start()
@@ -480,3 +486,5 @@ class WebServer:  # pylint:disable=too-few-public-methods
         """
         if self.server is not None:
             self.server.shutdown()
+        if self.memcache is not None:
+            self.memcache.shutdown()
