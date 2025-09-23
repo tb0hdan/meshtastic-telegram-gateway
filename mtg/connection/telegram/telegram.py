@@ -76,7 +76,7 @@ class TelegramConnection:
                     continue
             try:
                 # Wait for a message with timeout to allow shutdown
-                print(args, kwargs)
+                self.logger.info(args, kwargs)
                 try:
                     await self.application.bot.send_message(*args, **kwargs)
                     self.logger.debug(f"Message sent successfully: {kwargs.get('text', 'photo/document')}")

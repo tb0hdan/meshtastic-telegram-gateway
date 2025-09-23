@@ -41,7 +41,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         self.database = database
         self.config = config
         self.filter: Optional[MeshtasticFilter] = None
-        self.logger: Optional[logging.Logger] = None
+        self.logger: logging.Logger = logging.getLogger('Meshtastic Bot') # default logger
         self.telegram_connection = telegram_connection
         self.meshtastic_connection = meshtastic_connection
         # track ping request/reply
@@ -90,8 +90,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         :param topic:
         :return:
         """
-        if self.logger is not None:
-            self.logger.debug("connection on %s topic %s", interface, topic)
+        self.logger.debug("connection on %s topic %s", interface, topic)
 
     def on_node_info(self, node: Any, interface: meshtastic_serial_interface.SerialInterface) -> None:
         """
@@ -101,8 +100,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         :param interface:
         :return:
         """
-        if self.logger is not None:
-            self.logger.debug("node info %s on interface %s", node, interface)
+        self.logger.debug("node info %s on interface %s", node, interface)
 
     def subscribe(self) -> None:
         """
@@ -279,8 +277,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         try:
             text = self.get_cur_temp(lat, lon, key)
         except Exception as exc:  # pylint:disable=broad-exception-caught
-            if self.logger is not None:
-                self.logger.error(repr(exc))
+            self.logger.error(repr(exc))
             text = "could not get weather, see bot logs"
         self.meshtastic_connection.send_text(text, destinationId=from_id)
 
@@ -384,8 +381,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         :param interface:
         :return:
         """
-        if self.logger is not None:
-            self.logger.debug(f"Received: {packet}")
+        self.logger.debug("Received: %s", packet)
         to_id = packet.get('toId')
         decoded = packet.get('decoded')
         from_id = str(packet.get('fromId', ''))
@@ -397,8 +393,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
             packet['fromId'] = from_id
         # check for blacklist
         if self.filter is not None and self.filter.banned(from_id):
-            if self.logger is not None:
-                self.logger.debug(f"User {from_id} is in a blacklist...")
+            self.logger.debug("User %s is in a blacklist...", from_id)
             return
         # Send notifications if they're enabled
         if from_id is not None and self.config.enforce_type(bool, self.config.Telegram.NotificationsEnabled):
@@ -406,8 +401,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         # check hop count
         hop_limit = packet.get('hopLimit', 0)
         if hop_limit > self.config.enforce_type(int, self.config.Meshtastic.MaxHopCount):
-            if self.logger is not None:
-                self.logger.debug(f"User {from_id} exceeds {hop_limit}...")
+            self.logger.debug("User %s exceeds %s...", from_id, hop_limit)
             return
         #
         if decoded is not None and decoded.get('portnum') != 'TEXT_MESSAGE_APP':
@@ -437,8 +431,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
 
             text = self.bot_handler.get_response(from_id, msg)
             if text:
-                if self.logger is not None:
-                    self.logger.info(f"{from_id}: {msg} -> {text}")
+                self.logger.info("%s: %s -> %s", from_id, msg, text)
                 self.meshtastic_connection.send_text(text, destinationId=from_id)
 
             return
@@ -446,8 +439,7 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         try:
             self.database.store_message(packet)
         except Exception as exc:  # pylint:disable=broad-except
-            if self.logger is not None:
-                self.logger.error('Could not store message: %s %s', exc, repr(exc))
+            self.logger.error('Could not store message: %s %s', exc, repr(exc))
         # Process commands and forward messages
         node_info = interface.nodes.get(from_id)
         long_name = from_id
@@ -465,15 +457,13 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
 
         # Range test module should not spam telegram room
         if re.match(r'^seq\s[0-9]+', msg, re.I) is not None:
-            if self.logger is not None:
-                self.logger.debug(f"User {long_name} has sent range test... {msg}")
+            self.logger.debug("User %s has sent range test... %s", long_name, msg)
             return
 
         # Telemetry
         node_part = from_id[5:]
         if re.match(r'^(\-?[0-9]+,)+' + f'{node_part}$', msg) is not None:
-            if self.logger is not None:
-                self.logger.debug('Banned telemetry: %s %s', from_id, msg)
+            self.logger.debug('Banned telemetry: %s %s', from_id, msg)
             return
 
         # Meshtastic nodes sometimes duplicate messages sent by bot. Filter these.
@@ -483,21 +473,18 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
             else ''
         )
         if msg.startswith(self_name) or self_name == long_name:
-            if self.logger is not None:
-                self.logger.debug(f"Bot duplicate via meshtastic... {msg}")
+            self.logger.debug("Bot duplicate via meshtastic... %s", msg)
             return
 
         long_name = long_name.strip()
         # Do cache check
         key = f"{long_name}:{msg}"
         if self.memcache.get_ex(key):
-            if self.logger is not None:
-                self.logger.debug(f"Cache hit for {key}")
+            self.logger.debug("Cache hit for %s", key)
             return
         self.memcache.set(key, True, expires=300)
         #
-        if self.logger is not None:
-            self.logger.info(f"MTG-M-BOT: {long_name}: -> {msg}")
+        self.logger.info("MTG-M-BOT: %s: -> %s", long_name, msg)
 
         if msg.startswith('APRS-'):
             addressee = msg.split(' ')[0].lstrip('APRS-').rstrip(':')
@@ -505,6 +492,6 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
             if self.aprs is not None:
                 self.aprs.send_text(addressee, f'{long_name}: {new_msg}')
 
-        print(f"Queued {long_name}: {msg}")
+        self.logger.info("Queued %s: %s", long_name, msg)
         self.telegram_connection.send_message_sync(chat_id=self.config.enforce_type(int, self.config.Telegram.Room),
                                               text=f"{long_name}: {msg}")

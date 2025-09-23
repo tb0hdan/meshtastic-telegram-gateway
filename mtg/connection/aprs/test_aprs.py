@@ -63,7 +63,8 @@ class TestAPRSStreamer:
         assert streamer.itu_prefix == mock_itu_prefix
         assert streamer.aprs_is is None
         assert streamer.filter is None
-        assert streamer.logger is None
+        assert streamer.logger is not None
+        assert streamer.logger.name == 'APRS'
         assert streamer.exit is False
         assert streamer.name == 'APRS Streamer'
         assert streamer.database is None
@@ -210,7 +211,7 @@ class TestAPRSStreamer:
                     # Should cache the message
                     mock_cache_set.assert_called_with("SENDERHello World", True, expires=300)
                     # Should log the packet
-                    mock_logger.info.assert_called_with(f'Got APRS PACKET: {packet}')
+                    mock_logger.info.assert_called_with('Got APRS PACKET: %s', packet)
 
     def test_process_ping_response(self, aprs_streamer):
         """Test process responds to ping"""
@@ -433,7 +434,7 @@ class TestAPRSStreamer:
         mock_aprs_is.set_filter.assert_called_once_with(expected_filter)
 
         # Should log startup
-        mock_logger.info.assert_called_with('Starting APRS for country United States...')
+        mock_logger.info.assert_called_with('Starting APRS for country %s...', 'United States')
 
     @patch('mtg.connection.aprs.aprs.pub')
     @patch('mtg.connection.aprs.aprs.Thread')
