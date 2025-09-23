@@ -109,7 +109,8 @@ class TestMeshtasticBot:
         assert meshtastic_bot.database == mock_database
         assert meshtastic_bot.config == mock_config
         assert meshtastic_bot.filter is None
-        assert meshtastic_bot.logger is None
+        assert meshtastic_bot.logger is not None
+        assert meshtastic_bot.logger.name == 'Meshtastic Bot'
         assert meshtastic_bot.aprs is None
         assert isinstance(meshtastic_bot.ping_container, dict)
 

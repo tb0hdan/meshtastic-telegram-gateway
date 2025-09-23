@@ -4,8 +4,7 @@
 import time
 from threading import RLock, Thread
 from typing import Any, Dict, Optional
-
-# pylint:disable=no-name-in-module
+# 3rd party
 from setproctitle import setthreadtitle
 
 
@@ -19,6 +18,8 @@ class Memcache:
         self.lock = RLock()
         self.logger = logger
         self.cache: Dict[Any, Dict[str, Any]] = {}
+        self.shutdown_flag = False
+        self.reaper_thread: Optional[Thread] = None
 
     def set_logger(self, logger: Any) -> None:
         """
@@ -77,9 +78,11 @@ class Memcache:
         :return:
         """
         setthreadtitle(self.name)
-        while True:
+        while not self.shutdown_flag:
             time.sleep(0.1)
             for key in list(self.cache):
+                if self.shutdown_flag:
+                    break
                 cache_entry = self.get_ex(key)
                 if cache_entry:
                     expires = cache_entry.get('expires')
@@ -93,5 +96,16 @@ class Memcache:
 
         :return:
         """
-        locker = Thread(target=self.reaper, daemon=True, name=self.name)
-        locker.start()
+        if self.reaper_thread is None or not self.reaper_thread.is_alive():
+            self.reaper_thread = Thread(target=self.reaper, daemon=True, name=self.name)
+            self.reaper_thread.start()
+
+    def shutdown(self) -> None:
+        """
+        shutdown - shutdown memcache and stop reaper thread
+
+        :return:
+        """
+        self.shutdown_flag = True
+        if self.reaper_thread and self.reaper_thread.is_alive():
+            self.reaper_thread.join(timeout=1.0)

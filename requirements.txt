@@ -1,12 +1,12 @@
-anyio==4.10.0
+anyio==4.11.0
 aprslib==0.7.2
-cryptography==45.0.7
+cryptography==46.0.1
 flask~=3.1.2
 getmac==0.9.5
 haversine~=2.9.0
 humanize~=4.13.0
-meshtastic~=2.3.11
-openai==1.107.3
+meshtastic~=2.7.3
+openai==1.109.0
 paho-mqtt==2.1.0
 pylint==3.3.8
 pypng==0.20220715.0
@@ -17,6 +17,7 @@ pytest-asyncio==1.2.0
 Pypubsub~=4.0.3
 PyQRCode~=1.2.1
 pony~=0.7.19
+pytz==2025.2
 reverse-geocoder==1.5.1
 requests~=2.32.3
 sentry-sdk==2.38.0

@@ -3,6 +3,7 @@
 
 import base64
 import json
+import random
 import struct
 import time
 from threading import Thread
@@ -11,18 +12,18 @@ from typing import Any, Dict, Optional
 from cryptography.hazmat.primitives.ciphers import (
     Cipher, algorithms, modes
 )
+from getmac import get_mac_address as gma
+from google.protobuf import json_format
+from google.protobuf.message import DecodeError as ProtobufDecodeError
+import paho.mqtt.client as mqtt
 
-
-from meshtastic.stream_interface import StreamInterface
 from meshtastic import mqtt_pb2, mesh_pb2, BROADCAST_NUM, BROADCAST_ADDR
 from meshtastic import portnums_pb2 as PortNum
-
-import paho.mqtt.client as mqtt
-from google.protobuf import json_format
-
-from getmac import get_mac_address as gma
+from meshtastic.stream_interface import StreamInterface
 
 from .common import CommonMQTT
+
+random.seed()
 
 class MQTTCrypto:
     """ MQTT Crypto module """
@@ -68,12 +69,42 @@ class MQTTCrypto:
         r = self.decrypt(self.key, nonce, data)
         return mesh_pb2.Data().FromString(r)  # pylint:disable=no-member
 
-    def encrypt_packet(self) -> None:
+    @staticmethod
+    def encrypt(key: bytes, nonce: bytearray, data_payload) -> bytes:
         """
         encrypt_packet - Not implemented yet
         """
-        return
+        encryptor = Cipher(
+            algorithms.AES(key),
+            modes.CTR(nonce),
+        ).encryptor()
+        return encryptor.update(data_payload) + encryptor.finalize()
 
+    @staticmethod
+    def xor_hash(data: bytes) -> int:
+        """Calculate XOR hash of data bytes."""
+        result = 0
+        for char in data:
+            result ^= char
+        return result
+
+    def generate_channel_hash(self, name: str, key: str) -> int:
+        """Generate channel hash from name and key."""
+        # Add padding if needed for base64 decoding
+        padding = 4 - (len(key) % 4)
+        if padding != 4:
+            key += '=' * padding
+        key_bytes = base64.b64decode(key.encode('utf-8'))
+        h_name = self.xor_hash(bytes(name, 'utf-8'))
+        h_key = self.xor_hash(key_bytes)
+        return h_name ^ h_key
+
+    def encrypt_data_payload(self, data_payload: bytes, from_node: int, packet_id: int) -> bytes:
+        """
+        encrypt_data_payload - Encrypt a data payload for MQTT transmission
+        """
+        nonce = self.init_nonce(from_node, packet_id)
+        return self.encrypt(self.key, nonce, data_payload)
 
 class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attributes
     """
@@ -143,6 +174,8 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
             if self.logger:
                 self.logger.error('Exception in on_message_wrapped: %s -> %s', repr(exc), msg.payload)
 
+    # pylint:disable=too-many-statements
+    # pylint:disable=too-many-branches
     def on_message_wrapped(self, _client: Any, _userdata: Any, msg: Any) -> None:
         """
         on_message_wrapped - safe MQTT callback for message event
@@ -163,6 +196,10 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         #
         try:
             mqtt_incoming = mqtt_pb2.ServiceEnvelope().FromString(msg.payload)  # pylint:disable=no-member
+        except ProtobufDecodeError:
+            if self.logger:
+                self.logger.error("failed to decode incoming MQTT message: %s", str(msg.payload))
+            return
         except Exception as exc:  # pylint:disable=broad-except
             if self.logger:
                 self.logger.error(
@@ -235,61 +272,122 @@ class MQTTInterface(StreamInterface):  # pylint:disable=too-many-instance-attrib
         # initialize interface
         self._startConfig()
 
+    def create_packet_raw(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+        self, packet_to: int, msg: bytes, port_num: int, hop_limit: int = 3, is_encrypted: bool = False
+    ) -> Any:
+        """
+        Create raw packet structure for either encrypted or unencrypted transmission
+        """
+        # Generate packet ID once for consistency
+        packet_id = self._generatePacketId()
+        channel_name = self.cfg.MQTT.Channel if self.cfg else "default"
+
+        # Create the ServiceEnvelope
+        service_envelope = mqtt_pb2.ServiceEnvelope()  # pylint:disable=no-member
+        service_envelope.channel_id = channel_name
+        service_envelope.gateway_id = self.my_hw_hex_id
+
+        # Create the MeshPacket
+        mesh_packet = mesh_pb2.MeshPacket()  # pylint:disable=no-member
+        mesh_packet.id = packet_id
+        mesh_packet.to = packet_to
+        mesh_packet.hop_limit = hop_limit
+        setattr(mesh_packet, "from", self.my_hw_int_id)
+
+        if is_encrypted:
+            # For encrypted packets, create Data payload and encrypt it
+            data_payload = mesh_pb2.Data(  # pylint:disable=no-member
+                portnum=port_num,
+                payload=msg,
+                bitfield=3 if packet_to != BROADCAST_NUM else 1
+            )
+            mesh_packet.encrypted = self.crypto.encrypt_data_payload(
+                data_payload.SerializeToString(),
+                self.my_hw_int_id,
+                packet_id
+            )
+            # Set channel hash for encrypted packets
+            mesh_packet.channel = self.crypto.generate_channel_hash(channel_name, str(self.crypto.key))
+        else:
+            # For unencrypted packets, set the decoded field directly
+            mesh_packet.rx_time = int(time.time())
+            mesh_packet.decoded.portnum = port_num
+            mesh_packet.decoded.payload = msg
+
+        # Copy the mesh packet to the service envelope
+        service_envelope.packet.CopyFrom(mesh_packet)
+
+        if is_encrypted:
+            # For encrypted packets, return serialized bytes directly
+            return service_envelope.SerializeToString()
+        # For unencrypted packets, we need to do the dictionary manipulation
+        # to add the "from" field properly (protobuf reserved word workaround)
+        as_dict = json_format.MessageToDict(service_envelope.packet)
+        as_dict["from"] = self.my_hw_int_id
+
+        full = json_format.MessageToDict(service_envelope)
+        full['packet'] = as_dict
+
+        new_msg = mqtt_pb2.ServiceEnvelope()  # pylint:disable=no-member
+        return json_format.ParseDict(full, new_msg)
+
+    def create_packet(self, packet_to: int, msg: bytes, port_num: int, hop_limit: int) -> Any:
+        """
+        Create an unencrypted packet for transmission
+        """
+        return self.create_packet_raw(packet_to, msg, port_num, hop_limit=hop_limit, is_encrypted=False)
+
+    def create_encrypted_packet(self, packet_to: int, msg: bytes, port_num: int, hop_limit: int) -> Any:
+        """
+        Create an encrypted packet for transmission
+        """
+        return self.create_packet_raw(packet_to, msg, port_num, hop_limit=hop_limit, is_encrypted=True)
+
     # pylint:disable=arguments-differ,unused-argument,no-member
     def sendData(
-        self, msg: bytes, destinationId: Any = BROADCAST_ADDR, portNum: Any = PortNum.TEXT_MESSAGE_APP, **kwargs: Any
+        self, msg: bytes, destination_id: Any = BROADCAST_ADDR, port_num: Any = PortNum.TEXT_MESSAGE_APP, **kwargs: Any
     ) -> None:
         """
         Send Meshtastic data message
         """
-        if str(destinationId) == "-1":
+        if str(destination_id) == "-1":
             return
         packet_to = (
             # pylint:disable=line-too-long
-            int(f"0x{str(destinationId).removeprefix('!')}", base=16) if destinationId != BROADCAST_ADDR else BROADCAST_NUM
+            int(f"0x{str(destination_id).removeprefix('!')}", base=16) if destination_id != BROADCAST_ADDR else BROADCAST_NUM
         )
         if self.logger:
-            self.logger.info(f"Sending data to {destinationId} with portNum {portNum} and message {msg!r}")
-        # Create first message without from
-        original_mqtt_message = mqtt_pb2.ServiceEnvelope()  # pylint:disable=no-member
-        if self.cfg:
-            original_mqtt_message.channel_id = self.cfg.MQTT.Channel
-        original_mqtt_message.gateway_id = self.my_hw_hex_id
-        original_mqtt_message.packet.to = packet_to
-        original_mqtt_message.packet.hop_limit = 2
-        original_mqtt_message.packet.id = self._generatePacketId()
-        original_mqtt_message.packet.rx_time = int(time.time())
-        original_mqtt_message.packet.decoded.portnum = portNum
-        original_mqtt_message.packet.decoded.payload = msg
-        #original_mqtt_message.packet.decoded.payload = msg.encode() if isinstance(msg, str) else msg
+            self.logger.info(f"Sending data to {destination_id} with portNum {port_num} and message {msg!r}")
 
+        # Create both encrypted and unencrypted packets for backwards compatibility
+        hop_limit = 5
+        encrypted_msg = self.create_encrypted_packet(packet_to, msg, port_num, hop_limit)
+        unencrypted_msg = self.create_packet(packet_to, msg, port_num, hop_limit)
+        Thread(target=self.send_mqtt_message, args=(encrypted_msg, unencrypted_msg), daemon=True).start()
 
-        # Create second message from first one and add from
-        as_dict = json_format.MessageToDict(original_mqtt_message.packet)
-        as_dict["from"] = self.my_hw_int_id
-
-        # Create third message and combine first and second
-        full = json_format.MessageToDict(original_mqtt_message)
-        full['packet'] = as_dict
-
-        # Create forth and final message. Convert it to protobuf
-        new_msg = mqtt_pb2.ServiceEnvelope()  # pylint:disable=no-member
-        mqtt_msg = json_format.ParseDict(full, new_msg)
-        Thread(target=self.send_mqtt_message, args=(mqtt_msg,), daemon=True).start()
-
-    def send_mqtt_message(self, mqtt_msg: Any) -> None:
+    def send_mqtt_message(self, encrypted_msg: Any, unencrypted_msg: Any) -> None:
         """
         sendMQTTMessage - deliver message over MQTT. With retries.
+        Sends to both /e/ (encrypted) and /c/ (unencrypted) for backwards compatibility
         """
         if self.cfg:
-            for subtopic in ['c', 'e']:
-                mqtt_topic = f"{self.cfg.MQTT.Topic}/2/{subtopic}/{self.cfg.MQTT.Channel}/{self.my_hw_hex_id}"
-                for _ in range(3):
-                    result = self.client.publish(mqtt_topic, mqtt_msg.SerializeToString())
-                    if self.logger:
-                        self.logger.info(f"MQTT message sent with result: {result}")
-                # Sleep time for LongFast
-                time.sleep(30)
+            # Send encrypted message to /e/ topic
+            encrypted_topic = f"{self.cfg.MQTT.Topic}/2/e/{self.cfg.MQTT.Channel}/{self.my_hw_hex_id}"
+            unencrypted_topic = f"{self.cfg.MQTT.Topic}/2/c/{self.cfg.MQTT.Channel}/{self.my_hw_hex_id}"
+
+            for _ in range(3):
+                # Send encrypted message (raw bytes)
+                result_e = self.client.publish(encrypted_topic, encrypted_msg)
+                if self.logger:
+                    self.logger.info(f"MQTT encrypted message sent to {encrypted_topic} with result: {result_e}")
+
+                # Send unencrypted message (serialized protobuf)
+                result_c = self.client.publish(unencrypted_topic, unencrypted_msg.SerializeToString())
+                if self.logger:
+                    self.logger.info(f"MQTT unencrypted message sent to {unencrypted_topic} with result: {result_c}")
+
+            # Sleep time for LongFast
+            time.sleep(30)
 
     def waitForConfig(self) -> None:
         """Wait for configuration"""

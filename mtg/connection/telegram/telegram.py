@@ -42,8 +42,7 @@ class TelegramConnection:
         :return:
         """
         if self.msg_queue is None:
-            if self.logger:
-                self.logger.warning("Message queue not initialized yet, message will be dropped")
+            self.logger.warning("Message queue not initialized yet, message will be dropped")
             return
 
         try:
@@ -63,8 +62,7 @@ class TelegramConnection:
         Process messages from the queue asynchronously
         """
         if self.msg_queue is None:
-            if self.logger:
-                self.logger.error("Message queue not initialized")
+            self.logger.error("Message queue not initialized")
             return
 
         while self.running:
@@ -78,11 +76,10 @@ class TelegramConnection:
                     continue
             try:
                 # Wait for a message with timeout to allow shutdown
-                print(args, kwargs)
+                self.logger.info(args, kwargs)
                 try:
                     await self.application.bot.send_message(*args, **kwargs)
-                    if self.logger:
-                        self.logger.debug(f"Message sent successfully: {kwargs.get('text', 'photo/document')}")
+                    self.logger.debug(f"Message sent successfully: {kwargs.get('text', 'photo/document')}")
                 except (ValueError, TypeError, RuntimeError) as e:
                     if self.logger:
                         self.logger.error(f"Failed to send message: {e}")
@@ -90,8 +87,7 @@ class TelegramConnection:
                 # Timeout is normal, continue checking if we should keep running
                 continue
             except (ValueError, TypeError, RuntimeError) as e:
-                if self.logger:
-                    self.logger.error(f"Error in message queue processor: {e}")
+                self.logger.error(f"Error in message queue processor: {e}")
 
     async def start_queue_processor(self) -> None:
         """
@@ -104,8 +100,7 @@ class TelegramConnection:
 
             self.running = True
             self.queue_task = asyncio.create_task(self._process_message_queue())
-            if self.logger:
-                self.logger.info("Message queue processor started")
+            self.logger.info("Message queue processor started")
 
     async def stop_queue_processor(self) -> None:
         """
@@ -115,8 +110,7 @@ class TelegramConnection:
         if self.queue_task:
             await self.queue_task
             self.queue_task = None
-            if self.logger:
-                self.logger.info("Message queue processor stopped")
+            self.logger.info("Message queue processor stopped")
 
     def poll(self) -> None:
         """
@@ -124,12 +118,12 @@ class TelegramConnection:
 
         :return:
         """
-        print("Polling Telegram...")
+        self.logger.info("Polling Telegram...")
         # Start the queue processor before polling
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(self.start_queue_processor())
-        print("Message queue processor started.")
+        self.logger.info("Message queue processor started.")
         # Run polling (this will block)
         self.application.run_polling(allowed_updates=Update.ALL_TYPES)
 
