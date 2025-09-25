@@ -112,6 +112,30 @@ class TelegramConnection:
             self.queue_task = None
             self.logger.info("Message queue processor stopped")
 
+    def stop_queue_processor_sync(self) -> None:
+        """
+        Stop the message queue processor synchronously
+        """
+        # Signal the queue processor to stop
+        self.running = False
+
+        # If there's a queue task, try to handle it properly
+        if self.queue_task:
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running() and not loop.is_closed():
+                    # Cancel the task - this is safe even in a running loop
+                    self.queue_task.cancel()
+                elif not loop.is_closed():
+                    # Loop exists but not running, we can wait for cleanup
+                    loop.run_until_complete(self.stop_queue_processor())
+            except RuntimeError:
+                # No event loop or loop issues, nothing we can do
+                pass
+            finally:
+                self.queue_task = None
+                self.logger.info("Message queue processor stopped")
+
     def poll(self) -> None:
         """
         Run Telegram bot polling
@@ -132,10 +156,5 @@ class TelegramConnection:
         Stop Telegram bot
         """
         # Stop the queue processor
-        with contextlib.suppress(RuntimeError):
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                asyncio.create_task(self.stop_queue_processor())
-            else:
-                loop.run_until_complete(self.stop_queue_processor())
+        self.stop_queue_processor_sync()
         self.application.stop_running()

@@ -407,7 +407,7 @@ class ServerThread(Thread):
     """
 
     def __init__(self, app: Flask, config: Config, logger: logging.Logger):
-        Thread.__init__(self)
+        Thread.__init__(self, daemon=True)
         self.config = config
         self.logger = logger
         port = self.config.enforce_type(int, self.config.WebApp.Port)
