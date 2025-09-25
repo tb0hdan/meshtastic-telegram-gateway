@@ -5,9 +5,7 @@
 import argparse
 import logging
 import os
-import signal
 import sys
-import threading
 #
 import reverse_geocoder as rg
 import sentry_sdk
