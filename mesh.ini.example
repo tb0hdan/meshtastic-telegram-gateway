@@ -136,6 +136,10 @@ DutyCycle = true
 Role = ROUTER_LATE
 # Allow sharing location over MQTT public maps. Boolean.
 MapReporting = true
+# Allow the radio to publish to MQTT brokers. Boolean.
+OkToMQTT = true
+# Ignore incoming MQTT updates. Boolean.
+IgnoreMQTT = false
 
 [APRS]
 # en: APRS functionality. Not actually used. Boolean.

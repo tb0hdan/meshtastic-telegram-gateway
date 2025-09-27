@@ -243,6 +243,22 @@ class MeshtasticConnection:
                 diffs.append(f'duty_cycle {lora.override_duty_cycle}->{duty}')
                 lora.override_duty_cycle = duty
                 lora_changed = True
+        ok_to_mqtt = getattr(self.config.MeshtasticReset, 'OkToMQTT', None)
+        if ok_to_mqtt is not None:
+            ok_to_mqtt = self.config.enforce_type(bool, ok_to_mqtt)
+            if lora.config_ok_to_mqtt != ok_to_mqtt:
+                diffs.append(
+                    f'ok_to_mqtt {lora.config_ok_to_mqtt}->{ok_to_mqtt}'
+                )
+                lora.config_ok_to_mqtt = ok_to_mqtt
+                lora_changed = True
+        ignore_mqtt = getattr(self.config.MeshtasticReset, 'IgnoreMQTT', None)
+        if ignore_mqtt is not None:
+            ignore_mqtt = self.config.enforce_type(bool, ignore_mqtt)
+            if lora.ignore_mqtt != ignore_mqtt:
+                diffs.append(f'ignore_mqtt {lora.ignore_mqtt}->{ignore_mqtt}')
+                lora.ignore_mqtt = ignore_mqtt
+                lora_changed = True
         if lora_changed:
             node.writeConfig('lora')
 
