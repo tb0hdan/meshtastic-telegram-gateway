@@ -7,8 +7,19 @@ import logging
 import os
 import sys
 import time
+from pathlib import Path
 #
-import reverse_geocoder as rg
+try:
+    import reverse_geocoder as _reverse_geocoder
+    _REVERSE_GEOCODER_AVAILABLE = True
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    _reverse_geocoder = None
+    _REVERSE_GEOCODER_AVAILABLE = False
+
+
+def _noop_reverse_geocode(*_args, **_kwargs):
+    """Return an empty list when reverse geocoding is unavailable."""
+    return []
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
 #
@@ -60,10 +71,17 @@ def main(args):
                         before_send=before_send,
                         integrations=[FlaskIntegration()]
         )
-    # warm up reverse cache
-    rg.search((50.5, 30.5), verbose=debug)
+    base_path = Path(__file__).resolve().parent
+    log_dir = base_path / "logs"
     # our logger
-    logger = setup_logger('mesh', level, json_logs=True)
+    logger = setup_logger('mesh', level, json_logs=True, log_dir=log_dir)
+    if _REVERSE_GEOCODER_AVAILABLE:
+        # warm up reverse cache
+        _reverse_geocoder.search((50.5, 30.5), verbose=debug)
+    else:
+        logger.warning(
+            "reverse_geocoder package is not installed. Location lookups will be skipped."
+        )
     # meshtastic logger
     logging.basicConfig(level=level,
                         format=LOGFORMAT)
@@ -73,8 +91,12 @@ def main(args):
     meshtastic_filter = MeshtasticFilter(database, config, logger)
     #
     telegram_connection = TelegramConnection(config.Telegram.Token, logger)
+    if _REVERSE_GEOCODER_AVAILABLE:
+        reverse_geocode_fn = _reverse_geocoder.search
+    else:
+        reverse_geocode_fn = _noop_reverse_geocode
     meshtastic_connection = RichConnection(config.Meshtastic.Device, logger, config, meshtastic_filter,
-                                           database, rg_fn=rg.search)
+                                           database, rg_fn=reverse_geocode_fn)
     database.set_meshtastic(meshtastic_connection)
     meshtastic_connection.connect()
     meshtastic_connection.reset_params()
