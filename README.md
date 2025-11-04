@@ -1,7 +1,7 @@
 # meshtastic-telegram-gateway
 ![Build](https://github.com/tb0hdan/meshtastic-telegram-gateway/actions/workflows/build.yml/badge.svg)
 ![CodeQL](https://github.com/tb0hdan/meshtastic-telegram-gateway/actions/workflows/codeql-analysis.yml/badge.svg)
-![Python versions](https://shields.io/badge/python-3.9%20|%203.10%20|%203.11%20|%203.12%20|%203.13-green)
+![Python versions](https://shields.io/badge/python-3.10%20|%203.11%20|%203.12%20|%203.13%20|%203.14-green)
 
 *Read this in other languages: [English](README.md), [Polski](README.pl.md), [Português](README.pt.md)*
 
