@@ -3,6 +3,7 @@
 
 import logging
 import re
+import sqlite3
 import time
 #
 from datetime import datetime, timedelta
@@ -111,14 +112,14 @@ class MessageLinkRecord(DB.Entity):  # pylint:disable=too-few-public-methods
     id = PrimaryKey(int, auto=True)
     direction = Required(str)
     status = Required(str)
-    telegram_chat_id = Optional(int)
-    telegram_message_id = Optional(int)
-    telegram_thread_id = Optional(int)
-    meshtastic_packet_id = Optional(int)
+    telegram_chat_id = Optional(int, size=64)
+    telegram_message_id = Optional(int, size=64)
+    telegram_thread_id = Optional(int, size=64)
+    meshtastic_packet_id = Optional(int, size=64)
     payload = Optional(str)
     sender = Optional(str)
-    reply_to_packet_id = Optional(int)
-    emoji = Optional(int)
+    reply_to_packet_id = Optional(int, size=64)
+    emoji = Optional(int, size=64)
     retries = Required(int)
     last_error = Optional(str)
     created_at = Required(datetime)
@@ -131,8 +132,8 @@ class MessageLinkAlias(DB.Entity):  # pylint:disable=too-few-public-methods
 
     id = PrimaryKey(int, auto=True)
     link = Required(MessageLinkRecord)
-    meshtastic_packet_id = Required(int, unique=True)
-    previous_packet_id = Optional(int)
+    meshtastic_packet_id = Required(int, unique=True, size=64)
+    previous_packet_id = Optional(int, size=64)
 
 
 class MeshtasticDB:
@@ -143,8 +144,208 @@ class MeshtasticDB:
     def __init__(self, db_file: AnyStr, logger: logging.Logger):
         self.connection = None
         self.logger = logger
+        self.db_file = db_file
+        if DB.provider is not None:
+            DB.disconnect()
+            DB.provider = None
+            DB.schema = None
         DB.bind(provider='sqlite', filename=db_file, create_db=True)
+        migration_state = self._run_migrations(db_file)
         DB.generate_mapping(create_tables=True)
+        self._finalize_migrations(db_file, migration_state)
+
+    @staticmethod
+    def _run_migrations(db_file: AnyStr) -> dict[str, bool]:
+        """Run pre-mapping migrations and return their execution state."""
+
+        migration_state = {
+            'message_link_resized': False,
+            'message_link_alias_resized': False,
+            'message_link_old_table': None,
+            'message_link_alias_old_table': None,
+        }
+
+        try:
+            conn = sqlite3.connect(db_file)
+        except sqlite3.Error:
+            return migration_state
+
+        with conn:
+            table_name, schema_sql = MeshtasticDB._locate_table(
+                conn,
+                ('MessageLinkRecord', 'message_link_record'),
+            )
+            if table_name and schema_sql:
+                if MeshtasticDB._schema_has_32bit_constraint(
+                    schema_sql,
+                    (
+                        'telegram_chat_id',
+                        'telegram_message_id',
+                        'telegram_thread_id',
+                        'meshtastic_packet_id',
+                        'reply_to_packet_id',
+                        'emoji',
+                    ),
+                ):
+                    conn.execute('PRAGMA foreign_keys=OFF')
+                    old_table_name = f'{table_name}_old'
+                    conn.execute(
+                        f'ALTER TABLE "{table_name}" RENAME TO "{old_table_name}"',
+                    )
+                    migration_state['message_link_resized'] = True
+                    migration_state['message_link_old_table'] = old_table_name
+
+            table_name, schema_sql = MeshtasticDB._locate_table(
+                conn,
+                ('MessageLinkAlias', 'message_link_alias'),
+            )
+            if table_name and schema_sql:
+                if MeshtasticDB._schema_has_32bit_constraint(
+                    schema_sql,
+                    (
+                        'meshtastic_packet_id',
+                        'previous_packet_id',
+                    ),
+                ):
+                    if not migration_state['message_link_resized']:
+                        conn.execute('PRAGMA foreign_keys=OFF')
+                    conn.execute('DROP INDEX IF EXISTS idx_MessageLinkAlias__link')
+                    conn.execute('DROP INDEX IF EXISTS idx_messagelinkalias__link')
+                    old_table_name = f'{table_name}_old'
+                    conn.execute(
+                        f'ALTER TABLE "{table_name}" RENAME TO "{old_table_name}"',
+                    )
+                    migration_state['message_link_alias_resized'] = True
+                    migration_state['message_link_alias_old_table'] = old_table_name
+
+            if migration_state['message_link_resized'] or migration_state['message_link_alias_resized']:
+                conn.execute('PRAGMA foreign_keys=ON')
+
+        conn.close()
+        return migration_state
+
+    @staticmethod
+    def _schema_has_32bit_constraint(schema_sql: str, columns: Iterable[str]) -> bool:
+        """Return True if any of the given columns enforce 32-bit bounds."""
+
+        if not schema_sql:
+            return False
+        for column in columns:
+            constraint_fragment = f'"{column}" BETWEEN -2147483648 AND 2147483647'
+            if constraint_fragment in schema_sql:
+                return True
+        return False
+
+    @staticmethod
+    def _finalize_migrations(db_file: AnyStr, migration_state: dict[str, bool]) -> None:
+        """Copy data into freshly generated tables after migrations."""
+
+        if not (
+            migration_state.get('message_link_resized')
+            or migration_state.get('message_link_alias_resized')
+        ):
+            return
+
+        try:
+            conn = sqlite3.connect(db_file)
+        except sqlite3.Error:
+            return
+
+        try:
+            conn.execute('PRAGMA foreign_keys=OFF')
+            if migration_state.get('message_link_resized'):
+                old_table = migration_state.get('message_link_old_table')
+                if old_table:
+                    new_table = MeshtasticDB._entity_table_name(
+                        MessageLinkRecord,
+                        'MessageLinkRecord',
+                    )
+                    conn.execute(
+                        f'''
+                        INSERT INTO "{new_table}" (
+                            id,
+                            direction,
+                            status,
+                            telegram_chat_id,
+                            telegram_message_id,
+                            telegram_thread_id,
+                            meshtastic_packet_id,
+                            payload,
+                            sender,
+                            reply_to_packet_id,
+                            emoji,
+                            retries,
+                            last_error,
+                            created_at,
+                            updated_at
+                        )
+                        SELECT
+                            id,
+                            direction,
+                            status,
+                            telegram_chat_id,
+                            telegram_message_id,
+                            telegram_thread_id,
+                            meshtastic_packet_id,
+                            COALESCE(payload, ''),
+                            COALESCE(sender, ''),
+                            reply_to_packet_id,
+                            emoji,
+                            retries,
+                            COALESCE(last_error, ''),
+                            created_at,
+                            updated_at
+                        FROM "{old_table}"
+                        ''',
+                    )
+                    conn.execute(f'DROP TABLE IF EXISTS "{old_table}"')
+            if migration_state.get('message_link_alias_resized'):
+                old_table = migration_state.get('message_link_alias_old_table')
+                if old_table:
+                    new_table = MeshtasticDB._entity_table_name(
+                        MessageLinkAlias,
+                        'MessageLinkAlias',
+                    )
+                    conn.execute(
+                        f'''
+                        INSERT INTO "{new_table}" (
+                            id,
+                            link,
+                            meshtastic_packet_id,
+                            previous_packet_id
+                        )
+                        SELECT
+                            id,
+                            link,
+                            meshtastic_packet_id,
+                            previous_packet_id
+                        FROM "{old_table}"
+                        ''',
+                    )
+                    conn.execute(f'DROP TABLE IF EXISTS "{old_table}"')
+            conn.execute('PRAGMA foreign_keys=ON')
+            conn.commit()
+        finally:
+            conn.close()
+
+    @staticmethod
+    def _locate_table(conn: sqlite3.Connection, candidates: Iterable[str]):
+        for name in candidates:
+            cursor = conn.execute(
+                "SELECT sql FROM sqlite_master WHERE type='table' AND name=?",
+                (name,),
+            )
+            row = cursor.fetchone()
+            if row and row[0]:
+                return name, row[0]
+        return None, None
+
+    @staticmethod
+    def _entity_table_name(entity, default_name: str) -> str:
+        table = getattr(entity, '_table_', None)
+        if table is not None and hasattr(table, 'name'):
+            return table.name
+        return default_name
 
     def set_meshtastic(self, connection) -> None:
         """
