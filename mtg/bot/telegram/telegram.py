@@ -27,9 +27,10 @@ from telegram.ext import MessageHandler, Filters
 from mtg.config import Config
 from mtg.connection.rich import RichConnection
 from mtg.connection.telegram import TelegramConnection
+from mtg.database import MESSAGE_DIRECTION_TELEGRAM_TO_MESH
 from mtg.filter import TelegramFilter
 from mtg.log import VERSION
-from mtg.utils import split_message
+from mtg.utils import split_message, is_emoji_reaction, first_emoji_codepoint
 
 
 def check_room(func):
@@ -125,6 +126,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         :return:
         """
         self.logger = logger
+        self._deliver_pending_messages()
 
     def set_filter(self, filter_class: TelegramFilter):
         """
@@ -134,6 +136,62 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         :return:
         """
         self.filter = filter_class
+
+    def _deliver_pending_messages(self) -> None:
+        """Attempt to resend any pending Telegram-to-Meshtastic messages."""
+
+        if not hasattr(self.meshtastic_connection, 'database'):
+            return
+        database = self.meshtastic_connection.database
+        try:
+            pending = list(database.iter_pending_links(MESSAGE_DIRECTION_TELEGRAM_TO_MESH))
+        except Exception as exc:  # pylint:disable=broad-except
+            if self.logger:
+                self.logger.error('Failed to load pending Telegram messages: %s', repr(exc))
+            return
+
+        for record in pending:
+            try:
+                self._resend_pending_record(record)
+            except Exception as exc:  # pylint:disable=broad-except
+                if self.logger:
+                    self.logger.error('Pending Telegram message %s failed: %s', record.id, repr(exc))
+                database.mark_link_retry(record.id, repr(exc))
+
+    def _resend_pending_record(self, record) -> None:
+        """Resend a single pending message record."""
+
+        database = self.meshtastic_connection.database
+        if record.emoji is not None:
+            if record.reply_to_packet_id is None:
+                database.mark_link_failed(record.id, 'missing reply target for emoji reaction')
+                return
+            packets = self.meshtastic_connection.send_text(
+                '',
+                reply_id=record.reply_to_packet_id,
+                emoji=record.emoji,
+            )
+        else:
+            sender = record.sender or 'Telegram'
+            payload = record.payload or ''
+            packets = self.meshtastic_connection.send_user_text(
+                sender,
+                payload,
+                reply_id=record.reply_to_packet_id,
+            )
+        if not packets:
+            database.mark_link_retry(record.id, 'meshtastic send returned None')
+            return
+        first_packet = packets[0]
+        database.mark_link_sent(record.id, meshtastic_packet_id=first_packet.id)
+        previous_packet_id = record.reply_to_packet_id
+        for packet in packets:
+            database.add_link_alias(
+                record.id,
+                packet.id,
+                previous_packet_id=previous_packet_id,
+            )
+            previous_packet_id = packet.id
 
     def log_update(self, update: Update, _context: CallbackContext) -> None:
         """Log every incoming Telegram update"""
@@ -249,6 +307,58 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         if not message:
             return
         self.logger.debug(f"{update.effective_chat.id} {full_user} {message}")
+
+        reply_packet_id = None
+        if update.message and update.message.reply_to_message:
+            reply_record = self.meshtastic_connection.database.get_link_by_telegram(
+                update.effective_chat.id,
+                update.message.reply_to_message.message_id,
+            )
+            if reply_record and reply_record.meshtastic_packet_id:
+                reply_packet_id = reply_record.meshtastic_packet_id
+
+        text_content = update.message.text if update.message else ''
+        if update.message and update.message.text and is_emoji_reaction(text_content):
+            if reply_packet_id is None:
+                self.logger.debug('Ignoring emoji reaction without mapped Meshtastic message')
+                return
+            emoji_code = first_emoji_codepoint(text_content)
+            if emoji_code is None:
+                return
+            record = self.meshtastic_connection.database.ensure_message_link(
+                direction=MESSAGE_DIRECTION_TELEGRAM_TO_MESH,
+                telegram_chat_id=update.effective_chat.id,
+                telegram_message_id=update.message.message_id,
+                payload='',
+                sender=full_user,
+                reply_to_packet_id=reply_packet_id,
+                emoji=emoji_code,
+            )
+            log_data = {
+                "event": "telegram_to_mesh_reaction",
+                "user": full_user,
+                "emoji": emoji_code,
+                "message_id": update.message.message_id,
+                "reply_packet_id": reply_packet_id,
+            }
+            self.logger.info(json.dumps(log_data))
+            packets = self.meshtastic_connection.send_text(
+                '',
+                reply_id=reply_packet_id,
+                emoji=emoji_code,
+            )
+            if packets:
+                self.meshtastic_connection.database.mark_link_sent(
+                    record.id,
+                    meshtastic_packet_id=packets[0].id,
+                )
+            else:
+                self.meshtastic_connection.database.mark_link_retry(
+                    record.id,
+                    'meshtastic send returned None',
+                )
+            return
+
         if message.startswith('APRS-'):
             addressee = message.split(' ', maxsplit=1)[0].lstrip('APRS-').rstrip(':')
             msg = message.replace(message.split(' ', maxsplit=1)[0], '').strip()
@@ -258,9 +368,38 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             "user": full_user,
             "message": message,
             "message_id": update.message.message_id if update.message else None,
+            "reply_packet_id": reply_packet_id,
         }
         self.logger.info(json.dumps(log_data))
-        self.meshtastic_connection.send_user_text(full_user, message)
+        record = self.meshtastic_connection.database.ensure_message_link(
+            direction=MESSAGE_DIRECTION_TELEGRAM_TO_MESH,
+            telegram_chat_id=update.effective_chat.id,
+            telegram_message_id=update.message.message_id if update.message else None,
+            payload=message,
+            sender=full_user,
+            reply_to_packet_id=reply_packet_id,
+        )
+        packets = self.meshtastic_connection.send_user_text(full_user, message, reply_id=reply_packet_id)
+        if not packets:
+            self.meshtastic_connection.database.mark_link_retry(
+                record.id,
+                'meshtastic send returned None',
+            )
+            return
+
+        first_packet = packets[0]
+        self.meshtastic_connection.database.mark_link_sent(
+            record.id,
+            meshtastic_packet_id=first_packet.id,
+        )
+        previous_packet_id = reply_packet_id
+        for packet in packets:
+            self.meshtastic_connection.database.add_link_alias(
+                record.id,
+                packet.id,
+                previous_packet_id=previous_packet_id,
+            )
+            previous_packet_id = packet.id
 
     def shorten_tly(self, long_url):
         """

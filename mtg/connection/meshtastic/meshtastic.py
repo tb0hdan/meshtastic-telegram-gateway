@@ -18,7 +18,8 @@ from meshtastic import (
     BROADCAST_ADDR as MESHTASTIC_BROADCAST_ADDR,
     serial_interface as meshtastic_serial_interface,
     tcp_interface as meshtastic_tcp_interface,
-    mesh_pb2
+    mesh_pb2,
+    portnums_pb2,
 )
 # pylint:disable=no-name-in-module
 from meshtastic.protobuf import config_pb2
@@ -96,39 +97,111 @@ class MeshtasticConnection:
             raise last_exc
 
 
-    def send_text(self, msg, **kwargs) -> None:
-        """
-        Send Meshtastic message
+    def send_text(self, msg, reply_id=None, emoji=None, **kwargs):
+        """Send a Meshtastic message, optionally as a reply or reaction."""
 
-        :param args:
-        :param kwargs:
-        :return:
-        """
         log_data = {
             "event": "send_mesh",
             "message": msg,
             "kwargs": kwargs,
+            "reply_id": reply_id,
+            "emoji": emoji,
         }
         self.logger.info(json.dumps(log_data))
-        if len(msg) < mesh_pb2.Constants.DATA_PAYLOAD_LEN // 2:  # pylint:disable=no-member
-            with self.lock:
-                self.interface.sendText(msg, **kwargs)
-                return
-        # pylint:disable=no-member
-        split_message(msg, mesh_pb2.Constants.DATA_PAYLOAD_LEN // 2, self.interface.sendText, **kwargs)
-        return
+        chunk_len = mesh_pb2.Constants.DATA_PAYLOAD_LEN // 2  # pylint:disable=no-member
+        send_kwargs = dict(kwargs)
+        results = []
 
-    def send_user_text(self, sender: str, message: str, **kwargs) -> None:
-        """Send text message from a specific sender with automatic splitting"""
+        def _send_single(part, target_reply_id):
+            if target_reply_id is None and emoji is None:
+                packet = self.interface.sendText(part, **send_kwargs)
+            else:
+                packet = self._send_rich_text(
+                    part,
+                    reply_id=target_reply_id,
+                    emoji=emoji,
+                    **send_kwargs,
+                )
+            if packet:
+                results.append(packet)
+            return packet
+
+        if len(msg) <= chunk_len:
+            with self.lock:
+                _send_single(msg, reply_id)
+            return results
+
+        with self.lock:
+            next_reply_id = reply_id
+
+            def _send_part(part, **cb_kwargs):
+                nonlocal next_reply_id
+                cb_kwargs = dict(cb_kwargs)
+                target_reply_id = next_reply_id
+                if target_reply_id is None and results:
+                    target_reply_id = results[-1].id
+                packet = self._send_rich_text(
+                    part,
+                    reply_id=target_reply_id,
+                    emoji=emoji,
+                    **cb_kwargs,
+                ) if (target_reply_id is not None or emoji is not None) else self.interface.sendText(part, **cb_kwargs)
+                if packet:
+                    results.append(packet)
+                    next_reply_id = packet.id
+
+            split_message(msg, chunk_len, _send_part, **send_kwargs)
+        return results
+
+    def _send_rich_text(self, msg, reply_id=None, emoji=None, **kwargs):
+        """Send text that needs extra metadata like reply IDs or emoji reactions."""
+
+        destination_id = kwargs.pop('destinationId', MESHTASTIC_BROADCAST_ADDR)
+        want_ack = kwargs.pop('wantAck', False)
+        hop_limit = kwargs.pop('hopLimit', None)
+        pki_encrypted = kwargs.pop('pkiEncrypted', False)
+        public_key = kwargs.pop('publicKey', None)
+        channel_index = kwargs.pop('channelIndex', 0)
+        want_response = kwargs.pop('wantResponse', False)
+
+        data = mesh_pb2.Data()
+        data.portnum = portnums_pb2.PortNum.TEXT_MESSAGE_APP
+        data.payload = msg.encode('utf-8')
+        data.want_response = want_response
+        if reply_id is not None:
+            data.reply_id = int(reply_id)
+        if emoji is not None:
+            data.emoji = int(emoji)
+
+        mesh_packet = mesh_pb2.MeshPacket()
+        mesh_packet.channel = channel_index
+        mesh_packet.decoded.CopyFrom(data)
+
+        return self.interface._sendPacket(  # pylint:disable=protected-access
+            mesh_packet,
+            destinationId=destination_id,
+            wantAck=want_ack,
+            hopLimit=hop_limit,
+            pkiEncrypted=pki_encrypted,
+            publicKey=public_key,
+        )
+
+    def send_user_text(self, sender: str, message: str, reply_id=None, **kwargs):
+        """Send text message from a specific sender with automatic splitting."""
 
         chunk_len = mesh_pb2.Constants.DATA_PAYLOAD_LEN // 2  # pylint:disable=no-member
         full = f"{sender}: {message}"
         if len(full) <= chunk_len:
-            self.send_text(full, **kwargs)
-            return
+            return self.send_text(full, reply_id=reply_id, **kwargs)
         parts = split_user_message(sender, message, chunk_len)
+        packets = []
+        next_reply_id = reply_id
         for part in parts:
-            self.send_text(part, **kwargs)
+            sent_packets = self.send_text(part, reply_id=next_reply_id, **kwargs)
+            if sent_packets:
+                packets.extend(sent_packets)
+                next_reply_id = sent_packets[-1].id
+        return packets
 
     def send_data(self, *args, **kwargs) -> None:
         """
