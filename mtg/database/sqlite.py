@@ -7,15 +7,35 @@ import time
 #
 from datetime import datetime, timedelta
 from typing import (
-    AnyStr
+    AnyStr,
+    Iterable,
+    Optional as TypingOptional,
 )
 #
-from pony.orm import db_session, desc, Database, Optional, PrimaryKey, Required, Set, set_sql_debug
+from pony.orm import (
+    db_session,
+    desc,
+    Database,
+    Optional,
+    PrimaryKey,
+    Required,
+    Set,
+    set_sql_debug,
+    select,
+)
 #
 from mtg.log import conditional_log
 
 # has to be global variable ;-(
 DB = Database()
+
+
+MESSAGE_DIRECTION_MESH_TO_TELEGRAM = 'mesh_to_telegram'
+MESSAGE_DIRECTION_TELEGRAM_TO_MESH = 'telegram_to_mesh'
+
+MESSAGE_STATUS_PENDING = 'pending'
+MESSAGE_STATUS_SENT = 'sent'
+MESSAGE_STATUS_FAILED = 'failed'
 
 
 def sql_debug():
@@ -85,6 +105,36 @@ class FilterRecord(DB.Entity):
     active = Required(bool)
 
 
+class MessageLinkRecord(DB.Entity):  # pylint:disable=too-few-public-methods
+    """Persisted mapping between Telegram and Meshtastic messages."""
+
+    id = PrimaryKey(int, auto=True)
+    direction = Required(str)
+    status = Required(str)
+    telegram_chat_id = Optional(int)
+    telegram_message_id = Optional(int)
+    telegram_thread_id = Optional(int)
+    meshtastic_packet_id = Optional(int)
+    payload = Optional(str)
+    sender = Optional(str)
+    reply_to_packet_id = Optional(int)
+    emoji = Optional(int)
+    retries = Required(int)
+    last_error = Optional(str)
+    created_at = Required(datetime)
+    updated_at = Required(datetime)
+    aliases = Set(lambda: MessageLinkAlias)
+
+
+class MessageLinkAlias(DB.Entity):  # pylint:disable=too-few-public-methods
+    """Associates additional Meshtastic packet IDs with a canonical message link."""
+
+    id = PrimaryKey(int, auto=True)
+    link = Required(MessageLinkRecord)
+    meshtastic_packet_id = Required(int, unique=True)
+    previous_packet_id = Optional(int)
+
+
 class MeshtasticDB:
     """
     Meshtastic events database
@@ -151,6 +201,170 @@ class MeshtasticDB:
         node_record.nodeName = node_name or node_id  # pylint:disable=invalid-name
         node_record.lastHeard = last_heard  # pylint:disable=invalid-name
         return True, node_record
+
+    @staticmethod
+    @db_session
+    def ensure_message_link(
+        *,
+        direction: str,
+        telegram_chat_id: TypingOptional[int] = None,
+        telegram_message_id: TypingOptional[int] = None,
+        telegram_thread_id: TypingOptional[int] = None,
+        meshtastic_packet_id: TypingOptional[int] = None,
+        payload: TypingOptional[str] = None,
+        sender: TypingOptional[str] = None,
+        reply_to_packet_id: TypingOptional[int] = None,
+        emoji: TypingOptional[int] = None,
+    ) -> MessageLinkRecord:
+        """Create or update a message link record."""
+
+        now = datetime.utcnow()
+        record = None
+        if telegram_chat_id is not None and telegram_message_id is not None:
+            record = MessageLinkRecord.get(
+                telegram_chat_id=telegram_chat_id,
+                telegram_message_id=telegram_message_id,
+            )
+        if record is None and meshtastic_packet_id is not None:
+            record = MessageLinkRecord.get(meshtastic_packet_id=meshtastic_packet_id)
+        if record is None:
+            record = MessageLinkRecord(
+                direction=direction,
+                status=MESSAGE_STATUS_PENDING,
+                telegram_chat_id=telegram_chat_id,
+                telegram_message_id=telegram_message_id,
+                telegram_thread_id=telegram_thread_id,
+                meshtastic_packet_id=meshtastic_packet_id,
+                payload=payload,
+                sender=sender,
+                reply_to_packet_id=reply_to_packet_id,
+                emoji=emoji,
+                retries=0,
+                created_at=now,
+                updated_at=now,
+            )
+            return record
+
+        # Update existing record with the latest data
+        record.direction = direction
+        if telegram_chat_id is not None:
+            record.telegram_chat_id = telegram_chat_id
+        if telegram_message_id is not None:
+            record.telegram_message_id = telegram_message_id
+        if telegram_thread_id is not None:
+            record.telegram_thread_id = telegram_thread_id
+        if meshtastic_packet_id is not None:
+            record.meshtastic_packet_id = meshtastic_packet_id
+        if payload is not None:
+            record.payload = payload
+        if sender is not None:
+            record.sender = sender
+        if reply_to_packet_id is not None:
+            record.reply_to_packet_id = reply_to_packet_id
+        record.emoji = emoji
+        record.updated_at = now
+        return record
+
+    @staticmethod
+    @db_session
+    def mark_link_sent(
+        record_id: int,
+        *,
+        telegram_message_id: TypingOptional[int] = None,
+        meshtastic_packet_id: TypingOptional[int] = None,
+    ) -> None:
+        """Mark a message link as successfully sent."""
+
+        record = MessageLinkRecord.get(id=record_id)
+        if record is None:
+            return
+        now = datetime.utcnow()
+        record.status = MESSAGE_STATUS_SENT
+        record.updated_at = now
+        record.last_error = None
+        record.retries = 0
+        if telegram_message_id is not None:
+            record.telegram_message_id = telegram_message_id
+        if meshtastic_packet_id is not None:
+            record.meshtastic_packet_id = meshtastic_packet_id
+
+    @staticmethod
+    @db_session
+    def mark_link_failed(record_id: int, error: str) -> None:
+        """Mark a message link as failed permanently."""
+
+        record = MessageLinkRecord.get(id=record_id)
+        if record is None:
+            return
+        record.status = MESSAGE_STATUS_FAILED
+        record.last_error = error
+        record.updated_at = datetime.utcnow()
+
+    @staticmethod
+    @db_session
+    def mark_link_retry(record_id: int, error: str) -> None:
+        """Record a retry attempt for a message link."""
+
+        record = MessageLinkRecord.get(id=record_id)
+        if record is None:
+            return
+        record.retries += 1
+        record.last_error = error
+        record.updated_at = datetime.utcnow()
+
+    @staticmethod
+    @db_session
+    def add_link_alias(
+        record_id: int,
+        meshtastic_packet_id: int,
+        *,
+        previous_packet_id: TypingOptional[int] = None,
+    ) -> TypingOptional[MessageLinkAlias]:
+        """Associate an additional Meshtastic packet ID with an existing link."""
+
+        record = MessageLinkRecord.get(id=record_id)
+        if record is None:
+            return None
+        alias = MessageLinkAlias.get(meshtastic_packet_id=meshtastic_packet_id)
+        if alias is None:
+            alias = MessageLinkAlias(
+                link=record,
+                meshtastic_packet_id=meshtastic_packet_id,
+                previous_packet_id=previous_packet_id,
+            )
+        else:
+            alias.link = record
+            alias.previous_packet_id = previous_packet_id
+        return alias
+
+    @staticmethod
+    @db_session
+    def get_link_by_telegram(chat_id: int, message_id: int) -> TypingOptional[MessageLinkRecord]:
+        """Return link record for a Telegram message."""
+
+        return MessageLinkRecord.get(telegram_chat_id=chat_id, telegram_message_id=message_id)
+
+    @staticmethod
+    @db_session
+    def get_link_by_meshtastic(packet_id: int) -> TypingOptional[MessageLinkRecord]:
+        """Return link record for a Meshtastic packet."""
+
+        if record := MessageLinkRecord.get(meshtastic_packet_id=packet_id):
+            return record
+        alias = MessageLinkAlias.get(meshtastic_packet_id=packet_id)
+        if alias:
+            return alias.link
+        return None
+
+    @staticmethod
+    @db_session
+    def iter_pending_links(direction: str) -> Iterable[MessageLinkRecord]:
+        """Return pending message links for the specified direction."""
+
+        return select(
+            link for link in MessageLinkRecord
+            if link.direction == direction and link.status == MESSAGE_STATUS_PENDING
+        )[:]
 
     @staticmethod
     @db_session

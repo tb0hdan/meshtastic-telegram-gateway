@@ -44,7 +44,7 @@ class TelegramConnection:
                 self.logger.error("Failed to copy handlers: %s", repr(exc))
         self.updater = new_updater
 
-    def send_message(self, *args, **kwargs) -> None:
+    def send_message(self, *args, **kwargs):
         """
         Send Telegram message
 
@@ -55,8 +55,7 @@ class TelegramConnection:
         retries = 0
         while retries < 5 and not self.exit:
             try:
-                self.updater.bot.send_message(*args, **kwargs)
-                return
+                return self.updater.bot.send_message(*args, **kwargs)
             except NetworkError as exc:
                 self.logger.error('Telegram network error: %s', repr(exc))
             except TelegramError as exc:  # pylint:disable=broad-except
@@ -64,6 +63,30 @@ class TelegramConnection:
             retries += 1
             time.sleep(5)
         self.logger.error('Failed to send Telegram message after retries')
+        return None
+
+    def send_reaction(self, chat_id: int, message_id: int, emoji: str, is_big: bool = False):
+        """Attempt to set a Telegram reaction, fallback to textual reply if unavailable."""
+
+        payload = {
+            'chat_id': chat_id,
+            'message_id': message_id,
+            'reaction': [{'type': 'emoji', 'emoji': emoji}],
+        }
+        if is_big:
+            payload['is_big'] = True
+
+        try:
+            self.updater.bot._post('setMessageReaction', data=payload, timeout=10)  # pylint:disable=protected-access
+            return True, None
+        except (NetworkError, TelegramError) as exc:  # pylint:disable=broad-except
+            self.logger.warning('Falling back to textual reaction: %s', repr(exc))
+        message = self.send_message(
+            chat_id=chat_id,
+            text=emoji,
+            reply_to_message_id=message_id,
+        )
+        return False, message
 
     def poll(self) -> None:
         """
