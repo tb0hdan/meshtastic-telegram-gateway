@@ -9,7 +9,8 @@ import pkg_resources
 import re
 import tempfile
 import time
-from typing import Optional
+from datetime import timedelta
+from typing import Optional, Tuple
 #
 from threading import Thread
 from urllib.parse import urlparse
@@ -28,7 +29,10 @@ from telegram.ext import MessageHandler, Filters
 from mtg.config import Config
 from mtg.connection.rich import RichConnection
 from mtg.connection.telegram import TelegramConnection
-from mtg.database import MESSAGE_DIRECTION_TELEGRAM_TO_MESH
+from mtg.database import (
+    MESSAGE_DIRECTION_MESH_TO_TELEGRAM,
+    MESSAGE_DIRECTION_TELEGRAM_TO_MESH,
+)
 from mtg.filter import TelegramFilter
 from mtg.log import VERSION
 from mtg.utils import split_message, is_emoji_reaction, first_emoji_codepoint
@@ -158,7 +162,11 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             pending = list(database.iter_pending_links(MESSAGE_DIRECTION_TELEGRAM_TO_MESH))
         except Exception as exc:  # pylint:disable=broad-except
             if self.logger:
-                self.logger.error('Failed to load pending Telegram messages: %s', repr(exc))
+                self.logger.error(
+                    'Failed to load pending Telegram messages: %s',
+                    repr(exc),
+                    exc_info=True,
+                )
             return
 
         for record in pending:
@@ -166,7 +174,12 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
                 self._resend_pending_record(record)
             except Exception as exc:  # pylint:disable=broad-except
                 if self.logger:
-                    self.logger.error('Pending Telegram message %s failed: %s', record.id, repr(exc))
+                    self.logger.error(
+                        'Pending Telegram message %s failed: %s',
+                        record.id,
+                        repr(exc),
+                        exc_info=True,
+                    )
                 database.mark_link_retry(record.id, repr(exc))
 
     def _resend_pending_record(self, record) -> None:
@@ -214,6 +227,74 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
                 previous_packet_id=previous_packet_id,
             )
             previous_packet_id = packet.id
+
+    @staticmethod
+    def _split_sender_payload(text: str) -> Tuple[Optional[str], str]:
+        """Return sender/payload extracted from a Telegram message body."""
+
+        if not text:
+            return None, ''
+        candidate = text.strip()
+        sender: Optional[str] = None
+        payload = candidate
+        prefix, separator, suffix = candidate.partition(': ')
+        if separator and prefix and suffix:
+            sender = prefix.strip()
+            payload = suffix.strip()
+        return sender, payload
+
+    @staticmethod
+    def _format_reply_hint(message) -> Optional[str]:  # pragma: no cover - simple formatting
+        """Produce a compact hint describing the replied-to Telegram message."""
+
+        text = getattr(message, 'text', None) or getattr(message, 'caption', None)
+        if not text:
+            return None
+        compact = ' '.join(text.strip().split())
+        if len(compact) > 60:
+            return f"{compact[:57]}…"
+        return compact
+
+    def _attempt_reply_backfill(self, update: Update) -> Optional[object]:
+        """Reconstruct missing Telegram→Meshtastic mapping when possible."""
+
+        if not hasattr(self.meshtastic_connection, 'database'):
+            return None
+        reply_to = getattr(update.message, 'reply_to_message', None)
+        if not reply_to:
+            return None
+        text = getattr(reply_to, 'text', None) or getattr(reply_to, 'caption', None)
+        if not text:
+            return None
+        sender, payload = self._split_sender_payload(text)
+        database = self.meshtastic_connection.database
+        record = database.find_recent_link_by_payload(
+            MESSAGE_DIRECTION_MESH_TO_TELEGRAM,
+            payload,
+            sender=sender,
+            max_age=timedelta(hours=12),
+        )
+        if record is None and sender is not None:
+            record = database.find_recent_link_by_payload(
+                MESSAGE_DIRECTION_MESH_TO_TELEGRAM,
+                payload,
+                max_age=timedelta(hours=12),
+            )
+        if record is None or record.meshtastic_packet_id is None:
+            return None
+        thread_id = getattr(reply_to, 'message_thread_id', None)
+        database.attach_telegram_metadata(
+            record.id,
+            telegram_chat_id=update.effective_chat.id,
+            telegram_message_id=reply_to.message_id,
+            telegram_thread_id=thread_id,
+        )
+        if self.logger:
+            self.logger.warning(
+                'Recovered missing reply mapping for Telegram message %s via payload match',
+                reply_to.message_id,
+            )
+        return database.get_link_by_telegram(update.effective_chat.id, reply_to.message_id)
 
     def log_update(self, update: Update, _context: CallbackContext) -> None:
         """Log every incoming Telegram update"""
@@ -334,11 +415,22 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         self.logger.debug(f"{update.effective_chat.id} {full_user} {message}")
 
         reply_packet_id = None
+        reply_hint = None
         if update.message and update.message.reply_to_message:
             reply_record = self.meshtastic_connection.database.get_link_by_telegram(
                 update.effective_chat.id,
                 update.message.reply_to_message.message_id,
             )
+            if reply_record is None:
+                try:
+                    reply_record = self._attempt_reply_backfill(update)
+                except Exception as exc:  # pylint:disable=broad-except
+                    self._get_logger().warning(
+                        'Failed to backfill reply mapping for Telegram message %s: %s',
+                        update.message.reply_to_message.message_id,
+                        repr(exc),
+                        exc_info=True,
+                    )
             if reply_record is None:
                 self.logger.debug(
                     'No Meshtastic mapping found for Telegram reply %s in chat %s',
@@ -367,12 +459,21 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
                         update.message.message_id if update.message else None,
                         reply_packet_id,
                     )
+            if reply_packet_id is None:
+                reply_hint = self._format_reply_hint(update.message.reply_to_message)
         if reply_packet_id is None and update.message and update.message.reply_to_message:
             self.logger.debug(
                 'Unable to resolve Meshtastic reply target for Telegram message %s -> replied to %s',
                 update.message.message_id,
                 update.message.reply_to_message.message_id,
             )
+            if reply_hint:
+                message += f" (reply to: {reply_hint})"
+                self.logger.debug(
+                    'Added reply context hint for Telegram message %s: %s',
+                    update.message.message_id,
+                    reply_hint,
+                )
 
         text_content = update.message.text if update.message else ''
         if update.message and update.message.text and is_emoji_reaction(text_content):

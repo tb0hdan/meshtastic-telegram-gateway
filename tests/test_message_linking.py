@@ -12,10 +12,13 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from mtg.bot.telegram import TelegramBot
 from mtg.connection.meshtastic import MeshtasticConnection
 from mtg.database import (
     MeshtasticDB,
+    MESSAGE_DIRECTION_MESH_TO_TELEGRAM,
     MESSAGE_DIRECTION_TELEGRAM_TO_MESH,
+    MESSAGE_STATUS_SENT,
 )
 from mtg.database.sqlite import MessageLinkRecord, MessageLinkAlias
 
@@ -251,3 +254,49 @@ def test_large_telegram_chat_id_is_accepted(meshtastic_db):  # pylint:disable=re
     with db_session:
         refreshed = MessageLinkRecord[record.id]
         assert refreshed.telegram_chat_id == large_chat_id
+
+
+def test_split_sender_payload_handles_missing_separator():
+    sender, payload = TelegramBot._split_sender_payload('Plain text message')
+    assert sender is None
+    assert payload == 'Plain text message'
+
+    sender, payload = TelegramBot._split_sender_payload('Darafei: Reply test 11')
+    assert sender == 'Darafei'
+    assert payload == 'Reply test 11'
+
+
+def test_backfill_missing_reply_mapping(meshtastic_db):  # pylint:disable=redefined-outer-name
+    with db_session:
+        meshtastic_db.ensure_message_link(
+            direction=MESSAGE_DIRECTION_MESH_TO_TELEGRAM,
+            meshtastic_packet_id=424227366,
+            payload='Reply test 11',
+            sender='Darafei',
+        )
+        record = MessageLinkRecord.get(meshtastic_packet_id=424227366)
+        record_id = record.id
+
+    bot = object.__new__(TelegramBot)
+    bot.meshtastic_connection = SimpleNamespace(database=meshtastic_db)
+    bot.logger = logging.getLogger('test')
+
+    reply_message = SimpleNamespace(
+        message_id=14349,
+        text='Darafei: Reply test 11',
+        caption=None,
+        message_thread_id=None,
+    )
+    update = SimpleNamespace(
+        effective_chat=SimpleNamespace(id=-1002310528626),
+        message=SimpleNamespace(reply_to_message=reply_message),
+    )
+
+    restored = bot._attempt_reply_backfill(update)  # pylint:disable=protected-access
+    assert restored is not None
+
+    with db_session:
+        refreshed = MessageLinkRecord[record_id]
+        assert refreshed.telegram_chat_id == -1002310528626
+        assert refreshed.telegram_message_id == 14349
+        assert refreshed.status == MESSAGE_STATUS_SENT
