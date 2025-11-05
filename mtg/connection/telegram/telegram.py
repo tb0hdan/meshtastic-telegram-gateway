@@ -13,6 +13,9 @@ from telegram.ext import Updater
 from setproctitle import setthreadtitle
 
 
+from .reaction import ensure_reaction_update_support
+
+
 class TelegramConnection:
     """
     Telegram connection
@@ -26,6 +29,7 @@ class TelegramConnection:
                 f"Unsupported python-telegram-bot version {telegram.__version__}; "
                 "please install 13.15"
             )
+        ensure_reaction_update_support()
         self.updater = Updater(token=token, use_context=True)
         self.exit = False
         self.name = 'Telegram Connection'

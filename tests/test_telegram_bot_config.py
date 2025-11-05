@@ -18,6 +18,7 @@ class DummyDispatcher:
 class DummyTelegramConnection:
     def __init__(self):
         self.dispatcher = DummyDispatcher()
+        self.updater = SimpleNamespace(bot=SimpleNamespace(id=999999))
 
 
 def build_config(tmp_path, *, room_value='-100', admin_value='42') -> Config:
@@ -165,3 +166,58 @@ def test_resend_pending_record_marks_invalid_reply_id(
     meshtastic_connection.database.mark_link_failed.assert_called_once_with(
         7, 'invalid reply_to_packet_id value'
     )
+
+
+def test_handle_reaction_forwards_supported_emoji(
+    tmp_path,
+    meshtastic_connection,
+    telegram_connection,
+):
+    """TelegramBot.handle_reaction should forward supported emoji reactions to Meshtastic."""
+
+    config = build_config(tmp_path, room_value='-555', admin_value='99')
+    record = SimpleNamespace(meshtastic_packet_id='321')
+    meshtastic_connection.database.get_link_by_telegram.return_value = record
+    meshtastic_connection.database.ensure_message_link.return_value = SimpleNamespace(id=5)
+    meshtastic_connection.send_text.return_value = [SimpleNamespace(id=900)]
+
+    bot = TelegramBot(config, meshtastic_connection, telegram_connection)
+    bot.set_logger(logging.getLogger('test-telegram-bot'))
+
+    user = SimpleNamespace(
+        id=1234,
+        first_name='Alice',
+        last_name='Smith',
+        username=None,
+        is_bot=False,
+    )
+    reaction = SimpleNamespace(
+        chat=SimpleNamespace(id=-555),
+        message_id=777,
+        new_reaction=[SimpleNamespace(type='emoji', emoji='👍', is_big=False)],
+        old_reaction=[],
+        actor_chat=None,
+    )
+    update = SimpleNamespace(
+        message_reaction=reaction,
+        effective_chat=reaction.chat,
+        effective_user=user,
+    )
+
+    bot.handle_reaction(update, MagicMock())
+
+    meshtastic_connection.send_text.assert_called_once()
+    args, kwargs = meshtastic_connection.send_text.call_args
+    assert args[0] == ''
+    assert kwargs['reply_id'] == 321
+    assert kwargs['emoji'] == ord('👍')
+
+    ensure_kwargs = meshtastic_connection.database.ensure_message_link.call_args.kwargs
+    assert ensure_kwargs['emoji'] == ord('👍')
+    assert ensure_kwargs['reply_to_packet_id'] == 321
+
+    meshtastic_connection.database.mark_link_sent.assert_called_once()
+    sent_args, sent_kwargs = meshtastic_connection.database.mark_link_sent.call_args
+    assert sent_args[0] == 5
+    assert sent_kwargs['meshtastic_packet_id'] == meshtastic_connection.send_text.return_value[0].id
+    meshtastic_connection.database.mark_link_retry.assert_not_called()
