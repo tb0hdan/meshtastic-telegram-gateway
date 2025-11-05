@@ -29,6 +29,7 @@ class TelegramConnection:
         self.updater = Updater(token=token, use_context=True)
         self.exit = False
         self.name = 'Telegram Connection'
+        self._poll_backoff = 5.0
 
     def _init_updater(self):
         """(Re)initialize telegram updater preserving handlers"""
@@ -96,14 +97,22 @@ class TelegramConnection:
         """
         setthreadtitle(self.name)
         while not self.exit:
+            delay = None
             try:
                 self.logger.debug("Starting Telegram polling loop")
                 self.updater.start_polling()
+                self._poll_backoff = 5.0
 
                 while not self.exit:
                     time.sleep(1)
             except (NetworkError, TelegramError) as exc:
-                self.logger.error('Telegram polling error: %s', repr(exc))
+                delay = self._next_poll_delay(exc)
+                self.logger.warning(
+                    'Telegram polling error: %s; retrying in %.1f seconds',
+                    repr(exc),
+                    delay,
+                    exc_info=True,
+                )
                 # recreate updater on errors to ensure handlers are registered
                 self._init_updater()
             finally:
@@ -112,7 +121,12 @@ class TelegramConnection:
                 except Exception:  # pylint:disable=broad-except
                     self.logger.exception("Failed to stop updater")
                 self.logger.debug("Telegram polling loop stopped")
-            time.sleep(10)
+            if self.exit:
+                break
+            if delay is None:
+                time.sleep(1)
+            else:
+                time.sleep(delay)
 
     @property
     def dispatcher(self) -> telegram.ext.Dispatcher:
@@ -129,3 +143,13 @@ class TelegramConnection:
         """
         self.exit = True
         self.updater.stop()
+
+    def _next_poll_delay(self, exc: Exception) -> float:
+        """Return the next polling backoff delay based on the exception."""
+
+        description = repr(exc)
+        if any(text in description for text in ('Timed out', 'Connection reset by peer')):
+            self._poll_backoff = min(self._poll_backoff * 2, 60.0)
+        else:
+            self._poll_backoff = min(self._poll_backoff + 5.0, 60.0)
+        return self._poll_backoff

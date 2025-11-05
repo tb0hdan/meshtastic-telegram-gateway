@@ -468,6 +468,32 @@ class MeshtasticDB:
 
     @staticmethod
     @db_session
+    def attach_telegram_metadata(
+        record_id: int,
+        *,
+        telegram_chat_id: int,
+        telegram_message_id: int,
+        telegram_thread_id: TypingOptional[int] = None,
+    ) -> TypingOptional[MessageLinkRecord]:
+        """Populate Telegram-specific metadata on an existing message link."""
+
+        record = MessageLinkRecord.get(id=record_id)
+        if record is None:
+            return None
+
+        record.telegram_chat_id = telegram_chat_id
+        record.telegram_message_id = telegram_message_id
+        if telegram_thread_id is not None:
+            record.telegram_thread_id = telegram_thread_id
+        record.updated_at = datetime.utcnow()
+        if record.status != MESSAGE_STATUS_SENT:
+            record.status = MESSAGE_STATUS_SENT
+            record.last_error = ""
+            record.retries = 0
+        return record
+
+    @staticmethod
+    @db_session
     def mark_link_sent(
         record_id: int,
         *,
@@ -561,6 +587,35 @@ class MeshtasticDB:
         if alias:
             return alias.link
         return None
+
+    @staticmethod
+    @db_session
+    def find_recent_link_by_payload(
+        direction: str,
+        payload: str,
+        *,
+        sender: TypingOptional[str] = None,
+        max_age: timedelta = timedelta(hours=12),
+    ) -> TypingOptional[MessageLinkRecord]:
+        """Find the most recent link matching payload (and optionally sender)."""
+
+        cutoff = datetime.utcnow() - max_age
+        if sender is not None:
+            query = select(
+                link for link in MessageLinkRecord
+                if link.direction == direction
+                and link.sender == sender
+                and link.payload == payload
+                and link.created_at >= cutoff
+            )
+        else:
+            query = select(
+                link for link in MessageLinkRecord
+                if link.direction == direction
+                and link.payload == payload
+                and link.created_at >= cutoff
+            )
+        return query.order_by(lambda link: desc(link.created_at)).first()
 
     @staticmethod
     @db_session
