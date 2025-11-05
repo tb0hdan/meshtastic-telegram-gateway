@@ -9,6 +9,7 @@ import pkg_resources
 import re
 import tempfile
 import time
+from typing import Optional
 #
 from threading import Thread
 from urllib.parse import urlparse
@@ -48,14 +49,17 @@ def check_room(func):
         """
         bot = args[0]
         update = args[1]
-        rooms = [bot.config.enforce_type(int, bot.config.Telegram.NotificationsRoom),
-                 bot.config.enforce_type(int, bot.config.Telegram.Room)]
-        bot_in_rooms = bot.config.enforce_type(bool, bot.config.Telegram.BotInRooms)
+        rooms = [
+            room_id
+            for room_id in (bot._notifications_room_id, bot._room_id)
+            if room_id is not None
+        ]
+        bot_in_rooms = bot._bot_in_rooms
         # check rooms
-        if update.effective_chat.id in rooms and not bot_in_rooms:
+        if update.effective_chat and update.effective_chat.id in rooms and not bot_in_rooms:
             return None
         # check blacklist as well
-        if bot.filter.banned(str(update.effective_user.id)):
+        if bot.filter and update.effective_user and bot.filter.banned(str(update.effective_user.id)):
             bot.logger.debug(f"User {update.effective_user.id} is in a blacklist...")
             return None
         return func(*args)
@@ -77,6 +81,10 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         self.telegram_connection = telegram_connection
         self.aprs = None
         self.name = 'Telegram Bot'
+        self._room_id: Optional[int] = None
+        self._notifications_room_id: Optional[int] = None
+        self._admin_id: Optional[int] = None
+        self._bot_in_rooms: bool = False
 
 
         start_handler = CommandHandler('start', self.start)
@@ -111,6 +119,8 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         echo_handler = MessageHandler(~Filters.command, self.echo)
         dispatcher.add_handler(echo_handler, group=1)
 
+        self._refresh_cached_config()
+
 
     def set_aprs(self, aprs):
         """
@@ -126,6 +136,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         :return:
         """
         self.logger = logger
+        self._refresh_cached_config()
         self._deliver_pending_messages()
 
     def set_filter(self, filter_class: TelegramFilter):
@@ -162,14 +173,25 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         """Resend a single pending message record."""
 
         database = self.meshtastic_connection.database
-        if record.emoji is not None:
-            if record.reply_to_packet_id is None:
+        sanitized_reply_id = self._coerce_optional_int(
+            record.reply_to_packet_id,
+            context='pending reply_to_packet_id',
+        )
+        sanitized_emoji = self._coerce_optional_int(record.emoji, context='pending emoji code')
+        if record.reply_to_packet_id is not None and sanitized_reply_id is None:
+            database.mark_link_failed(record.id, 'invalid reply_to_packet_id value')
+            return
+        if record.emoji is not None and sanitized_emoji is None:
+            database.mark_link_failed(record.id, 'invalid emoji value')
+            return
+        if sanitized_emoji is not None:
+            if sanitized_reply_id is None:
                 database.mark_link_failed(record.id, 'missing reply target for emoji reaction')
                 return
             packets = self.meshtastic_connection.send_text(
                 '',
-                reply_id=record.reply_to_packet_id,
-                emoji=record.emoji,
+                reply_id=sanitized_reply_id,
+                emoji=sanitized_emoji,
             )
         else:
             sender = record.sender or 'Telegram'
@@ -177,14 +199,14 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
             packets = self.meshtastic_connection.send_user_text(
                 sender,
                 payload,
-                reply_id=record.reply_to_packet_id,
+                reply_id=sanitized_reply_id,
             )
         if not packets:
             database.mark_link_retry(record.id, 'meshtastic send returned None')
             return
         first_packet = packets[0]
         database.mark_link_sent(record.id, meshtastic_packet_id=first_packet.id)
-        previous_packet_id = record.reply_to_packet_id
+        previous_packet_id = sanitized_reply_id
         for packet in packets:
             database.add_link_alias(
                 record.id,
@@ -261,15 +283,18 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         :param _:
         :return:
         """
-        room_id = self.config.enforce_type(int, self.config.Telegram.Room)
+        room_id = self._room_id
+        if room_id is None:
+            self._get_logger().error('Telegram.Room is not configured with a valid integer value')
+            return
         if update.effective_chat.id != room_id:
             self.logger.warning(
-                "Ignoring message from chat %d; configured chat is %d", 
+                "Ignoring message from chat %d; configured chat is %d",
                 update.effective_chat.id,
                 room_id,
             )
             return
-        if self.filter.banned(str(update.effective_user.id)):
+        if self.filter and self.filter.banned(str(update.effective_user.id)):
             self.logger.debug(f"User {update.effective_user.id} is in a blacklist...")
             return
         # topic support
@@ -314,8 +339,17 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
                 update.effective_chat.id,
                 update.message.reply_to_message.message_id,
             )
-            if reply_record and reply_record.meshtastic_packet_id:
-                reply_packet_id = reply_record.meshtastic_packet_id
+            if reply_record and reply_record.meshtastic_packet_id is not None:
+                reply_packet_id = self._coerce_optional_int(
+                    reply_record.meshtastic_packet_id,
+                    context='reply mapping packet id',
+                )
+                if reply_packet_id is None:
+                    self._get_logger().warning(
+                        'Ignoring invalid reply mapping for Telegram message %s: %r',
+                        update.message.reply_to_message.message_id,
+                        reply_record.meshtastic_packet_id,
+                    )
 
         text_content = update.message.text if update.message else ''
         if update.message and update.message.text and is_emoji_reaction(text_content):
@@ -461,7 +495,10 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         :param context:
         :return:
         """
-        if update.effective_chat.id != self.config.enforce_type(int, self.config.Telegram.Admin):
+        if self._admin_id is None:
+            self._get_logger().error('Telegram.Admin is not configured with a valid integer value')
+            return
+        if update.effective_chat.id != self._admin_id:
             self.logger.info("Reboot requested by non-admin: %d", update.effective_chat.id)
             return
         context.bot.send_message(chat_id=update.effective_chat.id, text="Requesting reboot...")
@@ -476,7 +513,10 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         :param context:
         :return:
         """
-        if update.effective_chat.id != self.config.enforce_type(int, self.config.Telegram.Admin):
+        if self._admin_id is None:
+            self._get_logger().error('Telegram.Admin is not configured with a valid integer value')
+            return
+        if update.effective_chat.id != self._admin_id:
             self.logger.info("Reset node DB requested by non-admin: %d", update.effective_chat.id)
             return
         context.bot.send_message(chat_id=update.effective_chat.id, text="Requesting node DB reset...")
@@ -491,7 +531,10 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         :param context:
         :return:
         """
-        if update.effective_chat.id != self.config.enforce_type(int, self.config.Telegram.Admin):
+        if self._admin_id is None:
+            self._get_logger().error('Telegram.Admin is not configured with a valid integer value')
+            return
+        if update.effective_chat.id != self._admin_id:
             self.logger.info("Traceroute requested by non-admin: %d", update.effective_chat.id)
             return
         context.bot.send_message(chat_id=update.effective_chat.id, text="Sending traceroute... See bot logs")
@@ -510,7 +553,10 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         :param _context:
         :return:
         """
-        if update.effective_chat.id != self.config.enforce_type(int, self.config.Telegram.Admin):
+        if self._admin_id is None:
+            self._get_logger().error('Telegram.Admin is not configured with a valid integer value')
+            return
+        if update.effective_chat.id != self._admin_id:
             self.logger.info("Routes requested by non-admin: %d", update.effective_chat.id)
             return
         lora_config = getattr(self.meshtastic_connection.interface.localNode.localConfig, 'lora')
@@ -580,7 +626,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         :return:
         """
         msg = 'Map link not enabled'
-        if self.config.enforce_type(bool, self.config.Telegram.MapLinkEnabled):
+        if self._get_telegram_bool('MapLinkEnabled', default=False):
             msg = self.config.enforce_type(str, self.config.Telegram.MapLink)
         context.bot.send_message(chat_id=update.effective_chat.id,
                                  text=msg)
@@ -594,7 +640,7 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         :param context:
         :return:
         """
-        include_self = self.config.enforce_type(bool, self.config.Telegram.NodeIncludeSelf)
+        include_self = self._get_telegram_bool('NodeIncludeSelf', default=False)
         formatted = self.meshtastic_connection.format_nodes(include_self=include_self)
 
         if len(formatted) < MAX_MESSAGE_LENGTH:
@@ -636,3 +682,59 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
         """
         thread = Thread(target=self.poll, name=self.name)
         thread.start()
+
+    def _get_logger(self) -> logging.Logger:
+        """Return the configured logger or fall back to the module logger."""
+
+        return self.logger or logging.getLogger(__name__)
+
+    def _refresh_cached_config(self) -> None:
+        """Cache frequently used Telegram configuration values with validation."""
+
+        self._room_id = self._get_telegram_int('Room')
+        self._notifications_room_id = self._get_telegram_int('NotificationsRoom')
+        self._admin_id = self._get_telegram_int('Admin')
+        self._bot_in_rooms = self._get_telegram_bool('BotInRooms', default=False)
+
+    def _get_telegram_int(self, key: str, default: Optional[int] = None) -> Optional[int]:
+        """Safely read an integer value from the Telegram configuration section."""
+
+        logger = self._get_logger()
+        try:
+            raw_value = getattr(self.config.Telegram, key)
+        except (AttributeError, KeyError):
+            logger.error('Telegram.%s is missing from configuration', key)
+            return default
+        try:
+            return self.config.enforce_type(int, raw_value)
+        except (TypeError, ValueError) as exc:
+            logger.error('Invalid Telegram.%s value %r: %s', key, raw_value, exc)
+            return default
+
+    def _get_telegram_bool(self, key: str, default: bool = False) -> bool:
+        """Safely read a boolean value from the Telegram configuration section."""
+
+        logger = self._get_logger()
+        try:
+            raw_value = getattr(self.config.Telegram, key)
+        except (AttributeError, KeyError):
+            logger.error('Telegram.%s is missing from configuration', key)
+            return default
+        if isinstance(raw_value, bool):
+            return raw_value
+        try:
+            return self.config.enforce_type(bool, raw_value)
+        except (AttributeError, TypeError, ValueError) as exc:
+            logger.error('Invalid Telegram.%s value %r: %s', key, raw_value, exc)
+            return default
+
+    def _coerce_optional_int(self, value: Optional[object], *, context: str) -> Optional[int]:
+        """Best-effort conversion of optional values to integers."""
+
+        if value is None:
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError) as exc:
+            self._get_logger().warning('Invalid %s %r: %s', context, value, exc)
+            return None
