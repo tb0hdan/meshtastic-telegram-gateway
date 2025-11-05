@@ -482,7 +482,12 @@ class MeshtasticDB:
         now = datetime.utcnow()
         record.status = MESSAGE_STATUS_SENT
         record.updated_at = now
-        record.last_error = None
+        # Pony ORM does not allow assigning ``None`` to optional string
+        # attributes once a non-null value has been stored. Clearing the last
+        # error by writing ``None`` therefore raises ``ValueError``. Using an
+        # empty string conveys the same "no error" meaning without triggering
+        # an exception.
+        record.last_error = ""
         record.retries = 0
         if telegram_message_id is not None:
             record.telegram_message_id = telegram_message_id
