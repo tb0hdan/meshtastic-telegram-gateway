@@ -339,7 +339,18 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
                 update.effective_chat.id,
                 update.message.reply_to_message.message_id,
             )
-            if reply_record and reply_record.meshtastic_packet_id is not None:
+            if reply_record is None:
+                self.logger.debug(
+                    'No Meshtastic mapping found for Telegram reply %s in chat %s',
+                    update.message.reply_to_message.message_id,
+                    update.effective_chat.id,
+                )
+            elif reply_record.meshtastic_packet_id is None:
+                self.logger.debug(
+                    'Telegram reply %s is linked without a Meshtastic packet id',
+                    update.message.reply_to_message.message_id,
+                )
+            else:
                 reply_packet_id = self._coerce_optional_int(
                     reply_record.meshtastic_packet_id,
                     context='reply mapping packet id',
@@ -350,6 +361,18 @@ class TelegramBot:  # pylint:disable=too-many-public-methods
                         update.message.reply_to_message.message_id,
                         reply_record.meshtastic_packet_id,
                     )
+                else:
+                    self.logger.debug(
+                        'Forwarding Telegram message %s as reply to Meshtastic packet %s',
+                        update.message.message_id if update.message else None,
+                        reply_packet_id,
+                    )
+        if reply_packet_id is None and update.message and update.message.reply_to_message:
+            self.logger.debug(
+                'Unable to resolve Meshtastic reply target for Telegram message %s -> replied to %s',
+                update.message.message_id,
+                update.message.reply_to_message.message_id,
+            )
 
         text_content = update.message.text if update.message else ''
         if update.message and update.message.text and is_emoji_reaction(text_content):

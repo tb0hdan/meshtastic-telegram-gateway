@@ -616,10 +616,16 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         if msg:
             self.memcache.set(key, True, expires=300)
         packet_id = packet.get('id')
-        reply_id = decoded.get('replyId') or decoded.get('reply_id')
+        raw_reply_id = decoded.get('replyId') or decoded.get('reply_id')
         try:
-            reply_id = int(reply_id) if reply_id is not None else None
+            reply_id = int(raw_reply_id) if raw_reply_id is not None else None
         except (TypeError, ValueError):
+            self.logger.warning(
+                'Invalid reply ID %r on Meshtastic packet %s from %s',
+                raw_reply_id,
+                packet_id,
+                long_name,
+            )
             reply_id = None
         emoji_value = decoded.get('emoji')
         try:
@@ -642,8 +648,25 @@ class MeshtasticBot:  # pylint:disable=too-many-instance-attributes
         reply_message_id = None
         if reply_id is not None:
             reply_record = self.database.get_link_by_meshtastic(reply_id)
-            if reply_record and reply_record.telegram_message_id:
+            if reply_record is None:
+                self.logger.debug(
+                    'No Telegram mapping found for Meshtastic reply %s (packet %s)',
+                    reply_id,
+                    packet_id,
+                )
+            elif not reply_record.telegram_message_id:
+                self.logger.debug(
+                    'Meshtastic reply %s (packet %s) has no Telegram message id in mapping',
+                    reply_id,
+                    packet_id,
+                )
+            else:
                 reply_message_id = reply_record.telegram_message_id
+                self.logger.debug(
+                    'Forwarding Meshtastic packet %s as reply to Telegram message %s',
+                    packet_id,
+                    reply_message_id,
+                )
 
         log_data = {
             "event": "mesh_to_telegram",
